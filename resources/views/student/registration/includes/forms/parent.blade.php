@@ -25,7 +25,7 @@
         <hr class="hr-8">
 
         <div class="form-group">
-            {!! Form::label('father_name', __('form_fields.student.fields.father_name'), ['class' => 'col-sm-3 control-label']) !!}
+            {!! Form::label('father_name', __('form_fields.student.fields.father_name').' <span class="text-danger">*</span>', ['class' => 'col-sm-3 control-label'], false) !!}
             <div class="col-sm-3">
                 {!! Form::text('father_first_name', null, [ "class" => "form-control border-form upper","required"]) !!}
                 @include('includes.form_fields_validation_message', ['name' => 'father_first_name'])
@@ -101,7 +101,7 @@
         <hr class="hr-8">
 
         <div class="form-group">
-            {!! Form::label('mother_name', __('form_fields.student.fields.mother_name'), ['class' => 'col-sm-3 control-label']) !!}
+            {!! Form::label('mother_name', __('form_fields.student.fields.mother_name').' <span class="text-danger">*</span>', ['class' => 'col-sm-3 control-label'], false) !!}
             <div class="col-sm-3">
                 {!! Form::text('mother_first_name', null, [ "class" => "form-control border-form upper","required"]) !!}
                 @include('includes.form_fields_validation_message', ['name' => 'mother_first_name'])
@@ -204,7 +204,7 @@
         <div id="guardian-detail">
             <hr class="hr-8">
             <div class="form-group">
-                {!! Form::label('guardian_name', __('form_fields.student.fields.guardian_name'), ['class' => 'col-sm-3 control-label']) !!}
+                {!! Form::label('guardian_name', __('form_fields.student.fields.guardian_name').' <span class="text-danger">*</span>', ['class' => 'col-sm-3 control-label'], false) !!}
                 <div class="col-sm-3">
                     {!! Form::text('guardian_first_name', null, [ "class" => "form-control border-form upper","required"]) !!}
                     @include('includes.form_fields_validation_message', ['name' => 'guardian_first_name'])
@@ -276,13 +276,13 @@
             </div>
 
             <div class="form-group">
-                {!! Form::label('guardian_relation', __('form_fields.student.fields.relation'), ['class' => 'col-sm-2 control-label']) !!}
+                {!! Form::label('guardian_relation', __('form_fields.student.fields.relation').' <span class="text-danger">*</span>', ['class' => 'col-sm-2 control-label'], false) !!}
                 <div class="col-sm-4">
                     {!! Form::text('guardian_relation', null, ["class" => "form-control border-form upper","required"]) !!}
                     @include('includes.form_fields_validation_message', ['name' => 'guardian_relation'])
                 </div>
 
-                {!! Form::label('guardian_address', __('form_fields.student.fields.address'), ['class' => 'col-sm-2 control-label']) !!}
+                {!! Form::label('guardian_address', __('form_fields.student.fields.address').' <span class="text-danger">*</span>', ['class' => 'col-sm-2 control-label'], false) !!}
                 <div class="col-sm-4">
                     {!! Form::text('guardian_address', null, ["class" => "form-control border-form upper", "required"]) !!}
                     @include('includes.form_fields_validation_message', ['name' => 'guardian_address'])

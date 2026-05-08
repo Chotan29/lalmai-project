@@ -2,13 +2,13 @@
 <fieldset>
     <legend>{{ __('form_fields.student.section_label.general_info')}}</legend>
     <div class="form-group">
-        {!! Form::label('reg_no', __('form_fields.student.fields.reg_no'), ['class' => 'col-sm-2 control-label']) !!}
+        {!! Form::label('reg_no', __('form_fields.student.fields.reg_no').' <span class="text-danger">*</span>', ['class' => 'col-sm-2 control-label'], false) !!}
         <div class="col-sm-2">
             {!! Form::text('reg_no', null, ["placeholder" => "", "class" => "form-control border-form input-mask-registration", "required"]) !!}
             @include('includes.form_fields_validation_message', ['name' => 'reg_no'])
         </div>
 
-        {!! Form::label('reg_date', __('form_fields.student.fields.reg_date'), ['class' => 'col-sm-2 control-label']) !!}
+        {!! Form::label('reg_date', __('form_fields.student.fields.reg_date').' <span class="text-danger">*</span>', ['class' => 'col-sm-2 control-label'], false) !!}
         <div class="col-sm-2">
             {!! Form::text('reg_date', null, ["class" => "form-control date-picker border-form input-mask-date","required"]) !!}
             @include('includes.form_fields_validation_message', ['name' => 'reg_date'])
@@ -23,7 +23,7 @@
 
     @if (!isset($data['row']))
         <div class="form-group">
-            <label class="col-sm-2 control-label">{{ __('form_fields.student.fields.faculty')}}</label>
+            <label class="col-sm-2 control-label">{{ __('form_fields.student.fields.faculty')}} <span class="text-danger">*</span></label>
             <div class="col-sm-5">
                 <select name="faculty" class="form-control  chosen-select"  data-placeholder="Choose a Faculty..."  onChange ="loadSemesters(this)" required="required">
                     @foreach( $data['faculties'] as $key => $faculty)
@@ -32,7 +32,7 @@
                 </select>
             </div>
 
-            <label class="col-sm-2 control-label">{{__('form_fields.student.fields.semester')}}</label>
+            <label class="col-sm-2 control-label">{{__('form_fields.student.fields.semester')}} <span class="text-danger">*</span></label>
             <div class="col-sm-3">
                 <select id="semester" name="semester" required onChange ="loadSubject(this)" class="form-control border-form semester"  > </select>
                 @include('includes.form_fields_validation_message', ['name' => 'semester'])
@@ -89,13 +89,13 @@
 
     <div class="form-group">
         @if (!isset($data['row']))
-            <label class="col-sm-2 control-label">{{__('form_fields.student.fields.batch')}}</label>
+            <label class="col-sm-2 control-label">{{__('form_fields.student.fields.batch')}} <span class="text-danger">*</span></label>
             <div class="col-sm-5">
                 {!! Form::select('batch', $data['batch'], 1, ['class' => 'form-control chosen-select','required'=>"required"]) !!}
                 @include('includes.form_fields_validation_message', ['name' => 'batch'])
             </div>
 
-            <label class="col-sm-2 control-label">{{__('form_fields.student.fields.academic_status')}}</label>
+            <label class="col-sm-2 control-label">{{__('form_fields.student.fields.academic_status')}} <span class="text-danger">*</span></label>
             <div class="col-sm-3">
                 {!! Form::select('academic_status', $data['academic_status'], 1, ['class' => 'form-control']) !!}
                 @include('includes.form_fields_validation_message', ['name' => 'academic_status'])
@@ -116,7 +116,7 @@
     </div>
 
     <div class="form-group">
-        {!! Form::label('first_name', __('form_fields.student.fields.name_of_student'), ['class' => 'col-sm-3 control-label',]) !!}
+        {!! Form::label('first_name', __('form_fields.student.fields.name_of_student').' <span class="text-danger">*</span>', ['class' => 'col-sm-3 control-label'], false) !!}
         <div class="col-sm-3">
             {!! Form::text('first_name', null, ["class" => "form-control border-form upper","required"]) !!}
             @include('includes.form_fields_validation_message', ['name' => 'first_name'])
@@ -132,13 +132,13 @@
     </div>
 
     <div class="form-group">
-        {!! Form::label('date_of_birth', __('form_fields.student.fields.date_of_birth'), ['class' => 'col-sm-2 control-label']) !!}
+        {!! Form::label('date_of_birth', __('form_fields.student.fields.date_of_birth').' <span class="text-danger">*</span>', ['class' => 'col-sm-2 control-label'], false) !!}
         <div class="col-sm-2">
             {!! Form::text('date_of_birth', null, ["class" => "form-control border-form date-picker input-mask-date","required"]) !!}
             @include('includes.form_fields_validation_message', ['name' => 'date_of_birth'])
         </div>
 
-        {!! Form::label('gender', __('form_fields.student.fields.gender'), ['class' => 'col-sm-2 control-label']) !!}
+        {!! Form::label('gender', __('form_fields.student.fields.gender').' <span class="text-danger">*</span>', ['class' => 'col-sm-2 control-label'], false) !!}
         <div class="col-sm-2">
             {!! Form::select('gender', __('common.gender'), isset($data['row']) ? $data['row']->gender : null, ['class'=>'form-control border-form',"required"]); !!}
             @include('includes.form_fields_validation_message', ['name' => 'gender'])
@@ -153,13 +153,13 @@
     </div>
 
     <div class="form-group">
-        {!! Form::label('nationality', __('form_fields.student.fields.nationality'), ['class' => 'col-sm-2 control-label']) !!}
+        {!! Form::label('nationality', __('form_fields.student.fields.nationality').' <span class="text-danger">*</span>', ['class' => 'col-sm-2 control-label'], false) !!}
         <div class="col-sm-4">
             {!! Form::text('nationality', 'Bangladeshi', ["class" => "form-control border-form","required", "readonly" => true]) !!}
             @include('includes.form_fields_validation_message', ['name' => 'nationality'])
         </div>
 
-        {!! Form::label('religion', __('form_fields.student.fields.religion'), ['class' => 'col-sm-2 control-label']) !!}
+        {!! Form::label('religion', __('form_fields.student.fields.religion').' <span class="text-danger">*</span>', ['class' => 'col-sm-2 control-label'], false) !!}
         <div class="col-sm-4">
             @php
                 $selectedReligion = isset($data['row']) ? $data['row']->religion : null;
@@ -214,7 +214,7 @@
             @include('includes.form_fields_validation_message', ['name' => 'home_phone'])
         </div>
 
-        {!! Form::label('mobile_1', __('form_fields.student.fields.mobile_1'), ['class' => 'col-sm-1 control-label']) !!}
+        {!! Form::label('mobile_1', __('form_fields.student.fields.mobile_1').' <span class="text-danger">*</span>', ['class' => 'col-sm-1 control-label'], false) !!}
         <div class="col-sm-3">
             {!! Form::text('mobile_1', null, ["class" => "form-control border-form input-mask-mobile","required"]) !!}
             @include('includes.form_fields_validation_message', ['name' => 'mobile_1'])
@@ -231,7 +231,7 @@
         <div class="label label-warning arrowed-in arrowed-right arrowed">{{ __('form_fields.student.section_label.address')}}</div>
         <hr class="hr-8">
         <div class="form-group">
-            {!! Form::label('address', __('form_fields.student.fields.address'), ['class' => 'col-sm-1 control-label']) !!}
+            {!! Form::label('address', __('form_fields.student.fields.address').' <span class="text-danger">*</span>', ['class' => 'col-sm-1 control-label'], false) !!}
             <div class="col-sm-4">
                 {!! Form::text('address', null, ["class" => "form-control border-form upper","required"]) !!}
                 @include('includes.form_fields_validation_message', ['name' => 'address'])
@@ -243,7 +243,7 @@
     {{--            @include('includes.form_fields_validation_message', ['name' => 'state'])--}}
     {{--        </div>--}}
 
-            {!! Form::label('state', __('form_fields.student.fields.state'), ['class' => 'col-sm-1 control-label']) !!}
+            {!! Form::label('state', __('form_fields.student.fields.state').' <span class="text-danger">*</span>', ['class' => 'col-sm-1 control-label'], false) !!}
             <div class="col-sm-3">
                 {!! Form::text('state', null, ["class" => "form-control border-form upper","required"]) !!}
                 @include('includes.form_fields_validation_message', ['name' => 'state'])
