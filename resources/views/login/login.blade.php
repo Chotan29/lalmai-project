@@ -1,11 +1,11 @@
 <!DOCTYPE html>
-<html lang="bn">
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta http-equiv="X-UA-Compatible" content="IE=edge">
-<title>{{ isset($data['general_setting']->institute) ? $data['general_setting']->institute.' - Login' : 'লালমাই সরকারি কলেজ - Login' }}</title>
-<meta name="description" content="লালমাই সরকারি কলেজ - IMS Login">
+<title>{{ isset($data['general_setting']->institute) ? $data['general_setting']->institute.' - Login' : 'Lalmai Govt. College - Login' }}</title>
+<meta name="description" content="Lalmai Govt. College - IMS Login">
 @if(isset($data['general_setting']->favicon))
 <link rel="icon" href="{{ asset('images/setting/general/'.$data['general_setting']->favicon) }}" type="image/x-icon">
 @endif
@@ -59,21 +59,21 @@ body{min-height:100%;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Rob
         <div class="logo-wrap">
             @if(isset($data['general_setting']->logo))
                 <img src="{{ asset('images/setting/general/'.$data['general_setting']->logo) }}"
-                     alt="{{ $data['general_setting']->institute ?? 'লালমাই সরকারি কলেজ' }}"
+                     alt="{{ $data['general_setting']->institute ?? 'Lalmai Govt. College' }}"
                      loading="lazy" width="96" height="96">
             @else
-                <span class="logo-icon">🎓</span>
+                <span class="logo-icon">&#127891;</span>
             @endif
         </div>
         <div class="college-name-bn">
-            {{ $data['general_setting']->institute ?? 'লালমাই সরকারি কলেজ' }}
+            {{ $data['general_setting']->institute ?? 'Lalmai Govt. College' }}
         </div>
-        <div class="college-name-en">লালমাই সরকারি কলেজ &nbsp;·&nbsp; Lalmai, Cumilla</div>
+        <div class="college-name-en">Lalmai, Cumilla</div>
     </div>
 
     <div class="card-body">
 
-        <p class="signin-title">আপনার অ্যাকাউন্টে সাইন ইন করুন</p>
+        <p class="signin-title">Sign in to your account</p>
 
         @if(session()->has('login_error'))
         <div class="alert alert-error">
@@ -93,7 +93,7 @@ body{min-height:100%;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Rob
             {{ csrf_field() }}
 
             <div class="form-group">
-                <label class="form-label" for="email">ইমেইল ঠিকানা</label>
+                <label class="form-label" for="email">Email Address</label>
                 <div class="input-wrap">
                     <span class="input-icon">
                         <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor"><path d="M2.003 5.884L10 9.882l7.997-3.998A2 2 0 0016 4H4a2 2 0 00-1.997 1.884z"/><path d="M18 8.118l-8 4-8-4V14a2 2 0 002 2h12a2 2 0 002-2V8.118z"/></svg>
@@ -108,7 +108,7 @@ body{min-height:100%;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Rob
             </div>
 
             <div class="form-group">
-                <label class="form-label" for="password">পাসওয়ার্ড</label>
+                <label class="form-label" for="password">Password</label>
                 <div class="input-wrap">
                     <span class="input-icon">
                         <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clip-rule="evenodd"/></svg>
@@ -128,14 +128,14 @@ body{min-height:100%;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Rob
             <div class="row-between">
                 <label class="check-label">
                     <input type="checkbox" name="remember" {{ old('remember') ? 'checked' : '' }}>
-                    মনে রাখো
+                    Remember me
                 </label>
-                <a href="{{ route('password.request') }}" class="forgot-link">পাসওয়ার্ড ভুলে গেছেন?</a>
+                <a href="{{ route('password.request') }}" class="forgot-link">Forgot your password?</a>
             </div>
 
             <button type="submit" class="btn-signin" id="signin-btn">
                 <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>
-                সাইন ইন করুন
+                Sign In
             </button>
         </form>
     </div>
@@ -144,7 +144,7 @@ body{min-height:100%;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Rob
         @if(isset($data['general_setting']->copyright))
             {!! $data['general_setting']->copyright !!}
         @else
-            &copy; {{ date('Y') }} লালমাই সরকারি কলেজ &mdash; সর্বস্বত্ব সংরক্ষিত
+            &copy; {{ date('Y') }} Lalmai Govt. College. All rights reserved.
         @endif
     </div>
 </div>
@@ -164,7 +164,7 @@ function togglePwd(){
 document.getElementById('login-form').addEventListener('submit',function(){
     var b=document.getElementById('signin-btn');
     b.disabled=true;
-    b.innerHTML='<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="animation:spin 1s linear infinite"><line x1="12" y1="2" x2="12" y2="6"/><line x1="12" y1="18" x2="12" y2="22"/><line x1="4.93" y1="4.93" x2="7.76" y2="7.76"/><line x1="16.24" y1="16.24" x2="19.07" y2="19.07"/><line x1="2" y1="12" x2="6" y2="12"/><line x1="18" y1="12" x2="22" y2="12"/><line x1="4.93" y1="19.07" x2="7.76" y2="16.24"/><line x1="16.24" y1="7.76" x2="19.07" y2="4.93"/></svg> অপেক্ষা করুন...';
+    b.innerHTML='<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="animation:spin 1s linear infinite"><line x1="12" y1="2" x2="12" y2="6"/><line x1="12" y1="18" x2="12" y2="22"/><line x1="4.93" y1="4.93" x2="7.76" y2="7.76"/><line x1="16.24" y1="16.24" x2="19.07" y2="19.07"/><line x1="2" y1="12" x2="6" y2="12"/><line x1="18" y1="12" x2="22" y2="12"/><line x1="4.93" y1="19.07" x2="7.76" y2="16.24"/><line x1="16.24" y1="7.76" x2="19.07" y2="4.93"/></svg> Please wait...';
 });
 </script>
 <style>@@keyframes spin{to{transform:rotate(360deg)}}</style>
