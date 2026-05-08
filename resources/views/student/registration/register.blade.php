@@ -6,28 +6,6 @@
            Modern Registration Form Design - Online Registration Style
            ============================================================ */
 
-        /* Mandatory field red asterisk - auto via CSS, no HTML change needed */
-        #validation-form .form-group .control-label.mandatory::after,
-        #validation-form .form-group label.mandatory::after {
-            content: ' *';
-            color: #e53e3e;
-            font-weight: 700;
-        }
-        /* Any input[required] sibling label gets asterisk automatically */
-        #validation-form .form-control[required] ~ .control-label::after,
-        #validation-form input[required] ~ label::after { content: none; }
-        /* Red asterisk on labels before required inputs using adjacent fieldset approach */
-        #validation-form .form-group:has(input[required]) .control-label::after,
-        #validation-form .form-group:has(select[required]) .control-label::after,
-        #validation-form .form-group:has(input[required]) label.col-sm-2::after,
-        #validation-form .form-group:has(input[required]) label.col-sm-3::after,
-        #validation-form .form-group:has(select[required]) label.col-sm-2::after,
-        #validation-form .form-group:has(select[required]) label.col-sm-5::after {
-            content: ' *';
-            color: #e53e3e;
-            font-weight: 700;
-        }
-
         /* Form wrapper card */
         #validation-form {
             background: #fff;
