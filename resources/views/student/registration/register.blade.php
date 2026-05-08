@@ -144,6 +144,16 @@
         #validation-form .control-label .text-danger {
             margin-left: 3px;
             font-weight: 700;
+            font-size: 0;
+            line-height: 0;
+            vertical-align: middle;
+        }
+
+        #validation-form .control-label .text-danger::before {
+            content: '*';
+            font-size: 14px;
+            line-height: 1;
+            font-weight: 700;
         }
 
         /* Modern inputs */
