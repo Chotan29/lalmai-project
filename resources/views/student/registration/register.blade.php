@@ -2,38 +2,107 @@
 
 @section('css')
     <style>
+        /* ============================================================
+           Modern Registration Form Design - Online Registration Style
+           ============================================================ */
+
+        /* Form wrapper card */
+        #validation-form {
+            background: #fff;
+            border-radius: 12px;
+            box-shadow: 0 4px 24px rgba(15, 23, 42, 0.08);
+            padding: 24px;
+            margin-top: 10px;
+        }
+
+        /* Tab Navigation */
+        #validation-form .nav-tabs {
+            border-bottom: 2px solid #dee2e6;
+            margin-bottom: 28px;
+            padding: 0;
+        }
+
+        #validation-form .nav-tabs > li > a {
+            border: none !important;
+            border-bottom: 3px solid transparent !important;
+            color: #555;
+            font-weight: 500;
+            font-size: 13px;
+            padding: 12px 16px;
+            border-radius: 0 !important;
+            margin-right: 0;
+            transition: color 0.2s, border-color 0.2s;
+        }
+
+        #validation-form .nav-tabs > li > a:hover {
+            color: #1e5799;
+            background: transparent !important;
+            border-bottom-color: #a8c4e8 !important;
+        }
+
+        #validation-form .nav-tabs > li.active > a,
+        #validation-form .nav-tabs > li.active > a:focus,
+        #validation-form .nav-tabs > li.active > a:hover {
+            color: #1e5799 !important;
+            background: transparent !important;
+            border-bottom: 3px solid #1e5799 !important;
+            font-weight: 700;
+        }
+
+        /* Fieldset → form-section card */
         #validation-form fieldset {
             margin-bottom: 24px;
-            padding: 18px 16px 10px;
-            border: 1px solid #e5e8ef;
-            background: #fff;
+            padding: 24px;
+            border: 1px solid #e1eaf4 !important;
+            border-radius: 16px;
+            background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
+            box-shadow: 0 8px 24px rgba(15, 23, 42, 0.05);
         }
 
+        /* Legend → section-title style */
         #validation-form legend {
-            width: auto;
-            margin-bottom: 18px;
-            padding: 0 10px;
+            width: 100%;
+            float: none;
+            margin-bottom: 20px;
+            padding-bottom: 14px;
+            padding-left: 0;
+            padding-right: 0;
             border: 0;
+            border-bottom: 1px solid #d9e4ef;
             font-size: 16px;
-            font-weight: 600;
-            color: #1f3b5b;
+            font-weight: 700;
+            color: #16324a;
+            letter-spacing: 0.01em;
+            display: block;
         }
 
+        #validation-form legend::before {
+            content: '';
+            display: inline-block;
+            width: 4px;
+            height: 18px;
+            background: linear-gradient(135deg, #1e5799 0%, #2f80c8 100%);
+            border-radius: 3px;
+            margin-right: 10px;
+            vertical-align: middle;
+            box-shadow: 0 2px 8px rgba(30, 87, 153, 0.25);
+        }
+
+        /* Form group spacing */
         #validation-form .form-group {
             margin-right: 0;
             margin-left: 0;
-            margin-bottom: 16px;
+            margin-bottom: 18px;
         }
 
+        /* Control label */
         #validation-form .control-label {
-            padding-top: 10px;
-            padding-bottom: 10px;
+            padding-top: 11px;
+            padding-bottom: 6px;
             font-weight: 600;
-            letter-spacing: 0.2px;
-        }
-
-        #validation-form .form-control {
-            min-height: 40px;
+            color: #23384d;
+            font-size: 13px;
+            letter-spacing: 0.1px;
         }
 
         #validation-form .control-label .text-danger {
@@ -41,16 +110,71 @@
             font-weight: 700;
         }
 
+        /* Modern inputs */
+        #validation-form .form-control {
+            min-height: 44px !important;
+            padding: 9px 12px;
+            border: 1px solid #cdd6e0;
+            border-radius: 8px !important;
+            box-shadow: none !important;
+            font-size: 13px;
+            transition: border-color 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        #validation-form .form-control:focus {
+            border-color: #2b6cb0 !important;
+            box-shadow: 0 0 0 3px rgba(43, 108, 176, 0.12) !important;
+            outline: none;
+        }
+
+        #validation-form textarea.form-control {
+            min-height: 76px !important;
+            resize: vertical;
+        }
+
+        /* Chosen select modern look */
+        #validation-form .chosen-container .chosen-single {
+            min-height: 44px !important;
+            line-height: 42px;
+            border: 1px solid #cdd6e0 !important;
+            border-radius: 8px !important;
+            box-shadow: none !important;
+            background: #fff !important;
+            background-image: none !important;
+            padding: 0 0 0 12px;
+            color: #333;
+        }
+
+        #validation-form .chosen-container-active .chosen-single,
+        #validation-form .chosen-container-active.chosen-with-drop .chosen-single {
+            border-color: #2b6cb0 !important;
+            box-shadow: 0 0 0 3px rgba(43, 108, 176, 0.12) !important;
+        }
+
+        #validation-form .chosen-container .chosen-single span {
+            line-height: 44px;
+        }
+
+        #validation-form .chosen-container .chosen-single b {
+            background-position: 0 12px;
+        }
+
+        #validation-form .chosen-container .chosen-drop {
+            border: 1px solid #cdd6e0;
+            border-radius: 0 0 8px 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+
+        /* Invalid field highlighting */
         #validation-form .form-control.field-invalid,
-        #validation-form .chosen-container.field-invalid .chosen-single,
-        #validation-form .chosen-container.field-invalid .chosen-choices {
+        #validation-form .chosen-container.field-invalid .chosen-single {
             border-color: #d9534f !important;
-            box-shadow: 0 0 0 2px rgba(217, 83, 79, 0.12);
+            box-shadow: 0 0 0 3px rgba(217, 83, 79, 0.1) !important;
         }
 
         #validation-form .validation-note {
             display: none;
-            margin-top: 6px;
+            margin-top: 5px;
             color: #d9534f;
             font-size: 12px;
             font-weight: 600;
@@ -60,25 +184,83 @@
             display: block;
         }
 
-        #validation-form textarea.form-control {
-            min-height: 72px;
-            resize: vertical;
-        }
-
+        /* arrowed labels */
         #validation-form .label.arrowed,
         #validation-form .label.arrowed-in {
             display: inline-block;
             margin-bottom: 10px;
-            padding: 7px 12px;
+            padding: 6px 14px;
+            border-radius: 4px;
+            font-size: 13px;
+        }
+
+        /* Next / Previous buttons inside tabs */
+        #validation-form .tab-pane .btn-info,
+        #validation-form .tab-pane .btn-primary {
+            min-width: 120px;
+            border-radius: 8px;
+            padding: 9px 20px;
+            font-weight: 600;
+            font-size: 13px;
+            letter-spacing: 0.2px;
+        }
+
+        #validation-form .tab-pane .btn-info {
+            background: linear-gradient(135deg, #1e5799 0%, #2f80c8 100%);
+            border-color: #1e5799;
+            color: #fff;
+        }
+
+        #validation-form .tab-pane .btn-info:hover {
+            background: linear-gradient(135deg, #174a87 0%, #2570b5 100%);
+            border-color: #174a87;
+        }
+
+        #validation-form .tab-pane .btn-primary {
+            background: #6c757d;
+            border-color: #6c757d;
+            color: #fff;
+        }
+
+        #validation-form .tab-pane .btn-primary:hover {
+            background: #5a6268;
+            border-color: #545b62;
+        }
+
+        /* Register / Reset buttons at the bottom */
+        .form-actions .btn {
+            border-radius: 8px;
+            padding: 10px 24px;
+            font-weight: 600;
+            font-size: 13px;
+            min-width: 110px;
+        }
+
+        /* Photo preview box */
+        #student-photo-preview {
+            border-radius: 8px;
+            border: 2px solid #e1eaf4;
+            padding: 4px;
+            background: #f8fbff;
         }
 
         @media (max-width: 767px) {
+            #validation-form {
+                padding: 14px;
+            }
+
             #validation-form fieldset {
-                padding: 14px 12px 8px;
+                padding: 16px;
+                border-radius: 12px;
+            }
+
+            #validation-form .nav-tabs > li > a {
+                padding: 9px 10px;
+                font-size: 12px;
             }
 
             #validation-form .control-label {
-                margin-bottom: 6px;
+                margin-bottom: 4px;
                 text-align: left;
             }
         }
