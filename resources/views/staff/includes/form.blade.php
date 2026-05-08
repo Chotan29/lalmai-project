@@ -95,31 +95,17 @@
                         @include('includes.form_fields_validation_message', ['name' => 'nationality'])
                     </div>
 
-                    {!! Form::label('national_id_1', __('form_fields.student.fields.national_id_1'), ['class' => 'col-sm-2 control-label']) !!}
+                    {!! Form::label('national_id_1', 'NID', ['class' => 'col-sm-2 control-label']) !!}
                     <div class="col-sm-2">
                         {!! Form::text('national_id_1', null, ["placeholder" => "", "class" => "form-control border-form upper"]) !!}
                         @include('includes.form_fields_validation_message', ['name' => 'national_id_1'])
                     </div>
 
-                    {!! Form::label('national_id_2', __('form_fields.student.fields.national_id_2'), ['class' => 'col-sm-2 control-label']) !!}
-                    <div class="col-sm-2">
-                        {!! Form::text('national_id_2', null, ["class" => "form-control border-form upper"]) !!}
-                        @include('includes.form_fields_validation_message', ['name' => 'national_id_2'])
-                    </div>
-                </div>
+                    {{-- national_id_2, _3, _4 hidden --}}
+                    {!! Form::hidden('national_id_2', null) !!}
+                    {!! Form::hidden('national_id_3', null) !!}
+                    {!! Form::hidden('national_id_4', null) !!}
 
-                <div class="form-group">
-                    {!! Form::label('national_id_3', __('form_fields.student.fields.national_id_3'), ['class' => 'col-sm-2 control-label']) !!}
-                    <div class="col-sm-2">
-                        {!! Form::text('national_id_3', null, ["class" => "form-control border-form upper"]) !!}
-                        @include('includes.form_fields_validation_message', ['name' => 'national_id_3'])
-                    </div>
-
-                    {!! Form::label('national_id_4', __('form_fields.student.fields.national_id_4'), ['class' => 'col-sm-2 control-label']) !!}
-                    <div class="col-sm-2">
-                        {!! Form::text('national_id_4', null, ["placeholder" => "", "class" => "form-control border-form upper"]) !!}
-                        @include('includes.form_fields_validation_message', ['name' => 'national_id_4'])
-                    </div>
                     {!! Form::label('mother_tongue', __('form_fields.student.fields.mother_tongue'), ['class' => 'col-sm-2 control-label']) !!}
                     <div class="col-sm-2">
                         {!! Form::text('mother_tongue', null, ["class" => "form-control border-form upper"]) !!}
@@ -128,12 +114,6 @@
                 </div>
 
                 <div class="form-group">
-                    {!! Form::label('nationality', __('form_fields.student.fields.nationality'), ['class' => 'col-sm-2 control-label']) !!}
-                    <div class="col-sm-2">
-                        {!! Form::text('nationality', null, ["placeholder" => "", "class" => "form-control border-form upper","required"]) !!}
-                        @include('includes.form_fields_validation_message', ['name' => 'nationality'])
-                    </div>
-
                     {!! Form::label('qualification', 'Qualification', ['class' => 'col-sm-1 control-label']) !!}
                     <div class="col-sm-3">
                         {!! Form::text('qualification', null, ["class" => "form-control border-form upper","required"]) !!}
@@ -178,7 +158,7 @@
                         @include('includes.form_fields_validation_message', ['name' => 'address'])
                     </div>
 
-                    {!! Form::label('state', 'State', ['class' => 'col-sm-1 control-label']) !!}
+                    {!! Form::label('state', 'Division', ['class' => 'col-sm-1 control-label']) !!}
                     <div class="col-sm-3">
                         {!! Form::select('state', $data['state'],null, ['class' => 'form-control',"required"]) !!}
                         @include('includes.form_fields_validation_message', ['name' => 'state'])
@@ -210,7 +190,7 @@
                         @include('includes.form_fields_validation_message', ['name' => 'temp_address'])
                     </div>
 
-                    {!! Form::label('state', 'State', ['class' => 'col-sm-1 control-label']) !!}
+                    {!! Form::label('state', 'Division', ['class' => 'col-sm-1 control-label']) !!}
                     <div class="col-sm-3">
                         {!! Form::select('temp_state', $data['state'],null, ['class' => 'form-control']) !!}
                         @include('includes.form_fields_validation_message', ['name' => 'temp_state'])
