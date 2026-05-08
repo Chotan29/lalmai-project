@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta http-equiv="X-UA-Compatible" content="IE=edge">
-<title>@if(isset($data['general_setting']->institute)){{$data['general_setting']->institute}} - Login@else লালমাই সরকারি কলেজ - Login@endif</title>
+<title>{{ isset($data['general_setting']->institute) ? $data['general_setting']->institute.' - Login' : 'লালমাই সরকারি কলেজ - Login' }}</title>
 <meta name="description" content="লালমাই সরকারি কলেজ - IMS Login">
 @if(isset($data['general_setting']->favicon))
 <link rel="icon" href="{{ asset('images/setting/general/'.$data['general_setting']->favicon) }}" type="image/x-icon">
@@ -48,7 +48,7 @@ body{min-height:100%;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Rob
 .card-footer{text-align:center;padding:.75rem 1rem 1rem;font-size:.73rem;color:#9ca3af}
 .card-footer a{color:#6b7280;text-decoration:none}
 .card-footer a:hover{color:#0e4c8b;text-decoration:underline}
-@media(max-width:480px){.card-header{padding:1.5rem 1.25rem 1.25rem}.card-body{padding:1.5rem 1.25rem 1.5rem}.logo-wrap{width:80px;height:80px}.college-name-bn{font-size:1.05rem}}
+@@media(max-width:480px){.card-header{padding:1.5rem 1.25rem 1.25rem}.card-body{padding:1.5rem 1.25rem 1.5rem}.logo-wrap{width:80px;height:80px}.college-name-bn{font-size:1.05rem}}
 </style>
 </head>
 <body>
@@ -167,7 +167,7 @@ document.getElementById('login-form').addEventListener('submit',function(){
     b.innerHTML='<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="animation:spin 1s linear infinite"><line x1="12" y1="2" x2="12" y2="6"/><line x1="12" y1="18" x2="12" y2="22"/><line x1="4.93" y1="4.93" x2="7.76" y2="7.76"/><line x1="16.24" y1="16.24" x2="19.07" y2="19.07"/><line x1="2" y1="12" x2="6" y2="12"/><line x1="18" y1="12" x2="22" y2="12"/><line x1="4.93" y1="19.07" x2="7.76" y2="16.24"/><line x1="16.24" y1="7.76" x2="19.07" y2="4.93"/></svg> অপেক্ষা করুন...';
 });
 </script>
-<style>@keyframes spin{to{transform:rotate(360deg)}}</style>
+<style>@@keyframes spin{to{transform:rotate(360deg)}}</style>
 @include('includes.scripts.tracking')
 </body>
 </html>
