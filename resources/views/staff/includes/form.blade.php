@@ -1,15 +1,15 @@
 <div class="tabbable">
-    <ul class="nav nav-tabs padding-12 tab-color-blue background-blue" id="myTab4">
+    <ul class="nav nav-tabs" id="myTab4" style="background:transparent;border:none;">
         <li class="active" id="generalInfoTab">
             <a data-toggle="tab" href="#generalInfo">
                 <i class="fa fa-user bigger-110"></i> General Information
             </a>
         </li>
         <li class="" id="profileImageTab">
-            <a data-toggle="tab" href="#profileImage"><i class="fa fa-image bigger-110"></i> Profile Images</a>
+            <a href="#" onclick="return activeProfileImage()"><i class="fa fa-image bigger-110"></i> Profile Images</a>
         </li>
         <li id="extraInfoTab">
-            <a data-toggle="tab" href="#extraInfo"><i class="fa fa-list-alt bigger-110"></i> Extra Info</a>
+            <a href="#" onclick="return activeExtraInfo()"><i class="fa fa-list-alt bigger-110"></i> Extra Info</a>
         </li>
     </ul>
 
@@ -19,19 +19,19 @@
                 <legend>General Info:</legend>
 
                 <div class="form-group">
-                    {!! Form::label('reg_no', __('form_fields.student.fields.reg_no'), ['class' => 'col-sm-1 control-label']) !!}
+                    {!! Form::label('reg_no', __('form_fields.student.fields.reg_no').' <span class="text-danger">*</span>', ['class' => 'col-sm-1 control-label'], false) !!}
                     <div class="col-sm-2">
                         {!! Form::text('reg_no', null, ["placeholder" => "", "class" => "form-control border-form input-mask-registration", "required"]) !!}
                         @include('includes.form_fields_validation_message', ['name' => 'reg_no'])
                     </div>
 
-                    {!! Form::label('join_date', 'Join Date', ['class' => 'col-sm-2 control-label']) !!}
+                    {!! Form::label('join_date', 'Join Date <span class="text-danger">*</span>', ['class' => 'col-sm-2 control-label'], false) !!}
                     <div class="col-sm-2">
                         {!! Form::text('join_date', null, ["class" => "form-control date-picker border-form input-mask-date","required"]) !!}
                         @include('includes.form_fields_validation_message', ['name' => 'join_date'])
                     </div>
 
-                    {!! Form::label('designation', 'Designation', ['class' => 'col-sm-2 control-label']) !!}
+                    {!! Form::label('designation', 'Designation <span class="text-danger">*</span>', ['class' => 'col-sm-2 control-label'], false) !!}
                     <div class="col-sm-3">
                         {!! Form::select('designation', $data['designations'], null, ['class' => 'form-control chosen-select', "required"]) !!}
                         @include('includes.form_fields_validation_message', ['name' => 'designation'])
@@ -39,7 +39,7 @@
                 </div>
 
                 <div class="form-group">
-                    {!! Form::label('first_name', 'NAME OF STAFF', ['class' => 'col-sm-3 control-label',]) !!}
+                    {!! Form::label('first_name', 'NAME OF STAFF <span class="text-danger">*</span>', ['class' => 'col-sm-3 control-label'], false) !!}
                     <div class="col-sm-3">
                         {!! Form::text('first_name', null, ["placeholder" => "FIRST NAME", "class" => "form-control border-form upper","required"]) !!}
                         @include('includes.form_fields_validation_message', ['name' => 'first_name'])
@@ -68,13 +68,13 @@
                 </div>
 
                 <div class="form-group">
-                    {!! Form::label('date_of_birth', 'Date of Birth', ['class' => 'col-sm-2 control-label']) !!}
+                    {!! Form::label('date_of_birth', 'Date of Birth <span class="text-danger">*</span>', ['class' => 'col-sm-2 control-label'], false) !!}
                     <div class="col-sm-2">
                         {!! Form::text('date_of_birth', null, ["placeholder" => "", "class" => "form-control date-picker border-form input-mask-date","required"]) !!}
                         @include('includes.form_fields_validation_message', ['name' => 'date_of_birth'])
                     </div>
 
-                    {!! Form::label('gender', __('form_fields.student.fields.gender'), ['class' => 'col-sm-2 control-label']) !!}
+                    {!! Form::label('gender', __('form_fields.student.fields.gender').' <span class="text-danger">*</span>', ['class' => 'col-sm-2 control-label'], false) !!}
                     <div class="col-sm-2">
                         {!! Form::select('gender', __('common.gender'), null, ['class'=>'form-control border-form',"required"]); !!}
                         @include('includes.form_fields_validation_message', ['name' => 'gender'])
@@ -89,7 +89,7 @@
                 </div>
 
                 <div class="form-group">
-                    {!! Form::label('nationality', __('form_fields.student.fields.nationality'), ['class' => 'col-sm-2 control-label']) !!}
+                    {!! Form::label('nationality', __('form_fields.student.fields.nationality').' <span class="text-danger">*</span>', ['class' => 'col-sm-2 control-label'], false) !!}
                     <div class="col-sm-2">
                         {!! Form::text('nationality', null, ["placeholder" => "", "class" => "form-control border-form upper","required"]) !!}
                         @include('includes.form_fields_validation_message', ['name' => 'nationality'])
@@ -114,13 +114,13 @@
                 </div>
 
                 <div class="form-group">
-                    {!! Form::label('qualification', 'Qualification', ['class' => 'col-sm-1 control-label']) !!}
+                    {!! Form::label('qualification', 'Qualification <span class="text-danger">*</span>', ['class' => 'col-sm-1 control-label'], false) !!}
                     <div class="col-sm-3">
                         {!! Form::text('qualification', null, ["class" => "form-control border-form upper","required"]) !!}
                         @include('includes.form_fields_validation_message', ['name' => 'qualification'])
                     </div>
 
-                    {!! Form::label('email', __('form_fields.student.fields.email'), ['class' => 'col-sm-1 control-label']) !!}
+                    {!! Form::label('email', __('form_fields.student.fields.email').' <span class="text-danger">*</span>', ['class' => 'col-sm-1 control-label'], false) !!}
                     <div class="col-sm-3">
                         {!! Form::text('email', null, ["class" => "form-control border-form","required"]) !!}
                         @include('includes.form_fields_validation_message', ['name' => 'email'])
@@ -137,7 +137,7 @@
                         @include('includes.form_fields_validation_message', ['name' => 'home_phone'])
                     </div>
 
-                    {!! Form::label('mobile_1', 'Mobile 1', ['class' => 'col-sm-1 control-label']) !!}
+                    {!! Form::label('mobile_1', 'Mobile 1 <span class="text-danger">*</span>', ['class' => 'col-sm-1 control-label'], false) !!}
                     <div class="col-sm-3">
                         {!! Form::text('mobile_1', null, ["class" => "form-control border-form input-mask-mobile","required"]) !!}
                         @include('includes.form_fields_validation_message', ['name' => 'mobile_1'])
@@ -152,7 +152,7 @@
                 <div class="label label-warning arrowed-in arrowed-right arrowed">Permanent Address</div>
                 <hr class="hr-8">
                 <div class="form-group">
-                    {!! Form::label('address', 'Address', ['class' => 'col-sm-1 control-label']) !!}
+                    {!! Form::label('address', 'Address <span class="text-danger">*</span>', ['class' => 'col-sm-1 control-label'], false) !!}
                     <div class="col-sm-4">
                         {!! Form::text('address', null, ["class" => "form-control border-form upper","required"]) !!}
                         @include('includes.form_fields_validation_message', ['name' => 'address'])
@@ -206,7 +206,7 @@
 
             <hr>
             <div class="text-right">
-                <a class="btn btn-info" data-toggle="tab" href="#profileImage" onclick="activeProfileImage()">
+                <a class="btn btn-info" href="#" onclick="return activeProfileImage()">
                     Next <i class="fa fa-arrow-circle-right bigger-110"></i>
                 </a>
             </div>
