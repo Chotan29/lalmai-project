@@ -2,16 +2,22 @@
 <div class="form-group">
     {!! Form::label('student_main_image', 'Student Profile Picture', ['class' => 'col-sm-2 control-label']) !!}
     <div class="col-sm-6">
-        {!! Form::file('student_main_image', ["class" => "form-control border-form"]) !!}
+        {!! Form::file('student_main_image', ["class" => "form-control border-form", "id" => "student_main_image"]) !!}
+        <small class="help-block">Max file size: 5MB | Minimum resolution: 300x400px | Passport ratio: 35x45</small>
+        <ul class="help-block" style="margin-top:8px; margin-bottom:0; padding-left:18px;">
+            <li>Use a recent passport-size portrait photo.</li>
+            <li>Keep the face straight and clearly visible.</li>
+            <li>Use a plain white background and make both ears visible when possible.</li>
+        </ul>
         @include('includes.form_fields_validation_message', ['name' => 'student_main_image'])
     </div>
 
     @if (isset($data['row']))
         @if ($data['row']->student_image)
-            <img id="avatar"  src="{{ asset('images'.DIRECTORY_SEPARATOR.'studentProfile'.DIRECTORY_SEPARATOR.$data['row']->student_image) }}" class="img-responsive" width="100px">
+            <img id="student-photo-preview"  src="{{ asset('images'.DIRECTORY_SEPARATOR.'studentProfile'.DIRECTORY_SEPARATOR.$data['row']->student_image) }}" class="img-responsive" width="100px">
         @endif
     @else
-        <img id="" class="img-responsive" alt="Avatar" src="{{ asset('assets/images/avatars/profile-pic.jpg') }}" width="100px">
+        <img id="student-photo-preview" class="img-responsive" alt="Avatar" src="{{ asset('assets/images/avatars/profile-pic.jpg') }}" width="100px">
     @endif
 </div>
 

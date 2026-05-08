@@ -3,6 +3,9 @@
     function clearFieldValidation(selector) {
         var $field = $(selector);
         $field.removeClass('field-invalid');
+        if ($field.hasClass('chosen-select')) {
+            $field.next('.chosen-container').removeClass('field-invalid');
+        }
         $field.closest('div').find('.validation-note').removeClass('is-visible').remove();
     }
 
@@ -13,6 +16,9 @@
         }
 
         $field.addClass('field-invalid');
+        if ($field.hasClass('chosen-select')) {
+            $field.next('.chosen-container').addClass('field-invalid');
+        }
 
         var $container = $field.closest('div');
         var $note = $container.find('.validation-note');
@@ -22,6 +28,54 @@
         }
 
         $note.text(message).addClass('is-visible');
+    }
+
+    function focusAndScrollToField(selector) {
+        if (!selector) {
+            return;
+        }
+
+        var $field = $(selector).first();
+        if (!$field.length) {
+            return;
+        }
+
+        var targetTop = Math.max($field.offset().top - 130, 0);
+        $('html, body').stop(true).animate({ scrollTop: targetTop }, 300);
+
+        setTimeout(function () {
+            if ($field.hasClass('chosen-select')) {
+                $field.trigger('chosen:open');
+            } else {
+                $field.trigger('focus');
+            }
+        }, 320);
+    }
+
+    function invalidateFieldAndStop(selector, noteMessage, toastMessage, tabActivator) {
+        if (selector) {
+            markFieldInvalid(selector, noteMessage || 'This field is required.');
+        }
+
+        if (typeof tabActivator === 'function') {
+            tabActivator(true);
+        }
+
+        focusAndScrollToField(selector);
+        toastr.warning(toastMessage, 'Info:');
+        return false;
+    }
+
+    function previewStudentProfileImage(input) {
+        if (!input || !input.files || !input.files[0]) {
+            return;
+        }
+
+        var reader = new FileReader();
+        reader.onload = function (e) {
+            $('#student-photo-preview').attr('src', e.target.result);
+        };
+        reader.readAsDataURL(input.files[0]);
     }
 
     function clearRegistrationValidationState() {
@@ -123,6 +177,10 @@
             }
         });
 
+        $('#student_main_image').on('change', function () {
+            previewStudentProfileImage(this);
+        });
+
     });
 
 
@@ -131,38 +189,51 @@
         deActiveAllTabs();
         $('#generalInfoTab').addClass('active');
         $('#generalInfo').addClass('active');
+        return true;
     }
 
-    function activeAcademicInfo() {
+    function activeAcademicInfo(skipValidation) {
         //$('ul li').removeClass('active');
-        registrationValidation();
+        if (skipValidation !== true && !registrationValidation()) {
+            return false;
+        }
         deActiveAllTabs();
         $('#academicInfoTab').addClass('active');
         $('#academicInfo').addClass('active');
+        return true;
     }
 
-    function activeProfileImage() {
+    function activeProfileImage(skipValidation) {
         //$('ul li').removeClass('active');
-        registrationValidation();
+        if (skipValidation !== true && !registrationValidation()) {
+            return false;
+        }
         deActiveAllTabs();
         $('#profileImageTab').addClass('active');
         $('#profileImage').addClass('active');
+        return true;
     }
 
-    function activeRuleAgreement() {
+    function activeRuleAgreement(skipValidation) {
         //$('ul li').removeClass('active');
-        registrationValidation();
+        if (skipValidation !== true && !registrationValidation()) {
+            return false;
+        }
         deActiveAllTabs();
         $('#ruleAgreementTab').addClass('active');
         $('#ruleAgreement').addClass('active');
+        return true;
     }
 
-    function activeExtraInfo() {
+    function activeExtraInfo(skipValidation) {
         //$('ul li').removeClass('active');
-        registrationValidation();
+        if (skipValidation !== true && !registrationValidation()) {
+            return false;
+        }
         deActiveAllTabs();
         $('#extraInfoTab').addClass('active');
         $('#extraInfo').addClass('active');
+        return true;
     }
 
     function deActiveAllTabs(){
@@ -202,108 +273,87 @@
         if (reg_date !== '') {
 
         }else{
-            toastr.warning("Please, Enter Registration Date.", "Info:");
-            activeGeneralInfo();
-            return false;
+            return invalidateFieldAndStop('input[name="reg_date"]', 'Registration date is required.', "Please, Enter Registration Date.", activeGeneralInfo);
         }
 
         if (faculty > 0 && semester > 0) {
 
         }else{
-            toastr.warning("Please, Select Faculty/Program/Class & Sem./Sec.", "Info:");
-            activeGeneralInfo();
-            return false;
+            if (!(faculty > 0)) {
+                return invalidateFieldAndStop('select[name="faculty"]', 'Please select Faculty/Program/Class.', "Please, Select Faculty/Program/Class & Sem./Sec.", activeGeneralInfo);
+            }
+            return invalidateFieldAndStop('select[name="semester"]', 'Please select Sem./Sec.', "Please, Select Faculty/Program/Class & Sem./Sec.", activeGeneralInfo);
         }
 
 
         if (batch > 0) {
 
         }else{
-            toastr.warning("Please, Select "+__('form_fields.student.fields.batch'), "Info:");
-            activeGeneralInfo();
-            return false;
+            return invalidateFieldAndStop('select[name="batch"]', 'Please select batch.', "Please, Select "+__('form_fields.student.fields.batch'), activeGeneralInfo);
         }
 
 
         if (academic_status >0) {
 
         }else{
-            toastr.warning("Please, Select Academic Status", "Info:");
-            activeGeneralInfo();
-            return false;
+            return invalidateFieldAndStop('select[name="academic_status"]', 'Please select academic status.', "Please, Select Academic Status", activeGeneralInfo);
         }
 
         if (first_name !== "" && last_name !=="") {
 
         }else{
-            toastr.warning("Please, Enter Student First & Last Name", "Info:");
-            activeGeneralInfo();
-            return false;
+            if (first_name === '') {
+                return invalidateFieldAndStop('input[name="first_name"]', 'First name is required.', "Please, Enter Student First & Last Name", activeGeneralInfo);
+            }
+            return invalidateFieldAndStop('input[name="last_name"]', 'Last name is required.', "Please, Enter Student First & Last Name", activeGeneralInfo);
         }
 
         if (date_of_birth !== '') {
 
         }else{
-            toastr.warning("Please, Enter Date of Birth.", "Info:");
-            activeGeneralInfo();
-            return false;
+            return invalidateFieldAndStop('input[name="date_of_birth"]', 'Date of birth is required.', "Please, Enter Date of Birth.", activeGeneralInfo);
         }
 
         if (gender !== '') {
 
         }else{
-            toastr.warning("Please, Select Gender.", "Info:");
-            activeGeneralInfo();
-            return false;
+            return invalidateFieldAndStop('select[name="gender"]', 'Please select gender.', "Please, Select Gender.", activeGeneralInfo);
         }
 
         if (nationality !== '') {
 
         }else{
-            markFieldInvalid('input[name="nationality"]', 'Nationality is required.');
-            toastr.warning("Please, Enter Nationality.", "Info:");
-            activeGeneralInfo();
-            return false;
+            return invalidateFieldAndStop('input[name="nationality"]', 'Nationality is required.', "Please, Enter Nationality.", activeGeneralInfo);
         }
 
         if (religion !== '') {
 
         }else{
-            markFieldInvalid('select[name="religion"]', 'Please select religion.');
-            toastr.warning("Please, Select Religion.", "Info:");
-            activeGeneralInfo();
-            return false;
+            return invalidateFieldAndStop('select[name="religion"]', 'Please select religion.', "Please, Select Religion.", activeGeneralInfo);
         }
 
         if (email !== '') {
             var emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
             if (!emailPattern.test(email)) {
-                markFieldInvalid('input[name="email"]', 'Enter a valid email address.');
-                toastr.warning("Please, Enter Valid Email Address.", "Info:");
-                activeGeneralInfo();
-                return false;
+                return invalidateFieldAndStop('input[name="email"]', 'Enter a valid email address.', "Please, Enter Valid Email Address.", activeGeneralInfo);
             }
         }else{
-            markFieldInvalid('input[name="email"]', 'Email address is required.');
-            toastr.warning("Please, Enter Email Address.", "Info:");
-            activeGeneralInfo();
-            return false;
+            return invalidateFieldAndStop('input[name="email"]', 'Email address is required.', "Please, Enter Email Address.", activeGeneralInfo);
         }
 
         if (mobile_1 !== '') {
 
         }else{
-            toastr.warning("Please, Enter Mobile Number.", "Info:");
-            activeGeneralInfo();
-            return false;
+            return invalidateFieldAndStop('input[name="mobile_1"]', 'Mobile number is required.', "Please, Enter Mobile Number.", activeGeneralInfo);
         }
 
         if (address !== '' && state !== '') {
 
         }else{
-            toastr.warning("Please, Enter Address & State Info.", "Info:");
-            activeGeneralInfo();
-            return false;
+            if (address === '') {
+                return invalidateFieldAndStop('input[name="address"]', 'Address is required.', "Please, Enter Address & State Info.", activeGeneralInfo);
+            }
+            return invalidateFieldAndStop('input[name="state"]', 'State/Division is required.', "Please, Enter Address & State Info.", activeGeneralInfo);
         }
 
         var father_first_name = $('input[name="father_first_name"]').val();
@@ -314,17 +364,19 @@
         if (father_first_name !== '' && father_last_name !== '') {
 
         }else{
-            toastr.warning("Please, Enter Father First Name & Last Name.", "Info:");
-            activeGeneralInfo();
-            return false;
+            if (father_first_name === '') {
+                return invalidateFieldAndStop('input[name="father_first_name"]', 'Father first name is required.', "Please, Enter Father First Name & Last Name.", activeGeneralInfo);
+            }
+            return invalidateFieldAndStop('input[name="father_last_name"]', 'Father last name is required.', "Please, Enter Father First Name & Last Name.", activeGeneralInfo);
         }
 
         if (mother_first_name !== '' && mother_last_name !== '') {
 
         }else{
-            toastr.warning("Please, Enter Mother First Name & Last Name.", "Info:");
-            activeGeneralInfo();
-            return false;
+            if (mother_first_name === '') {
+                return invalidateFieldAndStop('input[name="mother_first_name"]', 'Mother first name is required.', "Please, Enter Mother First Name & Last Name.", activeGeneralInfo);
+            }
+            return invalidateFieldAndStop('input[name="mother_last_name"]', 'Mother last name is required.', "Please, Enter Mother First Name & Last Name.", activeGeneralInfo);
         }
 
         var guardian_is = $('input[name="guardian_is"]:checked').val();
@@ -336,9 +388,13 @@
             if (guardian_first_name !== '' && guardian_last_name !== '' && guardian_relation !== '') {
 
             }else{
-                toastr.warning("Please, Enter Guardian First Name, Last Name & Relation.", "Info:");
-                activeGeneralInfo();
-                return false;
+                if (guardian_first_name === '') {
+                    return invalidateFieldAndStop('input[name="guardian_first_name"]', 'Guardian first name is required.', "Please, Enter Guardian First Name, Last Name & Relation.", activeGeneralInfo);
+                }
+                if (guardian_last_name === '') {
+                    return invalidateFieldAndStop('input[name="guardian_last_name"]', 'Guardian last name is required.', "Please, Enter Guardian First Name, Last Name & Relation.", activeGeneralInfo);
+                }
+                return invalidateFieldAndStop('input[name="guardian_relation"]', 'Guardian relation is required.', "Please, Enter Guardian First Name, Last Name & Relation.", activeGeneralInfo);
             }
         }else{
             removeRequiredFieldInGuardian();
@@ -346,13 +402,10 @@
             if (guardian_link_id !=="" && guardian_link_id > 0) {
 
             }else{
-                toastr.warning("Please, Find & Link Guardian Info", "Info:");
-                activeGeneralInfo();
-                return false;
+                return invalidateFieldAndStop('select[name="guardian_link_id"]', 'Please find and link guardian info.', "Please, Find & Link Guardian Info", activeGeneralInfo);
             }
         }
 
-        activeGeneralInfo();
         return true;
     }
 

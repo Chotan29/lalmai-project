@@ -6,22 +6,22 @@
         </li>
         @if(Config::get('edufirmconfig.student.registration.tabs.academic_info') == 1)
             <li id="academicInfoTab">
-                <a data-toggle="tab" href="#academicInfo" onclick="activeAcademicInfo()"><i class="fa fa-certificate bigger-110"></i> {{__('form_fields.student.tabs.academic_info')}}</a>
+                <a data-toggle="tab" href="#academicInfo" onclick="return activeAcademicInfo()"><i class="fa fa-certificate bigger-110"></i> {{__('form_fields.student.tabs.academic_info')}}</a>
             </li>
         @endif
         @if(Config::get('edufirmconfig.student.registration.tabs.profile_image') == 1)
         <li id="profileImageTab">
-            <a data-toggle="tab" href="#profileImage" onclick="activeProfileImage()"><i class="fa fa-image bigger-110"></i> {{__('form_fields.student.tabs.profile_image')}}</a>
+            <a data-toggle="tab" href="#profileImage" onclick="return activeProfileImage()"><i class="fa fa-image bigger-110"></i> {{__('form_fields.student.tabs.profile_image')}}</a>
         </li>
         @endif
         @if(Config::get('edufirmconfig.student.registration.tabs.annexure') == 1)
         <li id="ruleAgreementTab">
-            <a data-toggle="tab" href="#ruleAgreement"  onclick="activeRuleAgreement()"><i class="fa fa-certificate bigger-110"></i> {{__('form_fields.student.tabs.annexure')}}</a>
+            <a data-toggle="tab" href="#ruleAgreement"  onclick="return activeRuleAgreement()"><i class="fa fa-certificate bigger-110"></i> {{__('form_fields.student.tabs.annexure')}}</a>
         </li>
         @endif
         @if(Config::get('edufirmconfig.student.registration.tabs.extra_info') == 1)
         <li id="extraInfoTab">
-            <a data-toggle="tab" href="#extraInfo" onclick="activeExtraInfo()"><i class="fa fa-list-alt bigger-110"></i> {{__('form_fields.student.tabs.extra_info')}}</a>
+            <a data-toggle="tab" href="#extraInfo" onclick="return activeExtraInfo()"><i class="fa fa-list-alt bigger-110"></i> {{__('form_fields.student.tabs.extra_info')}}</a>
         </li>
         @endif
     </ul>
@@ -34,7 +34,7 @@
             @endif
             <hr>
             <div class="text-center">
-                <a class=" btn btn-info" data-toggle="tab" href="#academicInfo" onclick="activeAcademicInfo()">
+                <a class=" btn btn-info" data-toggle="tab" href="#academicInfo" onclick="return activeAcademicInfo()">
                     Next <i class="fa fa-arrow-circle-right bigger-110"></i>
                 </a>
             </div>
@@ -48,7 +48,7 @@
                     <a class="btn btn-primary" data-toggle="tab" href="#generalInfo" onclick="activeGeneralInfo()">
                         <i class="fa fa-arrow-circle-left bigger-110"></i> Previous
                     </a>
-                    <a class="btn btn-info" data-toggle="tab" href="#profileImage" onclick="activeProfileImage()">
+                    <a class="btn btn-info" data-toggle="tab" href="#profileImage" onclick="return activeProfileImage()">
                         Next <i class="fa fa-arrow-circle-right bigger-110"></i>
                     </a>
                 </div>
@@ -60,11 +60,11 @@
                 @include($view_path.'.registration.includes.forms.profileimage')
                 <hr>
                 <div class="text-center">
-                    <a class="btn btn-primary" data-toggle="tab" href="#academicInfo" onclick="activeAcademicInfo()">
+                    <a class="btn btn-primary" data-toggle="tab" href="#academicInfo" onclick="return activeAcademicInfo(true)">
                         <i class="fa fa-arrow-circle-left bigger-110"></i> Previous
                     </a>
 
-                    <a class="btn btn-info" data-toggle="tab" href="#ruleAgreement" onclick="activeRuleAgreement()">
+                    <a class="btn btn-info" data-toggle="tab" href="#ruleAgreement" onclick="return activeRuleAgreement()">
                         Next <i class="fa fa-arrow-circle-right bigger-110"></i>
                     </a>
 
@@ -103,11 +103,11 @@
             @endif
             <hr>
             <div class="text-center">
-                <a class="btn btn-primary" data-toggle="tab" href="#profileImage" onclick="activeProfileImage()">
+                <a class="btn btn-primary" data-toggle="tab" href="#profileImage" onclick="return activeProfileImage(true)">
                     <i class="fa fa-arrow-circle-left bigger-110"></i> Previous
                 </a>
 
-                <a class="btn btn-info" data-toggle="tab" href="#extraInfo" onclick="activeExtraInfo()">
+                <a class="btn btn-info" data-toggle="tab" href="#extraInfo" onclick="return activeExtraInfo()">
                     Next <i class="fa fa-arrow-circle-right bigger-110"></i>
                 </a>
 
@@ -120,7 +120,7 @@
             @include($view_path.'.registration.includes.forms.extrainfo')
             <hr>
             <div class="text-center">
-                <a class="btn btn-primary" data-toggle="tab" href="#ruleAgreement" onclick="activeRuleAgreement()">
+                <a class="btn btn-primary" data-toggle="tab" href="#ruleAgreement" onclick="return activeRuleAgreement(true)">
                     <i class="fa fa-arrow-circle-left bigger-110"></i> Previous
                 </a>
 {{--                @if(request()->is('student/registration*'))--}}
