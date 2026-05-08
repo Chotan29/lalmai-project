@@ -6,22 +6,22 @@
         </li>
         @if(Config::get('edufirmconfig.student.registration.tabs.academic_info') == 1)
             <li id="academicInfoTab">
-                <a data-toggle="tab" href="#academicInfo" onclick="return activeAcademicInfo()"><i class="fa fa-certificate bigger-110"></i> {{__('form_fields.student.tabs.academic_info')}}</a>
+                <a href="#" onclick="return activeAcademicInfo()"><i class="fa fa-certificate bigger-110"></i> {{__('form_fields.student.tabs.academic_info')}}</a>
             </li>
         @endif
         @if(Config::get('edufirmconfig.student.registration.tabs.profile_image') == 1)
         <li id="profileImageTab">
-            <a data-toggle="tab" href="#profileImage" onclick="return activeProfileImage()"><i class="fa fa-image bigger-110"></i> {{__('form_fields.student.tabs.profile_image')}}</a>
+            <a href="#" onclick="return activeProfileImage()"><i class="fa fa-image bigger-110"></i> {{__('form_fields.student.tabs.profile_image')}}</a>
         </li>
         @endif
         @if(Config::get('edufirmconfig.student.registration.tabs.annexure') == 1)
         <li id="ruleAgreementTab">
-            <a data-toggle="tab" href="#ruleAgreement"  onclick="return activeRuleAgreement()"><i class="fa fa-certificate bigger-110"></i> {{__('form_fields.student.tabs.annexure')}}</a>
+            <a href="#" onclick="return activeRuleAgreement()"><i class="fa fa-certificate bigger-110"></i> {{__('form_fields.student.tabs.annexure')}}</a>
         </li>
         @endif
         @if(Config::get('edufirmconfig.student.registration.tabs.extra_info') == 1)
         <li id="extraInfoTab">
-            <a data-toggle="tab" href="#extraInfo" onclick="return activeExtraInfo()"><i class="fa fa-list-alt bigger-110"></i> {{__('form_fields.student.tabs.extra_info')}}</a>
+            <a href="#" onclick="return activeExtraInfo()"><i class="fa fa-list-alt bigger-110"></i> {{__('form_fields.student.tabs.extra_info')}}</a>
         </li>
         @endif
     </ul>
