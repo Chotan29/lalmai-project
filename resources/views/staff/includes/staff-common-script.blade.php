@@ -64,7 +64,7 @@
         var state        = $('select[name="state"]').val();
 
         if (!reg_no)
-            return invalidateFieldAndStop('input[name="reg_no"]', 'Roll No. is required.', "Please, Enter Roll No.", activeGeneralInfo);
+            return invalidateFieldAndStop('input[name="reg_no"]', 'Staff Id is required.', "Please, Enter Staff Id.", activeGeneralInfo);
         if (!join_date)
             return invalidateFieldAndStop('input[name="join_date"]', 'Join Date is required.', "Please, Enter Join Date.", activeGeneralInfo);
         if (!designation || designation == '0')
