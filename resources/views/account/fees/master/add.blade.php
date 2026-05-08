@@ -164,15 +164,18 @@
         });
 
         function loadSemesters($this) {
+            var facultyId = typeof $this === 'object' && $this.value !== undefined ? $this.value : $this;
+            if (!facultyId) return;
             $.ajax({
                 type: 'POST',
                 url: '{{ route('student.find-semester') }}',
                 dataType: 'json',
                 data: {
                     _token: '{{ csrf_token() }}',
-                    faculty_id: $this.value
+                    faculty_id: facultyId
                 },
                 success: function (data) {
+                    if (!data) return;
                     if (data.error) {
                         $.notify(data.message, "warning");
                     } else {
@@ -183,8 +186,10 @@
                     }
                 }
             });
-
         }
+        $(document).on('change', 'select[name="faculty"]', function() {
+            loadSemesters(this);
+        });
 
         function setAmount($this){
             var $select = $($this);

@@ -99,25 +99,32 @@
                 data: {
                     _token: '{{ csrf_token() }}',
                     faculty_id: $this.value
-                },
-                success: function (response) {
-                    var data = (typeof response === 'string') ? $.parseJSON(response) : response;
-                    var $semesterSelect = $('select[name="semester_select"]');
-
-                    $semesterSelect.html('').append('<option value="0">Select Sem./Sec.</option>');
-
-                    if (data.error) {
-                        $.notify(data.message, "warning");
-                    } else {
-                        $.each(data.semester, function(key,valueObj){
-                            $semesterSelect.append('<option value="'+valueObj.id+'">'+valueObj.semester+'</option>');
-                        });
+                var facultyId = typeof $this === 'object' && $this.value !== undefined ? $this.value : $this;
+                if (!facultyId) return;
+                $.ajax({
+                    type: 'POST',
+                    url: '{{ route('student.find-semester') }}',
+                    data: {
+                        _token: '{{ csrf_token() }}',
+                        faculty_id: facultyId
+                    },
+                    success: function (response) {
+                        var data = (typeof response === 'string') ? $.parseJSON(response) : response;
+                        if (!data) return;
+                        var $semesterSelect = $('select[name="semester_select"]');
+                        $semesterSelect.html('').append('<option value="0">Select Sem./Sec.</option>');
+                        if (data.error) {
+                            $.notify(data.message, "warning");
+                        } else {
+                            $.each(data.semester, function(key,valueObj){
+                                $semesterSelect.append('<option value="'+valueObj.id+'">'+valueObj.semester+'</option>');
+                            });
+                        }
                     }
-                }
+                });
+            }
+            $(document).on('change', 'select[name="faculty"]', function() {
+                loadSemesters(this);
             });
-
-        }
-    </script>
-@endsection
 
 
