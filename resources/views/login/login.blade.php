@@ -48,6 +48,10 @@ body{min-height:100%;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Rob
 .card-footer{text-align:center;padding:.75rem 1rem 1rem;font-size:.73rem;color:#9ca3af}
 .card-footer a{color:#6b7280;text-decoration:none}
 .card-footer a:hover{color:#0e4c8b;text-decoration:underline}
+.divider{display:flex;align-items:center;gap:.75rem;margin:1.1rem 0;color:#9ca3af;font-size:.75rem;letter-spacing:.05em;text-transform:uppercase}
+.divider::before,.divider::after{content:'';flex:1;height:1px;background:#e5e7eb}
+.btn-register{display:flex;align-items:center;justify-content:center;gap:.5rem;width:100%;padding:.7rem;background:#fff;color:#0e4c8b;border:1.5px solid #0e4c8b;border-radius:10px;font-size:.875rem;font-weight:600;cursor:pointer;text-decoration:none;transition:background .2s,color .2s,box-shadow .2s;letter-spacing:.02em}
+.btn-register:hover{background:#e8f0fe;box-shadow:0 2px 10px rgba(14,76,139,.12);text-decoration:none;color:#0e4c8b}
 @@media(max-width:480px){.card-header{padding:1.5rem 1.25rem 1.25rem}.card-body{padding:1.5rem 1.25rem 1.5rem}.logo-wrap{width:80px;height:80px}.college-name-bn{font-size:1.05rem}}
 </style>
 </head>
@@ -137,6 +141,14 @@ body{min-height:100%;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Rob
                 <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>
                 Sign In
             </button>
+
+            @if(isset($data['general_setting']->public_registration) && $data['general_setting']->public_registration == 1)
+            <div class="divider">or</div>
+            <a href="{{ route('online-registration.registration') }}" class="btn-register">
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="22" y1="11" x2="16" y2="11"/></svg>
+                Register as Student
+            </a>
+            @endif
         </form>
     </div>
 
