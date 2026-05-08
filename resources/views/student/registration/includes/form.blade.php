@@ -1,6 +1,6 @@
 
 <div class="tabbable">
-    <ul class="nav nav-tabs padding-12 tab-color-blue background-blue" id="myTab4">
+    <ul class="nav nav-tabs" id="myTab4" style="background:transparent;border:none;">
         <li class="active" id="generalInfoTab">
             <a data-toggle="tab" href="#generalInfo"><i class="fa fa-user bigger-110"></i> {{__('form_fields.student.tabs.general_info')}}</a>
         </li>

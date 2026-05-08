@@ -6,6 +6,28 @@
            Modern Registration Form Design - Online Registration Style
            ============================================================ */
 
+        /* Mandatory field red asterisk - auto via CSS, no HTML change needed */
+        #validation-form .form-group .control-label.mandatory::after,
+        #validation-form .form-group label.mandatory::after {
+            content: ' *';
+            color: #e53e3e;
+            font-weight: 700;
+        }
+        /* Any input[required] sibling label gets asterisk automatically */
+        #validation-form .form-control[required] ~ .control-label::after,
+        #validation-form input[required] ~ label::after { content: none; }
+        /* Red asterisk on labels before required inputs using adjacent fieldset approach */
+        #validation-form .form-group:has(input[required]) .control-label::after,
+        #validation-form .form-group:has(select[required]) .control-label::after,
+        #validation-form .form-group:has(input[required]) label.col-sm-2::after,
+        #validation-form .form-group:has(input[required]) label.col-sm-3::after,
+        #validation-form .form-group:has(select[required]) label.col-sm-2::after,
+        #validation-form .form-group:has(select[required]) label.col-sm-5::after {
+            content: ' *';
+            color: #e53e3e;
+            font-weight: 700;
+        }
+
         /* Form wrapper card */
         #validation-form {
             background: #fff;
@@ -15,38 +37,74 @@
             margin-top: 10px;
         }
 
-        /* Tab Navigation */
-        #validation-form .nav-tabs {
-            border-bottom: 2px solid #dee2e6;
+        /* Tab Navigation - Override ACE dark theme completely */
+        #myTab4,
+        #validation-form .nav-tabs,
+        #validation-form ul.nav-tabs {
+            background: #f0f4f9 !important;
+            border-bottom: 3px solid #1e5799 !important;
+            border-radius: 10px 10px 0 0;
             margin-bottom: 28px;
-            padding: 0;
+            padding: 6px 8px 0;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 4px;
+            list-style: none;
         }
 
+        #myTab4 > li,
+        #validation-form .nav-tabs > li {
+            margin-bottom: 0;
+        }
+
+        #myTab4 > li > a,
         #validation-form .nav-tabs > li > a {
-            border: none !important;
-            border-bottom: 3px solid transparent !important;
-            color: #555;
-            font-weight: 500;
+            display: flex !important;
+            align-items: center;
+            gap: 7px;
+            color: #4a6280 !important;
+            background: #e4ecf5 !important;
+            border: 1px solid #c8d9ec !important;
+            border-bottom: none !important;
+            border-radius: 8px 8px 0 0 !important;
+            font-weight: 600;
             font-size: 13px;
-            padding: 12px 16px;
-            border-radius: 0 !important;
-            margin-right: 0;
-            transition: color 0.2s, border-color 0.2s;
+            padding: 10px 16px;
+            transition: background 0.2s, color 0.2s;
+            white-space: nowrap;
         }
 
+        #myTab4 > li > a i,
+        #validation-form .nav-tabs > li > a i {
+            font-size: 14px;
+            opacity: 0.85;
+        }
+
+        #myTab4 > li > a:hover,
         #validation-form .nav-tabs > li > a:hover {
-            color: #1e5799;
-            background: transparent !important;
-            border-bottom-color: #a8c4e8 !important;
+            background: #d0e3f5 !important;
+            color: #1e5799 !important;
+            border-color: #a8c4e8 !important;
+            text-decoration: none;
         }
 
+        #myTab4 > li.active > a,
+        #myTab4 > li.active > a:focus,
+        #myTab4 > li.active > a:hover,
         #validation-form .nav-tabs > li.active > a,
         #validation-form .nav-tabs > li.active > a:focus,
         #validation-form .nav-tabs > li.active > a:hover {
-            color: #1e5799 !important;
-            background: transparent !important;
-            border-bottom: 3px solid #1e5799 !important;
+            color: #fff !important;
+            background: linear-gradient(135deg, #1e5799 0%, #2f80c8 100%) !important;
+            border-color: #1e5799 !important;
+            border-bottom-color: transparent !important;
             font-weight: 700;
+            box-shadow: 0 -2px 10px rgba(30, 87, 153, 0.18);
+        }
+
+        #myTab4 > li.active > a i,
+        #validation-form .nav-tabs > li.active > a i {
+            opacity: 1;
         }
 
         /* Fieldset → form-section card */
