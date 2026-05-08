@@ -51,6 +51,35 @@
             });
 
         });
+
+        function loadSemesters($this) {
+            var facultyId = typeof $this === 'object' && $this.value !== undefined ? $this.value : $this;
+            if (!facultyId) return;
+            $.ajax({
+                type: 'POST',
+                url: '{{ route('student.find-semester') }}',
+                data: {
+                    _token: '{{ csrf_token() }}',
+                    faculty_id: facultyId
+                },
+                success: function (response) {
+                    var data = (typeof response === 'string') ? $.parseJSON(response) : response;
+                    if (!data) return;
+                    $('select[name="semester_select"]').html('').append('<option value="0">Select Sem./Sec.</option>');
+                    if (data.error) {
+                        $.notify(data.message, "warning");
+                    } else {
+                        $.each(data.semester, function(key,valueObj){
+                            $('select[name="semester_select"]').append('<option value="'+valueObj.id+'">'+valueObj.semester+'</option>');
+                        });
+                    }
+                }
+            });
+        }
+
+        $(document).on('change', 'select[name="faculty"]', function() {
+            loadSemesters(this);
+        });
     </script>
     @include('includes.scripts.inputMask_script')
     @include('includes.scripts.delete_confirm')
