@@ -38,7 +38,7 @@ return [
                         [
                                 'reg_no'                        =>  'Roll No.',
                             'reg_date'                      =>  'Reg. Date',
-                            'university_reg'                =>  'Unique Student Id',//UNIVERSITY REG.
+                            'university_reg'                =>  'Board Reg No.',//UNIVERSITY REG.
                             'special_category'              =>  'Special Category',
                             'weightage_claim'               =>  'Weightage Claim',
                             'faculty'                       =>  __('academic.child.academic_level.child.faculty'),

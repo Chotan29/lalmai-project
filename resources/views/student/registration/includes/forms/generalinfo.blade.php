@@ -4,7 +4,7 @@
     <div class="form-group">
         {!! Form::label('reg_no', __('form_fields.student.fields.reg_no'), ['class' => 'col-sm-2 control-label']) !!}
         <div class="col-sm-2">
-            {!! Form::text('reg_no', null, ["placeholder" => "", "class" => "form-control border-form input-mask-registration"]) !!}
+            {!! Form::text('reg_no', null, ["placeholder" => "", "class" => "form-control border-form input-mask-registration", "required"]) !!}
             @include('includes.form_fields_validation_message', ['name' => 'reg_no'])
         </div>
 

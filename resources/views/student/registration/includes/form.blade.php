@@ -34,7 +34,7 @@
             @endif
             <hr>
             <div class="text-center">
-                <a class=" btn btn-info" data-toggle="tab" href="#academicInfo" onclick="return activeAcademicInfo()">
+                <a class=" btn btn-info" href="#" onclick="return activeAcademicInfo()">
                     Next <i class="fa fa-arrow-circle-right bigger-110"></i>
                 </a>
             </div>
@@ -48,7 +48,7 @@
                     <a class="btn btn-primary" data-toggle="tab" href="#generalInfo" onclick="activeGeneralInfo()">
                         <i class="fa fa-arrow-circle-left bigger-110"></i> Previous
                     </a>
-                    <a class="btn btn-info" data-toggle="tab" href="#profileImage" onclick="return activeProfileImage()">
+                    <a class="btn btn-info" href="#" onclick="return activeProfileImage()">
                         Next <i class="fa fa-arrow-circle-right bigger-110"></i>
                     </a>
                 </div>
@@ -64,7 +64,7 @@
                         <i class="fa fa-arrow-circle-left bigger-110"></i> Previous
                     </a>
 
-                    <a class="btn btn-info" data-toggle="tab" href="#ruleAgreement" onclick="return activeRuleAgreement()">
+                    <a class="btn btn-info" href="#" onclick="return activeRuleAgreement()">
                         Next <i class="fa fa-arrow-circle-right bigger-110"></i>
                     </a>
 
@@ -107,7 +107,7 @@
                     <i class="fa fa-arrow-circle-left bigger-110"></i> Previous
                 </a>
 
-                <a class="btn btn-info" data-toggle="tab" href="#extraInfo" onclick="return activeExtraInfo()">
+                <a class="btn btn-info" href="#" onclick="return activeExtraInfo()">
                     Next <i class="fa fa-arrow-circle-right bigger-110"></i>
                 </a>
 

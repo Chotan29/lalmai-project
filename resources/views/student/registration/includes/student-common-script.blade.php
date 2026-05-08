@@ -253,6 +253,7 @@
     function registrationValidation(){
         clearRegistrationValidationState();
 
+        var reg_no = $('input[name="reg_no"]').val();
         var reg_date = $('input[name="reg_date"]').val();
         var faculty = $('select[name="faculty"]').val();
         var semester = $('select[name="semester"]').val();
@@ -269,6 +270,12 @@
         var state = $('input[name="state"]').val();
         var country = $('input[name="country"]').val();
         var email = $('input[name="email"]').val();
+
+        if (reg_no !== '') {
+
+        }else{
+            return invalidateFieldAndStop('input[name="reg_no"]', 'Roll No. is required.', "Please, Enter Roll No.", activeGeneralInfo);
+        }
 
         if (reg_date !== '') {
 
