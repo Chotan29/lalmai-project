@@ -349,7 +349,10 @@
         }
 
         if (mobile_1 !== '') {
-
+            var bdMobilePattern = /^01[3-9]\d{8}$/;
+            if (!bdMobilePattern.test(mobile_1)) {
+                return invalidateFieldAndStop('input[name="mobile_1"]', 'Must be a valid Bangladesh mobile number (e.g. 01XXXXXXXXX).', "Invalid mobile number! Enter Bangladesh format (e.g. 01712345678).", activeGeneralInfo);
+            }
         }else{
             return invalidateFieldAndStop('input[name="mobile_1"]', 'Mobile number is required.', "Please, Enter Mobile Number.", activeGeneralInfo);
         }
