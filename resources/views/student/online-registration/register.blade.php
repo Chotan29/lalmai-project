@@ -517,8 +517,13 @@
 
                     <!-- Tab navigation -->
                     <ul class="nav nav-tabs" role="tablist">
+                        <li class="nav-item" id="studentTypeTab">
+                            <a class="nav-link active" data-toggle="tab" href="#studentType" role="tab">
+                                <i class="fa fa-id-card"></i> Student Type
+                            </a>
+                        </li>
                         <li class="nav-item" id="generalInfoTab">
-                            <a class="nav-link active" data-toggle="tab" href="#generalInfo" role="tab">
+                            <a class="nav-link" data-toggle="tab" href="#generalInfo" role="tab">
                                 <i class="fa fa-user"></i> General Information
                             </a>
                         </li>
@@ -553,11 +558,52 @@
                                 </a>
                             </li>
                         @endif
+                        @if ($data['registration_setting']->payment_required == true)
+                            <li class="nav-item" id="paymentTab">
+                                <a class="nav-link" data-toggle="tab" href="#payment" role="tab">
+                                    <i class="fa fa-credit-card"></i> Payment
+                                </a>
+                            </li>
+                        @endif
                     </ul>
 
                     <div class="tab-content">
+                        <!-- Student Type Tab -->
+                        <div class="tab-pane fade show active" id="studentType" role="tabpanel">
+                            <div class="form-section">
+                                <h3 class="section-title"><i class="fa fa-id-card"></i> Select Your Student Type</h3>
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="form-group">
+                                            <label>Student Type <span class="text-danger">*</span></label>
+                                            <select name="student_type" id="studentTypeSelect" class="form-control" onchange="updatePaymentInfo()" required>
+                                                <option value="">Select Student Type</option>
+                                                @if($data['registration_setting']->new_student_enabled)
+                                                    <option value="new">New Student</option>
+                                                @endif
+                                                @if($data['registration_setting']->old_student_enabled)
+                                                    <option value="old">Old Student (Returning)</option>
+                                                @endif
+                                            </select>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div id="studentTypeInfo" style="display:none; margin-top:20px;">
+                                    <div class="alert alert-info">
+                                        <strong id="studentTypeInfoText"></strong>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="form-navigation d-flex justify-content-between mt-4">
+                                <button type="button" class="btn btn-primary btn-next" onclick="navigateTab('next')" id="studentTypeNextBtn" disabled>
+                                    <i class="fa fa-arrow-right mr-2"></i> Next
+                                </button>
+                            </div>
+                        </div>
+
                         <!-- General Info Tab -->
-                        <div class="tab-pane fade show active" id="generalInfo" role="tabpanel">
+                        <div class="tab-pane fade" id="generalInfo" role="tabpanel">
                             <div class="form-section">
                                 <h3 class="section-title"><i class="fa fa-info-circle"></i> Enrollment Information
                                 </h3>
@@ -1131,6 +1177,32 @@
                         <!-- Academic Info Tab -->
                         <div class="tab-pane fade" id="academicInfo" role="tabpanel">
                             <div class="form-section">
+                                <h3 class="section-title"><i class="fa fa-graduation-cap"></i> Academic Information</h3>
+                                <div class="table-responsive">
+                                    <table class="table table-bordered table-striped align-middle">
+                                        <thead>
+                                            <tr>
+                                                <th>Level</th>
+                                                <th>Pass Year</th>
+                                                <th>Institution</th>
+                                                <th>Roll No</th>
+                                                <th>Major Subjects</th>
+                                                <th>Mark Obtained</th>
+                                                <th>Maximum Mark</th>
+                                                <th>Percentage</th>
+                                                <th>Grade Point</th>
+                                                <th>Grade</th>
+                                                <th>Action</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="academicInfo_wrapper">
+                                            <!-- Academic Information rows will be loaded here via AJAX -->
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+
+                            <div class="form-section">
                                 <h3 class="section-title"><i class="fa fa-book"></i> Subjects</h3>
                                 <div id="subjects_wrapper">
                                     <!-- Subjects will be loaded here via AJAX -->
@@ -1275,13 +1347,96 @@
                                 <button type="button" class="btn btn-secondary btn-prev" onclick="navigateTab('prev')">
                                     <i class="fa fa-arrow-left mr-2"></i> Previous
                                 </button>
-                                <button type="submit" class="btn btn-success" name="add_student" id="add-student">
-                                    <i class="fa fa-check"></i> Submit Application
-                                </button>
+                                @if ($data['registration_setting']->payment_required == true)
+                                    <button type="button" class="btn btn-primary btn-next" onclick="navigateTab('next')">
+                                        <i class="fa fa-arrow-right mr-2"></i> Continue to Payment
+                                    </button>
+                                @else
+                                    <button type="submit" class="btn btn-success" name="add_student" id="add-student">
+                                        <i class="fa fa-check"></i> Submit Application
+                                    </button>
+                                @endif
                             </div>
                         </div>
                         @endif
-                    </div>
+
+                        <!-- Payment Tab -->
+                        @if ($data['registration_setting']->payment_required == true)
+                        <div class="tab-pane fade" id="payment" role="tabpanel">
+                            <div class="form-section">
+                                <h3 class="section-title"><i class="fa fa-credit-card"></i> Registration Payment</h3>
+                                
+                                <div class="row mb-4">
+                                    <div class="col-md-6">
+                                        <div class="alert alert-info">
+                                            <strong>Registration Fee: </strong>
+                                            <span id="registrationFeeAmount" class="h5">৳0</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="row">
+                                    <div class="col-md-8">
+                                        <div class="alert alert-light border" id="selectedPaymentMethodInfo">
+                                            <strong>Selected Method: </strong>
+                                            <span id="selectedPaymentMethodText">Not selected</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="form-navigation d-flex justify-content-between mt-4">
+                                <button type="button" class="btn btn-secondary btn-prev" onclick="navigateTab('prev')">
+                                    <i class="fa fa-arrow-left mr-2"></i> Previous
+                                </button>
+                                <button type="button" class="btn btn-success" id="proceedPaymentBtn" onclick="openPaymentMethodModal()" disabled>
+                                    <i class="fa fa-lock mr-2"></i> Proceed to Payment
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="modal fade" id="paymentMethodModal" tabindex="-1" aria-labelledby="paymentMethodModalLabel" aria-hidden="true">
+                            <div class="modal-dialog modal-dialog-centered">
+                                <div class="modal-content">
+                                    <div class="modal-header">
+                                        <h5 class="modal-title" id="paymentMethodModalLabel">Choose Payment Method</h5>
+                                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                    </div>
+                                    <div class="modal-body">
+                                        <div class="d-grid gap-3">
+                                            <button type="button" class="btn btn-outline-primary text-start p-3" onclick="choosePaymentMethod('ssl')">
+                                                <div class="d-flex align-items-center justify-content-between">
+                                                    <div class="d-flex align-items-center">
+                                                        <span class="badge bg-primary me-3" style="font-size:12px;">SSL</span>
+                                                        <div>
+                                                            <div class="fw-bold">SSL Commerz</div>
+                                                            <small class="text-muted">Card, Mobile Banking, Internet Banking</small>
+                                                        </div>
+                                                    </div>
+                                                    <i class="fa fa-chevron-right"></i>
+                                                </div>
+                                            </button>
+
+                                            <button type="button" class="btn btn-outline-success text-start p-3" onclick="choosePaymentMethod('ucb')">
+                                                <div class="d-flex align-items-center justify-content-between">
+                                                    <div class="d-flex align-items-center">
+                                                        <span class="badge bg-success me-3" style="font-size:12px;">UCB</span>
+                                                        <div>
+                                                            <div class="fw-bold">United Commercial Bank</div>
+                                                            <small class="text-muted">UCB Secure Online Payment</small>
+                                                        </div>
+                                                    </div>
+                                                    <i class="fa fa-chevron-right"></i>
+                                                </div>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        @else
+                        </div>
+                        @endif
                     {!! Form::close() !!}
                 </div>
             </div>
@@ -1315,6 +1470,7 @@
     <script>
         // Tab navigation order
         const tabOrder = [
+            'studentType',
             'generalInfo',
             'academicInfo',
             'profileImage',
@@ -1326,6 +1482,9 @@
             @endif
             @if($data['registration_setting']->agreement_status == '1')
                 'agreement'
+            @endif
+            @if($data['registration_setting']->payment_required == true)
+                ,'payment'
             @endif
         ];
 
@@ -1911,7 +2070,20 @@
 
         // Initialize on page load
         $(document).ready(function() {
-            activateTab('generalInfo');
+            const queryParams = new URLSearchParams(window.location.search);
+            const requestedTab = queryParams.get('tab');
+            const retryPayment = queryParams.get('retry_payment') === '1';
+            const hasPaymentTab = $('#payment').length > 0;
+            if (requestedTab === 'payment' && hasPaymentTab) {
+                activateTab('payment');
+                if (retryPayment) {
+                    setTimeout(function() {
+                        openPaymentMethodModal();
+                    }, 300);
+                }
+            } else {
+                activateTab('studentType');
+            }
 
             $('.nav-tabs .nav-link').on('click', function(e) {
                 e.preventDefault();
@@ -1979,7 +2151,7 @@
             $('select[name="guardian_link_id"]').select2({
                 placeholder: 'Select Guardian...',
                 ajax: {
-                    url: '{{ route('student.guardian-name-autocomplete') }}',
+                    url: '{{ route('student.guardian-name-autocomplete', [], false) }}',
                     dataType: 'json',
                     delay: 250,
                     processResults: function(data) {
@@ -1999,7 +2171,7 @@
                     $('#guardian_wrapper').empty();
                     $.ajax({
                         type: 'POST',
-                        url: '{{ route('student.guardianInfo-html') }}',
+                        url: '{{ route('student.guardianInfo-html', [], false) }}',
                         data: {
                             _token: '{{ csrf_token() }}',
                             id: guardians_id
@@ -2145,7 +2317,7 @@
         function loadSemesters($this) {
             $.ajax({
                 type: 'POST',
-                url: '{{ route('student.find-semester') }}',
+                url: '{{ route('online-registration.find-semester', [], false) }}',
                 dataType: 'json',
                 data: {
                     _token: '{{ csrf_token() }}',
@@ -2154,7 +2326,7 @@
                 success: function(response) {
                     var data = (typeof response === 'string' ? $.parseJSON(response) : response);
                     if (data.error) {
-                        toastr.warning(data.message, "Warning");
+                        toastr.warning(data.error, "Warning");
                     } else {
                         $('.semester').html('').append('<option value="0">Select Sem./Sec.</option>');
                         $.each(data.semester, function(key, valueObj) {
@@ -2185,7 +2357,7 @@
             } else {
                 $.ajax({
                     type: 'POST',
-                    url: '{{ route('online-registration.find-subject') }}',
+                    url: '{{ route('online-registration.find-subject', [], false) }}',
                     dataType: 'json',
                     data: {
                         _token: '{{ csrf_token() }}',
@@ -2223,13 +2395,13 @@
 
             $.ajax({
                 type: 'POST',
-                url: '{{ route('student.academicInfo-html') }}',
+                url: '{{ route('student.academicInfo-html', [], false) }}',
                 data: {
                     _token: '{{ csrf_token() }}',
                     semester_id: $semester
                 },
                 success: function(response) {
-                    var data = $.parseJSON(response);
+                    var data = (typeof response === 'string' ? $.parseJSON(response) : response);
                     if (!data.error) {
                         $('#academicInfo_wrapper').empty();
                         $('#academicInfo_wrapper').append(data.html);
@@ -2240,6 +2412,147 @@
                 }
             });
         }
+
+        // Student Type Selection Handler
+        function setPaymentButtonState(enabled) {
+            const $btn = $('#proceedPaymentBtn');
+            if ($btn.length) {
+                $btn.prop('disabled', !enabled);
+            }
+        }
+
+        function updatePaymentInfo() {
+            const studentType = $('#studentTypeSelect').val();
+            const studentTypeNextBtn = $('#studentTypeNextBtn');
+            const studentTypeInfoDiv = $('#studentTypeInfo');
+            const studentTypeInfoText = $('#studentTypeInfoText');
+
+            if (studentType === 'new') {
+                studentTypeInfoText.text('As a new student, you will need to complete all required information and pay the registration fee.');
+                studentTypeInfoDiv.show();
+                studentTypeNextBtn.prop('disabled', false);
+                $('#registrationFeeAmount').text('৳{{ $data['registration_setting']->new_student_registration_fee ?? 0 }}');
+                setPaymentButtonState(true);
+            } else if (studentType === 'old') {
+                studentTypeInfoText.text('As a returning student, please ensure your information is up-to-date.');
+                studentTypeInfoDiv.show();
+                studentTypeNextBtn.prop('disabled', false);
+                $('#registrationFeeAmount').text('৳{{ $data['registration_setting']->old_student_registration_fee ?? 0 }}');
+                setPaymentButtonState(true);
+            } else {
+                studentTypeInfoDiv.hide();
+                studentTypeNextBtn.prop('disabled', true);
+                $('#registrationFeeAmount').text('৳0');
+                setPaymentButtonState(false);
+            }
+        }
+
+        let selectedPaymentMethod = null;
+
+        function openPaymentMethodModal() {
+            const studentType = $('#studentTypeSelect').val();
+            if (!studentType) {
+                toastr.error('Please select student type first.', 'Payment Error');
+                return;
+            }
+
+            const modalEl = document.getElementById('paymentMethodModal');
+            if (!modalEl) {
+                toastr.error('Payment modal is unavailable right now. Please refresh and try again.', 'Payment Error');
+                return;
+            }
+
+            if (typeof bootstrap !== 'undefined' && bootstrap.Modal) {
+                const paymentModal = bootstrap.Modal.getOrCreateInstance(modalEl);
+                paymentModal.show();
+                return;
+            }
+
+            if (typeof $ !== 'undefined' && typeof $('#paymentMethodModal').modal === 'function') {
+                $('#paymentMethodModal').modal('show');
+                return;
+            }
+
+            toastr.error('Payment modal could not be opened. Please refresh and try again.', 'Payment Error');
+        }
+
+        function choosePaymentMethod(method) {
+            selectedPaymentMethod = method;
+            const methodText = method === 'ssl' ? 'SSL Commerz' : 'United Commercial Bank';
+            $('#selectedPaymentMethodText').text(methodText);
+
+            const modalEl = document.getElementById('paymentMethodModal');
+            if (modalEl && typeof bootstrap !== 'undefined' && bootstrap.Modal) {
+                const paymentModal = bootstrap.Modal.getOrCreateInstance(modalEl);
+                paymentModal.hide();
+            } else if (typeof $ !== 'undefined' && typeof $('#paymentMethodModal').modal === 'function') {
+                $('#paymentMethodModal').modal('hide');
+            }
+
+            processPayment(method);
+        }
+
+        // Process Payment Handler
+        function processPayment(methodFromPicker) {
+            const studentType = $('#studentTypeSelect').val();
+            const paymentMethod = methodFromPicker || selectedPaymentMethod;
+
+            if (!paymentMethod) {
+                toastr.error('Please select a payment method', 'Payment Method Required');
+                return;
+            }
+
+            // Collect form data
+            const registrationData = {};
+            $('#validation-form').find('input, select, textarea').each(function() {
+                if ($(this).attr('type') !== 'radio' && $(this).attr('type') !== 'checkbox') {
+                    registrationData[$(this).attr('name')] = $(this).val();
+                }
+            });
+
+            // Submit payment request
+            $.ajax({
+                url: '{{ route("registration-payment.pay", [], false) }}',
+                type: 'POST',
+                data: {
+                    student_type: studentType,
+                    payment_method: paymentMethod,
+                    amount: $('#registrationFeeAmount').text().replace('৳', ''),
+                    registration_data: JSON.stringify(registrationData),
+                    '_token': '{{ csrf_token() }}'
+                },
+                success: function(response) {
+                    if (response.success && response.gateway_url) {
+                        window.location.href = response.gateway_url;
+                    } else {
+                        toastr.error(response.message || 'Payment initialization failed', 'Error');
+                    }
+                },
+                error: function(xhr) {
+                    const errorMsg = xhr.responseJSON?.message || 'An error occurred while processing payment';
+                    toastr.error(errorMsg, 'Payment Error');
+                }
+            });
+        }
+
+        // Validate student type before allowing next
+        function validateStudentType() {
+            const studentType = $('#studentTypeSelect').val();
+            if (!studentType) {
+                toastr.error('Please select a student type to continue', 'Student Type Required');
+                return false;
+            }
+            return true;
+        }
+
+        // Override validateTab for student type
+        const originalValidateTab = validateTab;
+        window.validateTab = function(tabName, options) {
+            if (tabName === 'studentType') {
+                return validateStudentType();
+            }
+            return originalValidateTab(tabName, options);
+        };
     </script>
 </body>
 

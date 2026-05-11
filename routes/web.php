@@ -425,18 +425,30 @@ Route::group(['prefix' => 'student/',                                   'as' => 
     Route::post('note/bulk-action',             ['as' => '.note.bulk-action',    'middleware' => ['ability:super-admin,student-note-bulk-action'],      'uses' => 'NoteController@bulkAction']);
 
     Route::post('online-registration/register',       ['as' => '.online-registration.register',                       'uses' => 'OnlineRegistrationController@register']);
-    Route::post('online-registration/find-semester',  ['as' => '.online-registration.find-semester',             'uses' => 'OnlineRegistrationController@findSemester']);
+Route::post('online-registration/prepare-payment', ['as' => '.online-registration.prepare-payment', 'uses' => 'OnlineRegistrationController@preparePayment']);
 
 });
 
 //Public Online Registration
 Route::get('online-registration',                    ['as' => 'online-registration.registration',      'uses' => 'Student\OnlineRegistrationController@registration']);
+Route::post('online-registration/prepare-payment',  ['as' => 'online-registration.prepare-payment',   'uses' => 'Student\OnlineRegistrationController@preparePayment']);
 Route::post('online-registration/find-semester',     ['as' => 'online-registration.find-semester',      'uses' => 'Student\OnlineRegistrationController@findSemester']);
 Route::post('online-registration/find-subject',      ['as' => 'online-registration.find-subject',       'uses' => 'Student\OnlineRegistrationController@findSubject']);
 //print registration
 Route::get('online-registration/find',             ['as' => 'online-registration.find',         'uses' => 'Student\OnlineRegistrationController@findRegistration']);
 Route::get('online-registration/{id}/print',       ['as' => 'online-registration.print',        'uses' => 'Student\OnlineRegistrationController@print']);
 Route::get('online-registration/{id}/pdf',     ['as' => 'online-registration.pdf',        'uses' => 'Student\OnlineRegistrationController@pdf']);
+
+//Registration Payment Routes
+Route::group(['prefix' => 'registration-payment', 'as' => 'registration-payment.'], function () {
+    Route::post('pay',                          ['as' => 'pay',              'uses' => 'Student\RegistrationPaymentController@pay']);
+    Route::post('ssl-success',                  ['as' => 'ssl-success',      'uses' => 'Student\RegistrationPaymentController@sslSuccess']);
+    Route::post('ssl-fail',                     ['as' => 'ssl-fail',         'uses' => 'Student\RegistrationPaymentController@sslFail']);
+    Route::post('ssl-cancel',                   ['as' => 'ssl-cancel',       'uses' => 'Student\RegistrationPaymentController@sslCancel']);
+    Route::post('ssl-ipn',                      ['as' => 'ssl-ipn',          'uses' => 'Student\RegistrationPaymentController@sslSuccess']);
+    Route::post('ucb-success',                  ['as' => 'ucb-success',      'uses' => 'Student\RegistrationPaymentController@ucbSuccess']);
+    Route::post('ucb-cancel',                   ['as' => 'ucb-cancel',       'uses' => 'Student\RegistrationPaymentController@sslCancel']);
+});
 
 //certificate verification
 Route::get('certificate-verification',              ['as' => 'verification.certificate',         'uses' => 'VerificationController@certificate']);

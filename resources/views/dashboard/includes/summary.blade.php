@@ -26,7 +26,7 @@
                         </div>
                         <div class="stats-overview">
                             <div class="stat-item">
-                                <span class="stat-value">{{ $data['academic_status_count']->sum('total') }}</span>
+                                <span class="stat-value">{{ $data['studentIndicator'] ?? 0 }}</span>
                                 <span class="stat-label">Total Students</span>
                             </div>
                             <div class="stat-item">
@@ -34,6 +34,12 @@
                                     class="stat-value">{{ $data['student_active_status']->where('status', 'active')->first()->total ?? 0 }}</span>
                                 <span class="stat-label">Active</span>
                             </div>
+                            @if(isset($data['onlineRegistrationIndicator']) && $data['onlineRegistrationIndicator'] > 0)
+                            <div class="stat-item">
+                                <span class="stat-value">{{ $data['onlineRegistrationIndicator'] }}</span>
+                                <span class="stat-label">Online Registered</span>
+                            </div>
+                            @endif
                         </div>
                     @else
                         <div class="no-data">No student data available</div>

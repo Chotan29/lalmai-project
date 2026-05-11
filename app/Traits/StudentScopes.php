@@ -165,7 +165,11 @@ trait StudentScopes{
         }
 
         if ($request->has('status')) {
-            $query->where('students.status', $request->status == 'active' ? 1 : 0);
+            if ($request->status == 'Online Registration') {
+                $query->where('students.registration_payment_status', '=', 'completed');
+            } else {
+                $query->where('students.status', $request->status == 'active' ? 1 : 0);
+            }
             $this->filter_query['status'] = $request->get('status');
         }
 

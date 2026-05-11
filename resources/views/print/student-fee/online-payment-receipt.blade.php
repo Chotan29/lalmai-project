@@ -423,9 +423,47 @@
                 <p>Visit us at: {{ $generalSetting->website }}</p>
             @endif
         </div>
+
+        <!-- Print Registration Form Link -->
+        <div style="margin-top: 15px; text-align: center; border-top: 1px solid #ddd; padding-top: 10px;">
+            <p style="margin: 0; font-size: 10px; color: #666;">
+                <a href="{{ route('online-registration.print', encrypt($data['student']->id)) }}" 
+                   style="color: #2a6496; text-decoration: none; font-weight: bold;">
+                   👉 Click here to print your Student Registration Form
+                </a>
+            </p>
+        </div>
     </div>
 
+    <!-- Browser Actions (Hidden on Print) -->
+    <div style="margin-top: 20px; text-align: center; padding: 15px; background: #f8f9fa; border: 1px solid #dee2e6; display: none; print-hidden;" id="browserActions">
+        <h5 style="margin-top: 0;">Next Steps:</h5>
+        <a href="{{ route('online-registration.print', encrypt($data['student']->id)) }}" 
+           class="btn btn-primary" 
+           style="display: inline-block; padding: 8px 15px; background: #2a6496; color: white; text-decoration: none; border-radius: 4px; margin: 5px;">
+           📄 Print Student Registration Form
+        </a>
+        <a href="{{ url('/online-registration') }}" 
+           class="btn btn-secondary" 
+           style="display: inline-block; padding: 8px 15px; background: #6c757d; color: white; text-decoration: none; border-radius: 4px; margin: 5px;">
+           🏠 Back to Home
+        </a>
+    </div>
+
+    <style>
+        @media print {
+            #browserActions {
+                display: none !important;
+            }
+        }
+    </style>
+
     <script>
+        // Show browser actions if NOT printing
+        document.addEventListener('DOMContentLoaded', function() {
+            document.getElementById('browserActions').style.display = 'block';
+        });
+
         // Auto-print when the page loads
         window.addEventListener('load', function() {
             setTimeout(function() {

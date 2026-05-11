@@ -74,12 +74,30 @@ class HomeController extends CollegeBaseController
             ->get();
 
         // Indicators
-        $data['studentIndicator'] = Student::count();
+        $data['studentIndicator'] = Student::where('students.status', 1)
+            ->join('faculties as f', 'f.id', '=', 'students.faculty')
+            ->join('semesters as s', 's.id', '=', 'students.semester')
+            ->join('student_statuses as ss', 'ss.id', '=', 'students.academic_status')
+            ->count('students.id');
         $data['staffIndicator'] = Staff::count();
-        $data['student_active_status'] = Student::select('status', DB::raw('count(*) as total'))
-            ->groupBy('status')->get();
-        $data['academic_status_count'] = Student::select('academic_status', DB::raw('count(*) as total'))
-            ->groupBy('academic_status')->get();
+        $data['onlineRegistrationIndicator'] = Student::where('students.status', 1)
+            ->where('students.registration_payment_status', 'completed')
+            ->join('faculties as f', 'f.id', '=', 'students.faculty')
+            ->join('semesters as s', 's.id', '=', 'students.semester')
+            ->join('student_statuses as ss', 'ss.id', '=', 'students.academic_status')
+            ->count('students.id');
+        $data['student_active_status'] = Student::select('students.status', DB::raw('count(students.id) as total'))
+            ->join('faculties as f', 'f.id', '=', 'students.faculty')
+            ->join('semesters as s', 's.id', '=', 'students.semester')
+            ->join('student_statuses as ss', 'ss.id', '=', 'students.academic_status')
+            ->groupBy('students.status')
+            ->get();
+        $data['academic_status_count'] = Student::select('students.academic_status', DB::raw('count(students.id) as total'))
+            ->join('faculties as f', 'f.id', '=', 'students.faculty')
+            ->join('semesters as s', 's.id', '=', 'students.semester')
+            ->join('student_statuses as ss', 'ss.id', '=', 'students.academic_status')
+            ->groupBy('students.academic_status')
+            ->get();
         $data['staff_status'] = Staff::select('status', DB::raw('count(*) as total'))
             ->groupBy('status')->get();
         $data['books_status'] = Book::select('book_status', DB::raw('count(*) as total'))

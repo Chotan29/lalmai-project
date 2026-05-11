@@ -198,10 +198,34 @@
 @endsection
 
 @section('content')
+    {{-- Display success message if available --}}
+    @if(session()->has('message_success'))
+        <div class="alert alert-success alert-dismissible fade show no-print" role="alert" style="margin-bottom: 15px;">
+            <strong><i class="fa fa-check-circle"></i> Success!</strong> {{ session()->get('message_success') }}
+            <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                <span aria-hidden="true">&times;</span>
+            </button>
+        </div>
+    @endif
+    
+    @if(session()->has('message_danger'))
+        <div class="alert alert-danger alert-dismissible fade show no-print" role="alert" style="margin-bottom: 15px;">
+            <strong><i class="fa fa-exclamation-circle"></i> Error!</strong> {{ session()->get('message_danger') }}
+            <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                <span aria-hidden="true">&times;</span>
+            </button>
+        </div>
+    @endif
+    
     <div class="no-print text-center" style="margin-bottom: 10px;">
         <button class="btn btn-primary" onclick="window.print()">
-            <i class="fa fa-print"></i> Print Form
+            <i class="fa fa-print"></i> Print Registration Form
         </button>
+        @if(isset($data['onlinePayment']) && $data['onlinePayment'])
+            <a href="{{ route('print-out.fees.online-payment-receipt', ['id' => encrypt($data['onlinePayment']->id)]) }}" target="_blank" class="btn btn-info">
+                <i class="fa fa-file-pdf-o"></i> Print Payment Receipt
+            </a>
+        @endif
     </div>
 
     <div class="print-container">
@@ -343,8 +367,35 @@
             </table>
         @endif
         
-        <!-- Declaration -->
-        <div class="declaration">
+        <!-- Payment Receipt Information -->
+        @if(isset($data['onlinePayment']) && $data['onlinePayment'])
+            <div style="margin: 8mm 0; padding: 3mm; border: 1px solid #999; background-color: #f9f9f9;">
+                <table class="info-table">
+                    <tr>
+                        <td colspan="2" style="background-color: #f0f0f0; font-weight: bold; text-align: center;"><b>PAYMENT RECEIPT</b></td>
+                    </tr>
+                    <tr>
+                        <td width="50%"><b>Payment Date:</b> {{ \Carbon\Carbon::parse($data['onlinePayment']->date)->format('d-m-Y H:i:s') }}</td>
+                        <td width="50%"><b>Payment Mode:</b> {{ $data['onlinePayment']->payment_gateway }}</td>
+                    </tr>
+                    <tr>
+                        <td><b>Transaction Ref:</b> {{ $data['onlinePayment']->ref_no }}</td>
+                        <td><b>Amount Paid:</b> ৳{{ number_format($data['onlinePayment']->amount, 2) }}</td>
+                    </tr>
+                    <tr>
+                        <td colspan="2"><b>Payment Status:</b> <span style="color: green; font-weight: bold;">{{ strtoupper($data['onlinePayment']->payment_status) }}</span></td>
+                    </tr>
+                </table>
+                <div style="text-align: center; margin-top: 3mm;">
+                    <a href="{{ route('print-out.fees.online-payment-receipt', ['id' => encrypt($data['onlinePayment']->id)]) }}" target="_blank" class="no-print" style="padding: 5px 15px; background-color: #007bff; color: white; text-decoration: none; border-radius: 3px; display: inline-block;">
+                        <i class="fa fa-print"></i> Print Receipt
+                    </a>
+                </div>
+            </div>
+        @endif
+        
+        <!-- Declaration Section -->
+        <div class="declaration" style="margin-top: 5mm;">
             <div class="declaration-title">DECLARATION</div>
             <p>
                 I declare that I have gone through the rules of College and University and I have met the eligibility criteria for admission. The information given in this form is true and correct to the best of my knowledge. No disciplinary action or court case or use of unfair means in exams has been reported against me. My application is liable to get cancelled if my application is found to contain incorrect / false information. I, further declare that I shall abide by the rules & regulations of the college.

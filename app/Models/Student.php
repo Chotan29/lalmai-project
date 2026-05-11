@@ -17,6 +17,7 @@ class Student extends BaseModel
 
         'reg_fee','sbi_collect_no','bank_ref_no','payment_date','university_enrollment_no', 'admission_date','admission_no',
         'admission_payment_ref_no','admission_course_fee','national_id_1','national_id_2', 'special_category','weightage_claim',
+        'student_type', 'registration_payment_status',
         ];
 
     public function getFullNameAttribute()

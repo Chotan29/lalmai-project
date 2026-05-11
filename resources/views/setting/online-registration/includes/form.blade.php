@@ -58,6 +58,61 @@
 
 
 <div class="space-4"></div>
+
+<!-- Student Type Settings -->
+<div class="form-group">
+    <label class="col-sm-2 control-label">Student Type Settings</label>
+    <div class="col-sm-10">
+        <div class="checkbox">
+            <label>
+                {!! Form::checkbox('new_student_enabled', true, null) !!}
+                Enable New Student Registration
+            </label>
+        </div>
+        <div class="checkbox">
+            <label>
+                {!! Form::checkbox('old_student_enabled', true, null) !!}
+                Enable Old/Returning Student Registration
+            </label>
+        </div>
+    </div>
+</div>
+
+<div class="space-4"></div>
+
+<!-- Registration Fee Settings -->
+<div class="form-group">
+    {!! Form::label('new_student_registration_fee', 'New Student Registration Fee (৳)', ['class' => 'col-sm-2 control-label']) !!}
+    <div class="col-sm-4">
+        {!! Form::number('new_student_registration_fee', null, ["placeholder" => "0.00", "class" => "form-control border-form", "step" => "0.01", "min" => "0"]) !!}
+        @include('includes.form_fields_validation_message', ['name' => 'new_student_registration_fee'])
+    </div>
+
+    {!! Form::label('old_student_registration_fee', 'Old Student Registration Fee (৳)', ['class' => 'col-sm-2 control-label']) !!}
+    <div class="col-sm-4">
+        {!! Form::number('old_student_registration_fee', null, ["placeholder" => "0.00", "class" => "form-control border-form", "step" => "0.01", "min" => "0"]) !!}
+        @include('includes.form_fields_validation_message', ['name' => 'old_student_registration_fee'])
+    </div>
+</div>
+
+<div class="space-4"></div>
+
+<!-- Payment Requirement -->
+<div class="form-group">
+    <label class="col-sm-2 control-label">Payment Settings</label>
+    <div class="col-sm-10">
+        <div class="checkbox">
+            <label>
+                {!! Form::checkbox('payment_required', true, null) !!}
+                Require Payment for Registration (if fees are set above)
+            </label>
+        </div>
+        <small class="text-muted">If checked, students must make payment before completing registration. The payment will be recorded as their admission/registration fee.</small>
+    </div>
+</div>
+
+<div class="space-4"></div>
+
 <div class="form-group">
     <label class="col-sm-2 control-label" for="rules_status"> Rules Status </label>
     <div class="col-sm-10">
@@ -127,19 +182,17 @@
 
 
 <div class="form-group">
-    <div class="program-management-panel">
-        <div class="program-management-header">
-            <div>
-                <h4 class="program-management-title"><i class="fa fa-sitemap"></i> Program Management</h4>
-                <p class="program-management-subtitle">Configure available programs, semesters and registration window.</p>
-            </div>
-            <button type="button" class="btn btn-sm btn-soft-primary" id="add-program-html">
+    <label class="col-sm-2 control-label"> Program Management </label>
+    <div class="col-sm-10">
+        <div class="clearfix" style="margin-bottom: 10px;">
+            <button type="button" class="btn btn-primary btn-sm pull-right" id="add-program-html">
                 <i class="fa fa-plus"></i> Add Program
             </button>
         </div>
 
-        <table class="table table-bordered table-hover text-center program-table" width="100%">
-            <thead>
+        <div class="table-responsive">
+            <table class="table table-bordered table-hover" width="100%">
+            <thead class="thead-light">
             <tr>
                 <th>{{__('form_fields.student.fields.faculty')}}</th>
                 <th width="25%">Semester/Sec</th>
@@ -156,6 +209,7 @@
                 @endforeach
             @endif
             </tbody>
-        </table>
+            </table>
+        </div>
     </div>
 </div>

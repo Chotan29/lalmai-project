@@ -41,6 +41,14 @@ class VerifyCsrfToken extends Middleware
        // 'account/fees/cybersource*',
         'ucb/payment-confirmation',
 
+        // Public online registration payment callbacks
+        'registration-payment/ssl-success',
+        'registration-payment/ssl-fail',
+        'registration-payment/ssl-cancel',
+        'registration-payment/ssl-ipn',
+        'registration-payment/ucb-success',
+        'registration-payment/ucb-cancel',
+
 
         //Attendance TIPSOI 
         'attendance/tipsoi-sdk/heartbeat',

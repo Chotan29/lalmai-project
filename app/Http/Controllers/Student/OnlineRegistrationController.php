@@ -18,6 +18,7 @@ use App\Models\GeneralSetting;
 use App\Models\GuardianDetail;
 use App\Models\OnlineRegistrationProgram;
 use App\Models\OnlineRegistrationSetting;
+use App\Models\OnlinePayment;
 use App\Models\ParentDetail;
 use App\Models\Semester;
 use App\Models\Student;
@@ -93,7 +94,9 @@ class OnlineRegistrationController extends CollegeBaseController
                 $allFaculty = Faculty::whereIn('id',$facultyExceptId)->Active()->orderBy('faculty')->pluck('faculty','id')->toArray();
                 $data['faculties'] = array_prepend($allFaculty,'Select Faculty/Program/Class','');
             }else{
-                $data['faculties'] = [];
+                // Fallback to active faculties so the public form does not render an empty dropdown.
+                $allFaculty = Faculty::Active()->orderBy('faculty')->pluck('faculty','id')->toArray();
+                $data['faculties'] = array_prepend($allFaculty,'Select Faculty/Program/Class','');
             }
 
             $studentBatch = StudentBatch::select('id', 'title')->Active()->pluck('title','id')->toArray();
@@ -107,6 +110,75 @@ class OnlineRegistrationController extends CollegeBaseController
         }
 
         return view(parent::loadDataToView($this->view_path.'.register'), compact('data'));
+
+    }
+
+    /**
+     * Check payment requirements and prepare for payment
+     */
+    public function preparePayment(Request $request)
+    {
+        try {
+            $studentType = $request->input('student_type');
+            
+            if (!in_array($studentType, ['new', 'old'])) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Invalid student type'
+                ], 422);
+            }
+
+            $registrationSetting = OnlineRegistrationSetting::where('status', 'active')
+                ->orWhere('status', 1)
+                ->first() ?? OnlineRegistrationSetting::first();
+
+            if (!$registrationSetting) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Registration is not configured'
+                ], 422);
+            }
+
+            // Check if student type is enabled
+            if ($studentType === 'new' && !$registrationSetting->new_student_enabled) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'New student registration is not currently enabled'
+                ], 422);
+            }
+
+            if ($studentType === 'old' && !$registrationSetting->old_student_enabled) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Old student registration is not currently enabled'
+                ], 422);
+            }
+
+            // Get the applicable fee
+            $fee = $studentType === 'new' 
+                ? $registrationSetting->new_student_registration_fee 
+                : $registrationSetting->old_student_registration_fee;
+
+            if ($registrationSetting->payment_required && $fee <= 0) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Registration fee not configured. Please contact admin.'
+                ], 422);
+            }
+
+            return response()->json([
+                'success' => true,
+                'payment_required' => $registrationSetting->payment_required,
+                'amount' => $fee,
+                'payment_method_options' => ['ssl', 'ucb']
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error: ' . $e->getMessage()
+            ], 500);
+        }
 
     }
 
@@ -715,10 +787,10 @@ class OnlineRegistrationController extends CollegeBaseController
 //            'students.national_id_type', 'students.national_id_number', 'students.extra_id_card_type','students.extra_id_card_number',
         )
             ->where('students.id','=',$id)
-            ->join('parent_details as pd', 'pd.students_id', '=', 'students.id')
-            ->join('addressinfos as ai', 'ai.students_id', '=', 'students.id')
-            ->join('student_guardians as sg', 'sg.students_id','=','students.id')
-            ->join('guardian_details as gd', 'gd.id', '=', 'sg.guardians_id')
+            ->leftJoin('parent_details as pd', 'pd.students_id', '=', 'students.id')
+            ->leftJoin('addressinfos as ai', 'ai.students_id', '=', 'students.id')
+            ->leftJoin('student_guardians as sg', 'sg.students_id','=','students.id')
+            ->leftJoin('guardian_details as gd', 'gd.id', '=', 'sg.guardians_id')
             ->first();
 
         if (!$data['student']){
@@ -729,6 +801,7 @@ class OnlineRegistrationController extends CollegeBaseController
         $data['academicInfos'] = $data['student']->academicInfo()->orderBy('sorting_order','asc')->get();
         $data['appliedSubjects'] = $data['student']->majorSubject()->get();
         $data['annexure'] = $data['student']->annexure()->get();
+        $data['onlinePayment'] = OnlinePayment::where('students_id', $id)->latest()->first();
         $data['url'] = URL::current();
         return view(parent::loadDataToView('print.student.registration'), compact('data'));
     }

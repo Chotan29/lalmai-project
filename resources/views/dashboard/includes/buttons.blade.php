@@ -7,7 +7,7 @@
                     <i class="fas fa-users"></i>
                 </div>
                 <div class="metric-info">
-                    <h3 class="metric-value">{{ $data['academic_status_count']->sum('total') }}</h3>
+                    <h3 class="metric-value">{{ $data['studentIndicator'] ?? 0 }}</h3>
                     <p class="metric-label">Students</p>
                 </div>
                 <div class="metric-badge">

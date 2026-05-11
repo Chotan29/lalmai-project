@@ -1965,6 +1965,12 @@ class StudentController extends CollegeBaseController
     public function academicInfoHtml(Request $request)
     {
         $semester = Semester::find($request->semester_id);
+        if (!$semester) {
+            return response()->json(json_encode([
+                'html' => ''
+            ]));
+        }
+
         $academicInfoRow = $semester->programNeedAcademicLevel()->Active()->get();
 
         $response['html'] = view($this->view_path.'.registration.includes.forms.academic_tr', [
