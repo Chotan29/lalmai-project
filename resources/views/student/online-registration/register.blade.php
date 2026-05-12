@@ -1010,35 +1010,41 @@
 
                             <div class="form-section">
                                 <h3 class="section-title"><i class="fa fa-user-shield"></i> Guardian Information</h3>
+                                @php($guardianIs = old('guardian_is', 'self_guardian'))
                                 <div class="form-group">
                                     <label>Guardian Is:</label>
                                     <div class="form-check form-check-inline">
                                         <input class="form-check-input" type="radio" name="guardian_is"
                                             id="father_as_guardian" value="father_as_guardian"
+                                            {{ $guardianIs === 'father_as_guardian' ? 'checked' : '' }}
                                             onclick="FatherAsGuardian(this.form)">
                                         <label class="form-check-label" for="father_as_guardian">Father</label>
                                     </div>
                                     <div class="form-check form-check-inline">
                                         <input class="form-check-input" type="radio" name="guardian_is"
                                             id="mother_as_guardian" value="mother_as_guardian"
+                                            {{ $guardianIs === 'mother_as_guardian' ? 'checked' : '' }}
                                             onclick="MotherAsGuardian(this.form)">
                                         <label class="form-check-label" for="mother_as_guardian">Mother</label>
                                     </div>
                                     <div class="form-check form-check-inline">
                                         <input class="form-check-input" type="radio" name="guardian_is"
                                             id="self_guardian" value="self_guardian"
+                                            {{ $guardianIs === 'self_guardian' ? 'checked' : '' }}
                                             onclick="SelfGuardian(this.form)">
                                         <label class="form-check-label" for="self_guardian">Self</label>
                                     </div>
                                     <div class="form-check form-check-inline">
                                         <input class="form-check-input" type="radio" name="guardian_is"
                                             id="other_guardian" value="other_guardian"
+                                            {{ $guardianIs === 'other_guardian' ? 'checked' : '' }}
                                             onclick="OtherGuardian(this.form)">
                                         <label class="form-check-label" for="other_guardian">Other</label>
                                     </div>
                                     <div class="form-check form-check-inline">
                                         <input class="form-check-input" type="radio" name="guardian_is"
                                             id="link_guardian" value="link_guardian"
+                                            {{ $guardianIs === 'link_guardian' ? 'checked' : '' }}
                                             onclick="linkGuardian(this.form)">
                                         <label class="form-check-label" for="link_guardian">Link Guardian</label>
                                     </div>
@@ -2184,6 +2190,8 @@
 
             $("input[name='reg_date']").val(yyyy + '-' + mm + '-' + dd);
 
+            initializeGuardianSelection(document.getElementById('validation-form'));
+
             $('.custom-file-input').on('change', function() {
                 let fileName = $(this).val().split('\\').pop();
                 $(this).next('.custom-file-label').addClass("selected").html(fileName);
@@ -2318,11 +2326,11 @@
         }
 
         /*Blank Guardian Detail to Enter New*/
-        function OtherGuardian(f) {
+        function OtherGuardian(f, keepExistingValues) {
             document.getElementById('guardian-detail').style.display = 'block';
             document.getElementById('link-guardian-detail').style.display = 'none';
             addRequiredFieldInGuardian();
-            if (f.guardian_is.value == 'other_guardian') {
+            if (f.guardian_is.value == 'other_guardian' && !keepExistingValues) {
                 f.guardian_first_name.value = "";
                 f.guardian_middle_name.value = "";
                 f.guardian_last_name.value = "";
@@ -2335,6 +2343,30 @@
                 f.guardian_mobile_2.value = "";
                 f.guardian_email.value = "";
                 f.guardian_relation.value = "";
+            }
+        }
+
+        function initializeGuardianSelection(f) {
+            if (!f) {
+                return;
+            }
+
+            var selectedGuardian = $('input[name="guardian_is"]:checked').val();
+            if (!selectedGuardian) {
+                selectedGuardian = 'self_guardian';
+                $('#self_guardian').prop('checked', true);
+            }
+
+            if (selectedGuardian === 'father_as_guardian') {
+                FatherAsGuardian(f);
+            } else if (selectedGuardian === 'mother_as_guardian') {
+                MotherAsGuardian(f);
+            } else if (selectedGuardian === 'self_guardian') {
+                SelfGuardian(f);
+            } else if (selectedGuardian === 'other_guardian') {
+                OtherGuardian(f, true);
+            } else if (selectedGuardian === 'link_guardian') {
+                linkGuardian(f);
             }
         }
 
