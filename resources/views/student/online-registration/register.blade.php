@@ -2573,11 +2573,39 @@
                 return;
             }
 
-            // Collect form data
+            // Collect form data with proper array support (e.g. board[], institution[])
             const registrationData = {};
-            $('#validation-form').find('input, select, textarea').each(function() {
-                if ($(this).attr('type') !== 'radio' && $(this).attr('type') !== 'checkbox') {
-                    registrationData[$(this).attr('name')] = $(this).val();
+            const serialized = $('#validation-form').serializeArray();
+            serialized.forEach(function(item) {
+                if (!item.name) {
+                    return;
+                }
+
+                const isArrayField = item.name.endsWith('[]');
+                const key = isArrayField ? item.name.slice(0, -2) : item.name;
+
+                if (isArrayField) {
+                    if (!Array.isArray(registrationData[key])) {
+                        registrationData[key] = [];
+                    }
+                    registrationData[key].push(item.value);
+                } else {
+                    registrationData[key] = item.value;
+                }
+            });
+
+            const payload = new FormData();
+            payload.append('student_type', studentType);
+            payload.append('payment_method', paymentMethod);
+            payload.append('amount', $('#registrationFeeAmount').text().replace('৳', ''));
+            payload.append('registration_data', JSON.stringify(registrationData));
+            payload.append('_token', '{{ csrf_token() }}');
+
+            // Attach profile/parent images so backend can store real filenames instead of browser fakepath.
+            ['student_main_image', 'father_main_image', 'mother_main_image', 'guardian_main_image'].forEach(function(field) {
+                const fileInput = document.getElementById(field);
+                if (fileInput && fileInput.files && fileInput.files[0]) {
+                    payload.append(field, fileInput.files[0]);
                 }
             });
 
@@ -2585,13 +2613,9 @@
             $.ajax({
                 url: '{{ route("registration-payment.pay", [], false) }}',
                 type: 'POST',
-                data: {
-                    student_type: studentType,
-                    payment_method: paymentMethod,
-                    amount: $('#registrationFeeAmount').text().replace('৳', ''),
-                    registration_data: JSON.stringify(registrationData),
-                    '_token': '{{ csrf_token() }}'
-                },
+                data: payload,
+                processData: false,
+                contentType: false,
                 success: function(response) {
                     if (response.success && response.gateway_url) {
                         window.location.href = response.gateway_url;

@@ -899,34 +899,10 @@ class OnlineRegistrationController extends CollegeBaseController
         if ($request->has('faculty_id')) {
             $faculty = Faculty::find($request->get('faculty_id'));
             if ($faculty) {
-                $activeProgramSemesterIds = OnlineRegistrationProgram::query()
-                    ->where('faculties_id', $faculty->id)
-                    ->whereDate('start_date', '<=', Carbon::now())
-                    ->whereDate('end_date', '>=', Carbon::now())
-                    ->pluck('semesters_id')
-                    ->filter()
-                    ->unique()
-                    ->values();
-
-                if ($activeProgramSemesterIds->isNotEmpty()) {
-                    $semesterList = $faculty->semesters()
-                        ->whereIn('semesters.id', $activeProgramSemesterIds)
-                        ->select('semesters.id', 'semesters.semester', 'semesters.slug')
-                        ->get();
-
-                    // If faculty_semester mapping is incomplete, still honor active online registration setup.
-                    if ($semesterList->isEmpty()) {
-                        $semesterList = Semester::query()
-                            ->whereIn('id', $activeProgramSemesterIds)
-                            ->select('id', 'semester', 'slug')
-                            ->orderBy('semester')
-                            ->get();
-                    }
-                } else {
-                    $semesterList = $faculty->semesters()
-                        ->select('semesters.id', 'semesters.semester', 'semesters.slug')
-                        ->get();
-                }
+                $semesterList = $faculty->semesters()
+                    ->select('semesters.id', 'semesters.semester', 'semesters.slug')
+                    ->orderBy('semesters.semester')
+                    ->get();
 
                 if ($semesterList->isNotEmpty()) {
                     $response['semester'] = $semesterList->values();

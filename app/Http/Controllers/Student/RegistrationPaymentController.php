@@ -6,6 +6,8 @@ use App\Models\OnlinePayment;
 use App\Models\Student;
 use App\Models\StudentBatch;
 use App\Models\Addressinfo;
+use App\Models\ParentDetail;
+use App\Models\AcademicInfo;
 use App\Models\Role;
 use App\Models\OnlineRegistrationSetting;
 use App\Models\FeeCollection;
@@ -38,19 +40,58 @@ class RegistrationPaymentController extends Controller
     public function pay(Request $request)
     {
         try {
+            $registrationDataRaw = $request->input('registration_data');
+            $registrationData = is_array($registrationDataRaw)
+                ? $registrationDataRaw
+                : json_decode((string) $registrationDataRaw, true);
+
             // Validate input
             $validated = $request->validate([
                 'student_type' => 'required|in:new,old',
                 'payment_method' => 'required|in:ssl,ucb',
                 'amount' => 'required|numeric|min:1',
-                'registration_data' => 'required|json'
+                'registration_data' => 'required',
+                'student_main_image' => 'nullable|image|mimes:jpeg,jpg,png|max:5120',
+                'father_main_image' => 'nullable|image|mimes:jpeg,jpg,png|max:5120',
+                'mother_main_image' => 'nullable|image|mimes:jpeg,jpg,png|max:5120',
+                'guardian_main_image' => 'nullable|image|mimes:jpeg,jpg,png|max:5120',
             ]);
+
+            if (!is_array($registrationData)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Invalid registration data format.'
+                ], 422);
+            }
+
+            // Keep uploaded images with deterministic temp names for callback processing.
+            $tempFileMap = [
+                'student_main_image' => ['dir' => public_path('images/studentProfile'), 'suffix' => 'student'],
+                'father_main_image' => ['dir' => public_path('images/parents'), 'suffix' => 'father'],
+                'mother_main_image' => ['dir' => public_path('images/parents'), 'suffix' => 'mother'],
+                'guardian_main_image' => ['dir' => public_path('images/parents'), 'suffix' => 'guardian'],
+            ];
+
+            foreach ($tempFileMap as $field => $meta) {
+                if ($request->hasFile($field)) {
+                    $uploadDir = $meta['dir'];
+                    if (!is_dir($uploadDir)) {
+                        @mkdir($uploadDir, 0755, true);
+                    }
+
+                    $file = $request->file($field);
+                    $extension = strtolower($file->getClientOriginalExtension() ?: 'jpg');
+                    $storedName = 'tmpreg_' . time() . '_' . Str::random(8) . '_' . $meta['suffix'] . '.' . $extension;
+                    $file->move($uploadDir, $storedName);
+                    $registrationData[$field] = $storedName;
+                }
+            }
 
             // Store registration data and payment info in session
             $request->session()->put('registration_payment_data', [
                 'student_type' => $validated['student_type'],
                 'amount' => $validated['amount'],
-                'registration_data' => json_decode($validated['registration_data'], true),
+                'registration_data' => $registrationData,
                 'payment_method' => $validated['payment_method'],
                 'initiated_at' => Carbon::now()->toDateTimeString()
             ]);
@@ -87,7 +128,7 @@ class RegistrationPaymentController extends Controller
             $paymentPayload = [
                 'student_type' => $validated['student_type'],
                 'amount' => $validated['amount'],
-                'registration_data' => json_decode($validated['registration_data'], true),
+                'registration_data' => $registrationData,
                 'payment_method' => $validated['payment_method'],
                 'initiated_at' => Carbon::now()->toDateTimeString()
             ];
@@ -545,7 +586,7 @@ class RegistrationPaymentController extends Controller
 
             // Handle student image
             $student_image_name = "";
-            if (isset($regData['student_main_image'])) {
+            if (!empty($regData['student_main_image']) && stripos($regData['student_main_image'], 'fakepath') === false) {
                 $student_image_name = $regData['student_main_image'];
             }
 
@@ -565,11 +606,22 @@ class RegistrationPaymentController extends Controller
                 'last_name' => $regData['last_name'] ?? null,
                 'date_of_birth' => $regData['date_of_birth'],
                 'gender' => $regData['gender'] ?? null,
+                'blood_group' => $regData['blood_group'] ?? null,
+                'religion' => $regData['religion'] ?? null,
+                'caste' => $regData['caste'] ?? null,
+                'nationality' => $regData['nationality'] ?? null,
+                'mother_tongue' => $regData['mother_tongue'] ?? null,
+                'extra_info' => $regData['extra_info'] ?? null,
+                'home_phone' => $regData['home_phone'] ?? null,
                 'mobile_1' => $regData['mobile_1'] ?? ($regData['phone'] ?? null),
+                'mobile_2' => $regData['mobile_2'] ?? null,
                 'email' => $regData['email'] ?? ($regData['student_email'] ?? null),
                 'student_image' => $student_image_name,
                 'status' => 1,
                 'national_id_1' => $regData['national_id'] ?? null,
+                'national_id_2' => $regData['national_id_2'] ?? null,
+                'national_id_3' => $regData['national_id_3'] ?? null,
+                'national_id_4' => $regData['national_id_4'] ?? null,
             ]);
 
             \Log::info('[PAYMENT_TRACE] Student record created', [
@@ -584,16 +636,133 @@ class RegistrationPaymentController extends Controller
                 'state' => $regData['state'] ?? null,
                 'country' => $regData['country'] ?? null,
                 'postal_code' => $regData['postal_code'] ?? null,
+                'temp_address' => $regData['temp_address'] ?? null,
+                'temp_state' => $regData['temp_state'] ?? null,
+                'temp_country' => $regData['temp_country'] ?? null,
+                'temp_postal_code' => $regData['temp_postal_code'] ?? null,
+                'home_phone' => $regData['home_phone'] ?? null,
                 'mobile_1' => $regData['mobile_1'] ?? ($regData['phone'] ?? null),
                 'mobile_2' => $regData['mobile_2'] ?? null,
                 'created_by' => 0,
                 'status' => 1,
             ]);
 
+            ParentDetail::create([
+                'students_id' => $student->id,
+                'grandfather_first_name' => $regData['grandfather_first_name'] ?? null,
+                'grandfather_middle_name' => $regData['grandfather_middle_name'] ?? null,
+                'grandfather_last_name' => $regData['grandfather_last_name'] ?? null,
+                'father_first_name' => $regData['father_first_name'] ?? null,
+                'father_middle_name' => $regData['father_middle_name'] ?? null,
+                'father_last_name' => $regData['father_last_name'] ?? null,
+                'father_eligibility' => $regData['father_eligibility'] ?? null,
+                'father_occupation' => $regData['father_occupation'] ?? null,
+                'father_office' => $regData['father_office'] ?? null,
+                'father_office_number' => $regData['father_office_number'] ?? null,
+                'father_residence_number' => $regData['father_residence_number'] ?? null,
+                'father_mobile_1' => $regData['father_mobile_1'] ?? null,
+                'father_mobile_2' => $regData['father_mobile_2'] ?? null,
+                'father_email' => $regData['father_email'] ?? null,
+                'mother_first_name' => $regData['mother_first_name'] ?? null,
+                'mother_middle_name' => $regData['mother_middle_name'] ?? null,
+                'mother_last_name' => $regData['mother_last_name'] ?? null,
+                'mother_eligibility' => $regData['mother_eligibility'] ?? null,
+                'mother_occupation' => $regData['mother_occupation'] ?? null,
+                'mother_office' => $regData['mother_office'] ?? null,
+                'mother_office_number' => $regData['mother_office_number'] ?? null,
+                'mother_residence_number' => $regData['mother_residence_number'] ?? null,
+                'mother_mobile_1' => $regData['mother_mobile_1'] ?? null,
+                'mother_mobile_2' => $regData['mother_mobile_2'] ?? null,
+                'mother_email' => $regData['mother_email'] ?? null,
+                'father_image' => (!empty($regData['father_main_image']) && stripos($regData['father_main_image'], 'fakepath') === false) ? $regData['father_main_image'] : null,
+                'mother_image' => (!empty($regData['mother_main_image']) && stripos($regData['mother_main_image'], 'fakepath') === false) ? $regData['mother_main_image'] : null,
+                'created_by' => 0,
+            ]);
+
+            $institutions = isset($regData['institution']) ? (array) $regData['institution'] : [];
+            $boards = isset($regData['board']) ? (array) $regData['board'] : [];
+            $passYears = isset($regData['pass_year']) ? (array) $regData['pass_year'] : [];
+            $rollNos = isset($regData['roll_no']) ? (array) $regData['roll_no'] : [];
+            $majorSubjects = isset($regData['major_subjects']) ? (array) $regData['major_subjects'] : [];
+            $obtainedMarks = isset($regData['mark_obtained']) ? (array) $regData['mark_obtained'] : [];
+            $maxMarks = isset($regData['maximum_mark']) ? (array) $regData['maximum_mark'] : [];
+            $percentages = isset($regData['percentage']) ? (array) $regData['percentage'] : [];
+            $gradePoints = isset($regData['grade_point']) ? (array) $regData['grade_point'] : [];
+            $gradeLetters = isset($regData['grade_letter']) ? (array) $regData['grade_letter'] : [];
+
+            $academicRows = max(
+                count($institutions),
+                count($boards),
+                count($passYears),
+                count($rollNos),
+                count($majorSubjects),
+                count($obtainedMarks),
+                count($maxMarks),
+                count($percentages),
+                count($gradePoints),
+                count($gradeLetters)
+            );
+
+            for ($i = 0; $i < $academicRows; $i++) {
+                $institution = $institutions[$i] ?? null;
+                $board = $boards[$i] ?? null;
+                $passYear = $passYears[$i] ?? null;
+                $rollNo = $rollNos[$i] ?? null;
+                $majorSubject = $majorSubjects[$i] ?? null;
+                $markObtained = $obtainedMarks[$i] ?? null;
+                $maximumMark = $maxMarks[$i] ?? null;
+                $percentage = $percentages[$i] ?? null;
+                $gradePoint = $gradePoints[$i] ?? null;
+                $gradeLetter = $gradeLetters[$i] ?? null;
+
+                if (
+                    empty($institution) &&
+                    empty($board) &&
+                    empty($passYear) &&
+                    empty($rollNo) &&
+                    empty($majorSubject) &&
+                    empty($markObtained) &&
+                    empty($maximumMark) &&
+                    empty($percentage) &&
+                    empty($gradePoint) &&
+                    empty($gradeLetter)
+                ) {
+                    continue;
+                }
+
+                AcademicInfo::create([
+                    'students_id' => $student->id,
+                    'institution' => $institution,
+                    'board' => $board,
+                    'pass_year' => $passYear,
+                    'roll_no' => $rollNo,
+                    'major_subjects' => $majorSubject,
+                    'mark_obtained' => $markObtained,
+                    'maximum_mark' => $maximumMark,
+                    'percentage' => $percentage,
+                    'grade_point' => $gradePoint,
+                    'grade_letter' => $gradeLetter,
+                    'created_by' => 0,
+                    'sorting_order' => $i + 1,
+                ]);
+            }
+
             // Create user account
             $rolesId = Role::where('name', 'student')->first()->id;
             $password = Str::random(10);
-            $emailIds = $regData['email'];
+            $emailIds = isset($regData['email']) ? trim($regData['email']) : null;
+
+            // Avoid payment-flow failure on unique email conflict.
+            if (empty($emailIds)) {
+                $emailIds = 'student.' . $student->reg_no . '@local.invalid';
+            }
+
+            if (User::where('email', $emailIds)->exists()) {
+                $parts = explode('@', $emailIds, 2);
+                $localPart = $parts[0];
+                $domainPart = isset($parts[1]) ? $parts[1] : 'local.invalid';
+                $emailIds = $localPart . '+reg' . $student->reg_no . '@' . $domainPart;
+            }
 
             $user = User::create([
                 'role_id' => $rolesId,
