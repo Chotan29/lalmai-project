@@ -1010,7 +1010,23 @@
 
                             <div class="form-section">
                                 <h3 class="section-title"><i class="fa fa-user-shield"></i> Guardian Information</h3>
-                                @php($guardianIs = old('guardian_is', 'self_guardian'))
+                                @php
+                                    $guardianRelation = strtoupper(trim(old('guardian_relation', '')));
+                                    $guardianIs = old('guardian_is');
+                                    if (!$guardianIs) {
+                                        if ($guardianRelation === 'FATHER') {
+                                            $guardianIs = 'father_as_guardian';
+                                        } elseif ($guardianRelation === 'MOTHER') {
+                                            $guardianIs = 'mother_as_guardian';
+                                        } elseif ($guardianRelation === 'SELF') {
+                                            $guardianIs = 'self_guardian';
+                                        } elseif ($guardianRelation !== '') {
+                                            $guardianIs = 'other_guardian';
+                                        } else {
+                                            $guardianIs = 'self_guardian';
+                                        }
+                                    }
+                                @endphp
                                 <div class="form-group">
                                     <label>Guardian Is:</label>
                                     <div class="form-check form-check-inline">
@@ -2346,28 +2362,51 @@
             }
         }
 
+        function applyGuardianViewState(selectedGuardian) {
+            if (selectedGuardian === 'link_guardian') {
+                document.getElementById('guardian-detail').style.display = 'none';
+                document.getElementById('link-guardian-detail').style.display = 'block';
+                removeRequiredFieldInGuardian();
+                return;
+            }
+
+            document.getElementById('guardian-detail').style.display = 'block';
+            document.getElementById('link-guardian-detail').style.display = 'none';
+            addRequiredFieldInGuardian();
+        }
+
+        function inferGuardianSelection() {
+            var selectedGuardian = $('input[name="guardian_is"]:checked').val();
+            if (selectedGuardian) {
+                return selectedGuardian;
+            }
+
+            var relation = ($('input[name="guardian_relation"]').val() || '').trim().toUpperCase();
+            if (relation === 'FATHER') {
+                return 'father_as_guardian';
+            }
+            if (relation === 'MOTHER') {
+                return 'mother_as_guardian';
+            }
+            if (relation === 'SELF') {
+                return 'self_guardian';
+            }
+            if (relation !== '') {
+                return 'other_guardian';
+            }
+
+            return 'self_guardian';
+        }
+
         function initializeGuardianSelection(f) {
             if (!f) {
                 return;
             }
 
-            var selectedGuardian = $('input[name="guardian_is"]:checked').val();
-            if (!selectedGuardian) {
-                selectedGuardian = 'self_guardian';
-                $('#self_guardian').prop('checked', true);
-            }
-
-            if (selectedGuardian === 'father_as_guardian') {
-                FatherAsGuardian(f);
-            } else if (selectedGuardian === 'mother_as_guardian') {
-                MotherAsGuardian(f);
-            } else if (selectedGuardian === 'self_guardian') {
-                SelfGuardian(f);
-            } else if (selectedGuardian === 'other_guardian') {
-                OtherGuardian(f, true);
-            } else if (selectedGuardian === 'link_guardian') {
-                linkGuardian(f);
-            }
+            var selectedGuardian = inferGuardianSelection();
+            $('input[name="guardian_is"]').prop('checked', false);
+            $('input[name="guardian_is"][value="' + selectedGuardian + '"]').prop('checked', true);
+            applyGuardianViewState(selectedGuardian);
         }
 
         function linkGuardian() {
