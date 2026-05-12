@@ -20,7 +20,7 @@ body{min-height:100%;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Rob
 .logo-wrap img{width:100%;height:100%;object-fit:cover}
 .logo-icon{font-size:2.5rem;color:#0e4c8b}
 .college-name-bn{font-size:1.2rem;font-weight:700;color:#fff;letter-spacing:.01em;margin-bottom:.2rem;text-shadow:0 1px 3px rgba(0,0,0,.2)}
-.college-name-en{font-size:.8rem;color:rgba(255,255,255,.8);letter-spacing:.05em;text-transform:uppercase;font-weight:500}
+.college-name-en{font-size:.8rem;color:rgba(255,255,255,.8);letter-spacing:.05em;text-transform:uppercase;font-weight:500;margin-bottom:.35rem}
 .card-body{padding:1.75rem 2rem 2rem}
 .signin-title{font-size:1rem;font-weight:600;color:#1f2937;text-align:center;margin-bottom:1.25rem}
 .form-group{margin-bottom:1rem}
@@ -72,7 +72,7 @@ body{min-height:100%;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Rob
         <div class="college-name-bn">
             {{ $data['general_setting']->institute ?? 'Lalmai Govt. College' }}
         </div>
-        <div class="college-name-en">Lalmai, Cumilla</div>
+        <div class="college-name-en">Cumilla Sadar South</div>
     </div>
 
     <div class="card-body">
