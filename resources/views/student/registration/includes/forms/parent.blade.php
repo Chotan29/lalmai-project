@@ -27,15 +27,15 @@
         <div class="form-group">
             {!! Form::label('father_name', __('form_fields.student.fields.father_name').' <span class="text-danger">*</span>', ['class' => 'col-sm-3 control-label'], false) !!}
             <div class="col-sm-3">
-                {!! Form::text('father_first_name', null, [ "class" => "form-control border-form upper","required"]) !!}
+                {!! Form::text('father_first_name', isset($data['row']) ? $data['row']->father_first_name : null, [ "class" => "form-control border-form upper","required"]) !!}
                 @include('includes.form_fields_validation_message', ['name' => 'father_first_name'])
             </div>
             <div class="col-sm-3">
-                {!! Form::text('father_middle_name', null, ["class" => "form-control border-form upper"]) !!}
+                {!! Form::text('father_middle_name', isset($data['row']) ? $data['row']->father_middle_name : null, ["class" => "form-control border-form upper"]) !!}
                 @include('includes.form_fields_validation_message', ['name' => 'father_first_name'])
             </div>
             <div class="col-sm-3">
-                {!! Form::text('father_last_name', null, [ "class" => "form-control border-form upper"]) !!}
+                {!! Form::text('father_last_name', isset($data['row']) ? $data['row']->father_last_name : null, [ "class" => "form-control border-form upper"]) !!}
                 @include('includes.form_fields_validation_message', ['name' => 'father_last_name'])
             </div>
         </div>
@@ -103,15 +103,15 @@
         <div class="form-group">
             {!! Form::label('mother_name', __('form_fields.student.fields.mother_name').' <span class="text-danger">*</span>', ['class' => 'col-sm-3 control-label'], false) !!}
             <div class="col-sm-3">
-                {!! Form::text('mother_first_name', null, [ "class" => "form-control border-form upper","required"]) !!}
+                {!! Form::text('mother_first_name', isset($data['row']) ? $data['row']->mother_first_name : null, [ "class" => "form-control border-form upper","required"]) !!}
                 @include('includes.form_fields_validation_message', ['name' => 'mother_first_name'])
             </div>
             <div class="col-sm-3">
-                {!! Form::text('mother_middle_name', null, ["class" => "form-control border-form upper"]) !!}
+                {!! Form::text('mother_middle_name', isset($data['row']) ? $data['row']->mother_middle_name : null, ["class" => "form-control border-form upper"]) !!}
                 @include('includes.form_fields_validation_message', ['name' => 'mother_first_name'])
             </div>
             <div class="col-sm-3">
-                {!! Form::text('mother_last_name', null, [ "class" => "form-control border-form upper"]) !!}
+                {!! Form::text('mother_last_name', isset($data['row']) ? $data['row']->mother_last_name : null, [ "class" => "form-control border-form upper"]) !!}
                 @include('includes.form_fields_validation_message', ['name' => 'mother_last_name'])
             </div>
         </div>

@@ -689,8 +689,8 @@
                                     </div>
                                     <div class="col-md-4">
                                         <div class="form-group">
-                                            <label>Blood Group <span class="text-danger">*</span></label>
-                                            <select name="blood_group" class="form-control" required>
+                                            <label>Blood Group</label>
+                                            <select name="blood_group" class="form-control">
                                                 <option value="">Select Blood Group</option>
                                                 <option value="A+">A+</option>
                                                 <option value="A-">A-</option>
@@ -715,8 +715,8 @@
                                     </div>
                                     <div class="col-md-4">
                                         <div class="form-group">
-                                            <label>Religion <span class="text-danger">*</span></label>
-                                            <select name="religion" class="form-control" required>
+                                            <label>Religion</label>
+                                            <select name="religion" class="form-control">
                                                 <option value="">Select Religion</option>
                                                 <option value="Islam">Islam</option>
                                                 <option value="Hinduism">Hinduism</option>
@@ -1437,13 +1437,6 @@
                         @else
                         </div>
                         @endif
-                    {{-- Hidden submit button shown by JS when old student skips payment --}}
-                    @if($data['registration_setting']->payment_required && $data['registration_setting']->hide_payment_for_old_student)
-                    <button type="submit" class="btn btn-success" name="add_student"
-                            id="add-student-skip-payment" style="display:none;">
-                        <i class="fa fa-check"></i> Submit Application
-                    </button>
-                    @endif
                     {!! Form::close() !!}
                 </div>
             </div>
@@ -1475,12 +1468,8 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
     <script>
-        // Admin setting: hide payment when old student is selected
-        const hidePaymentForOldStudent = {{ $data['registration_setting']->hide_payment_for_old_student ? 'true' : 'false' }};
-        const paymentRequiredByDefault  = {{ $data['registration_setting']->payment_required ? 'true' : 'false' }};
-
-        // Tab navigation order (mutable so we can remove 'payment' for old students)
-        let tabOrder = [
+        // Tab navigation order
+        const tabOrder = [
             'studentType',
             'generalInfo',
             'academicInfo',
@@ -1498,8 +1487,6 @@
                 ,'payment'
             @endif
         ];
-        // Immutable copy used to restore tabOrder when switching back to new student
-        const baseTabOrder = tabOrder.slice();
 
         const generalFieldRules = [
             { field: 'input[name="first_name"]', message: "Please enter first name" },
@@ -1787,20 +1774,10 @@
 
             if (currentIndex === tabOrder.length - 1) {
                 nextButton.hide();
-                // Show skip-payment submit button when old student hides payment
-                const oldStudentSkipsPayment = hidePaymentForOldStudent &&
-                    $('#studentTypeSelect').val() === 'old';
-                if (oldStudentSkipsPayment) {
-                    $('#add-student-skip-payment').show();
-                    $('#add-student').hide();
-                } else {
-                    $('#add-student').show();
-                    $('#add-student-skip-payment').hide();
-                }
+                $('#add-student').show();
             } else {
                 nextButton.show();
                 $('#add-student').hide();
-                $('#add-student-skip-payment').hide();
             }
         }
 
@@ -2482,20 +2459,6 @@
                 window.localStorage.setItem('online_registration_student_type', studentType);
             }
 
-            // --- Payment tab visibility based on student type + admin setting ---
-            if (studentType === 'old' && hidePaymentForOldStudent && paymentRequiredByDefault) {
-                // Hide payment tab nav item and remove from tab order
-                $('#paymentTab').hide();
-                tabOrder = baseTabOrder.filter(function(t) { return t !== 'payment'; });
-            } else if (paymentRequiredByDefault) {
-                // Restore payment tab for new student (or when setting disabled)
-                $('#paymentTab').show();
-                tabOrder = baseTabOrder.slice();
-            }
-            // Refresh navigation buttons since tabOrder may have changed
-            const currentTab = $('.tab-pane.active').attr('id');
-            if (currentTab) { updateNavigationButtons(currentTab); }
-
             if (studentType === 'new') {
                 studentTypeInfoText.text('As a new student, you will need to complete all required information and pay the registration fee.');
                 studentTypeInfoDiv.show();
@@ -2507,8 +2470,7 @@
                 studentTypeInfoDiv.show();
                 studentTypeNextBtn.prop('disabled', false);
                 $('#registrationFeeAmount').text('৳{{ $data['registration_setting']->old_student_registration_fee ?? 0 }}');
-                // No payment needed for old student when admin enables the hide setting
-                setPaymentButtonState(!hidePaymentForOldStudent);
+                setPaymentButtonState(true);
             } else {
                 studentTypeInfoDiv.hide();
                 studentTypeNextBtn.prop('disabled', true);

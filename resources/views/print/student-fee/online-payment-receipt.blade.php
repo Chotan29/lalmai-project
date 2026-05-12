@@ -438,6 +438,12 @@
     <!-- Browser Actions (Hidden on Print) -->
     <div style="margin-top: 20px; text-align: center; padding: 15px; background: #f8f9fa; border: 1px solid #dee2e6; display: none; print-hidden;" id="browserActions">
         <h5 style="margin-top: 0;">Next Steps:</h5>
+        <button onclick="printBothReceiptAndForm()" 
+                class="btn btn-success" 
+                id="printBothBtn"
+                style="display: inline-block; padding: 10px 20px; background: #28a745; color: white; border: none; border-radius: 4px; margin: 5px; cursor: pointer; font-weight: bold; font-size: 14px;">
+            🖨️ Print Both Receipt & Form
+        </button>
         <a href="{{ route('online-registration.print', encrypt($data['student']->id)) }}" 
            class="btn btn-primary" 
            style="display: inline-block; padding: 8px 15px; background: #2a6496; color: white; text-decoration: none; border-radius: 4px; margin: 5px;">
@@ -459,16 +465,63 @@
     </style>
 
     <script>
-        // Show browser actions if NOT printing
+        let printBothInProgress = false;
+
+        // Show browser actions immediately
         document.addEventListener('DOMContentLoaded', function() {
             document.getElementById('browserActions').style.display = 'block';
         });
 
-        // Auto-print when the page loads
+        function printBothReceiptAndForm() {
+            if (printBothInProgress) return;
+            printBothInProgress = true;
+
+            // Disable button to prevent double-clicking
+            const btn = document.getElementById('printBothBtn');
+            btn.disabled = true;
+            btn.style.opacity = '0.6';
+            btn.textContent = '⏳ Printing...';
+
+            // Step 1: Print the receipt (current page)
+            window.print();
+
+            // Step 2: After receipt print dialog closes/completes (very short delay)
+            // Open form print page and print it
+            setTimeout(function() {
+                const formPrintUrl = "{{ route('online-registration.print', encrypt($data['student']->id)) }}";
+                
+                // Create a hidden iframe to load and print the form
+                const iframe = document.createElement('iframe');
+                iframe.style.display = 'none';
+                iframe.onload = function() {
+                    // Give a tiny delay for iframe to fully render
+                    setTimeout(function() {
+                        iframe.contentWindow.print();
+                        
+                        // Remove iframe after a delay
+                        setTimeout(function() {
+                            iframe.remove();
+                            btn.disabled = false;
+                            btn.style.opacity = '1';
+                            btn.textContent = '🖨️ Print Both Receipt & Form';
+                            printBothInProgress = false;
+                        }, 500);
+                    }, 300);
+                };
+                iframe.src = formPrintUrl;
+                document.body.appendChild(iframe);
+            }, 100);
+        }
+
+        // Auto-trigger on page load (receipt prints first, then form)
         window.addEventListener('load', function() {
             setTimeout(function() {
+                // Uncomment the line below if you want auto-print on page load
+                // printBothReceiptAndForm();
+                
+                // Or just print receipt with minimal delay
                 window.print();
-            }, 300);
+            }, 500);
         });
     </script>
 </body>

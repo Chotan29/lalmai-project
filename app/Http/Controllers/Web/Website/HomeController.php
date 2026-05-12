@@ -32,8 +32,10 @@ class HomeController extends WebsiteBaseController
         $data = [];
         $data['home_setting'] = $this->getHomeSetting();
 
-       if(!isset($data['home_setting']))
-            return redirect()->route('login');
+        if (!isset($data['home_setting'])) {
+            // Keep webportal publicly accessible even when home settings are not configured.
+            \Log::warning('[WEBPORTAL_TRACE] Home setting missing; rendering fallback public page.');
+        }
 
 
 

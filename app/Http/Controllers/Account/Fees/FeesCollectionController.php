@@ -49,8 +49,8 @@ class FeesCollectionController extends CollegeBaseController
             ->where(function ($query) use ($request) {
                 $this->commonStudentFilterCondition($query, $request);
             })
-            ->join('parent_details as pd', 'pd.students_id', '=', 'students.id')
-            ->join('addressinfos as ai', 'ai.students_id', '=', 'students.id')
+            ->leftJoin('parent_details as pd', 'pd.students_id', '=', 'students.id')
+            ->leftJoin('addressinfos as ai', 'ai.students_id', '=', 'students.id')
             //->get();
             ->paginate(env('PAGINATION_LIMIT',$this->pagination_limit));
 
@@ -119,8 +119,8 @@ class FeesCollectionController extends CollegeBaseController
                 'students.email', 'ai.mobile_1', 'pd.father_first_name', 'pd.father_middle_name', 'pd.father_last_name',
                 'students.student_image','students.status')
                 ->where('students.id','=',$id)
-                ->join('parent_details as pd', 'pd.students_id', '=', 'students.id')
-                ->join('addressinfos as ai', 'ai.students_id', '=', 'students.id')
+                ->leftJoin('parent_details as pd', 'pd.students_id', '=', 'students.id')
+                ->leftJoin('addressinfos as ai', 'ai.students_id', '=', 'students.id')
                 ->first();
 
             // Check if student exists
@@ -505,9 +505,14 @@ class FeesCollectionController extends CollegeBaseController
             'students.email', 'ai.mobile_1', 'pd.father_first_name', 'pd.father_middle_name', 'pd.father_last_name',
             'students.student_image','students.status')
             ->where('students.id','=',$id)
-            ->join('parent_details as pd', 'pd.students_id', '=', 'students.id')
-            ->join('addressinfos as ai', 'ai.students_id', '=', 'students.id')
+            ->leftJoin('parent_details as pd', 'pd.students_id', '=', 'students.id')
+            ->leftJoin('addressinfos as ai', 'ai.students_id', '=', 'students.id')
             ->first();
+
+        if (!$data['student']) {
+            $request->session()->flash($this->message_warning, 'Student not found.');
+            return redirect()->route($this->base_route);
+        }
 
         $student = $data['student'];
 

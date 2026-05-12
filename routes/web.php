@@ -442,12 +442,13 @@ Route::get('online-registration/{id}/pdf',     ['as' => 'online-registration.pdf
 //Registration Payment Routes
 Route::group(['prefix' => 'registration-payment', 'as' => 'registration-payment.'], function () {
     Route::post('pay',                          ['as' => 'pay',              'uses' => 'Student\RegistrationPaymentController@pay']);
-    Route::post('ssl-success',                  ['as' => 'ssl-success',      'uses' => 'Student\RegistrationPaymentController@sslSuccess']);
-    Route::post('ssl-fail',                     ['as' => 'ssl-fail',         'uses' => 'Student\RegistrationPaymentController@sslFail']);
-    Route::post('ssl-cancel',                   ['as' => 'ssl-cancel',       'uses' => 'Student\RegistrationPaymentController@sslCancel']);
-    Route::post('ssl-ipn',                      ['as' => 'ssl-ipn',          'uses' => 'Student\RegistrationPaymentController@sslSuccess']);
-    Route::post('ucb-success',                  ['as' => 'ucb-success',      'uses' => 'Student\RegistrationPaymentController@ucbSuccess']);
-    Route::post('ucb-cancel',                   ['as' => 'ucb-cancel',       'uses' => 'Student\RegistrationPaymentController@sslCancel']);
+    // Gateways may call callbacks with POST (server-to-server) or GET (browser return).
+    Route::match(['get', 'post'], 'ssl-success', ['as' => 'ssl-success', 'uses' => 'Student\RegistrationPaymentController@sslSuccess']);
+    Route::match(['get', 'post'], 'ssl-fail',    ['as' => 'ssl-fail',    'uses' => 'Student\RegistrationPaymentController@sslFail']);
+    Route::match(['get', 'post'], 'ssl-cancel',  ['as' => 'ssl-cancel',  'uses' => 'Student\RegistrationPaymentController@sslCancel']);
+    Route::match(['get', 'post'], 'ssl-ipn',     ['as' => 'ssl-ipn',     'uses' => 'Student\RegistrationPaymentController@sslSuccess']);
+    Route::match(['get', 'post'], 'ucb-success', ['as' => 'ucb-success', 'uses' => 'Student\RegistrationPaymentController@ucbSuccess']);
+    Route::match(['get', 'post'], 'ucb-cancel',  ['as' => 'ucb-cancel',  'uses' => 'Student\RegistrationPaymentController@sslCancel']);
 });
 
 //certificate verification
@@ -2283,15 +2284,20 @@ Route::group(['prefix' => 'setting/',                                   'as' => 
     Route::post('general/{id}/update',       ['as' => '.general.update',           'middleware' => ['ability:super-admin,general-setting-edit'],            'uses' => 'GeneralSettingController@update']);
 
     /*Registration Section*/
-    Route::get('online-registration',                       ['as' => '.online-registration',                     'middleware' => ['ability:super-admin|admin,registration-settings-index'],            'uses' => 'OnlineRegistrationSettingController@index']);
-    Route::get('online-registration/add',                   ['as' => '.online-registration.add',                 'middleware' => ['ability:super-admin|admin,registration-settings-add'],              'uses' => 'OnlineRegistrationSettingController@add']);
-    Route::post('online-registration/store',                ['as' => '.online-registration.store',               'middleware' => ['ability:super-admin|admin,registration-settings-add'],              'uses' => 'OnlineRegistrationSettingController@store']);
-    Route::get('online-registration/{id}/edit',             ['as' => '.online-registration.edit',                'middleware' => ['ability:super-admin|admin,registration-settings-edit'],             'uses' => 'OnlineRegistrationSettingController@edit']);
-    Route::post('online-registration/{id}/update',          ['as' => '.online-registration.update',              'middleware' => ['ability:super-admin|admin,registration-settings-edit'],             'uses' => 'OnlineRegistrationSettingController@update']);
+    Route::get('online-registration',                       ['as' => '.online-registration',                     'middleware' => ['ability:super-admin|admin,web-setting-registration-index'],            'uses' => 'OnlineRegistrationSettingController@index']);
+    Route::get('online-registration/add',                   ['as' => '.online-registration.add',                 'middleware' => ['ability:super-admin|admin,web-setting-registration-add'],              'uses' => 'OnlineRegistrationSettingController@add']);
+    Route::post('online-registration/store',                ['as' => '.online-registration.store',               'middleware' => ['ability:super-admin|admin,web-setting-registration-add'],              'uses' => 'OnlineRegistrationSettingController@store']);
+    Route::get('online-registration/{id}/edit',             ['as' => '.online-registration.edit',                'middleware' => ['ability:super-admin|admin,web-setting-registration-edit'],             'uses' => 'OnlineRegistrationSettingController@edit']);
+    Route::post('online-registration/{id}/update',          ['as' => '.online-registration.update',              'middleware' => ['ability:super-admin|admin,web-setting-registration-edit'],             'uses' => 'OnlineRegistrationSettingController@update']);
 
     Route::post('online-registration/program-html',        ['as' => '.online-registration.program-html',                                                                         'uses' => 'OnlineRegistrationSettingController@programHtml']);
-    Route::get('online-registration/remove-program',        ['as' => '.online-registration.remove-program',       'middleware' => ['ability:super-admin|admin,registration-settings-edit'],     'uses' => 'OnlineRegistrationSettingController@removeProgram']);
+    Route::get('online-registration/remove-program',        ['as' => '.online-registration.remove-program',       'middleware' => ['ability:super-admin|admin,web-setting-registration-edit'],     'uses' => 'OnlineRegistrationSettingController@removeProgram']);
     Route::post('online-registration/find-semester',        ['as' => '.online-registration.find-semester',                                                                       'uses' => 'OnlineRegistrationSettingController@findSemester']);
+
+    /* Online Registration Student Management Routes */
+    Route::get('online-registration-student',              ['as' => '.online-registration-student',                         'middleware' => ['ability:super-admin|admin,web-setting-registration-index'],            'uses' => 'OnlineRegistrationStudentController@index']);
+    Route::get('online-registration-student/{id}',         ['as' => '.online-registration-student.show',                    'middleware' => ['ability:super-admin|admin,web-setting-registration-index'],            'uses' => 'OnlineRegistrationStudentController@show']);
+    Route::post('online-registration-student/{id}/payment', ['as' => '.online-registration-student.payment',                'middleware' => ['ability:super-admin|admin,web-setting-registration-index'],            'uses' => 'OnlineRegistrationStudentController@initiatePayment']);
 
     /* Alert Setting Routes */
     Route::get('alert',                    ['as' => '.alert',                   'middleware' => ['ability:super-admin,alert-setting-index'],        'uses' => 'AlertSettingController@index']);

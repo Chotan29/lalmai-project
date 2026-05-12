@@ -36,6 +36,8 @@ class AddValidation extends FormRequest
             'last_name'                     => 'required | max:25',
             'date_of_birth'                 => 'required',
             'gender'                        => 'required',
+            'blood_group'                   => 'required | max:5',
+            'religion'                      => 'required | max:25',
             'email'                         => 'required | max:100 | unique:students,email',
             'mobile_1'                      => 'max:25',
             'father_first_name'             => 'max:25',
@@ -98,6 +100,8 @@ class AddValidation extends FormRequest
             'student_main_image.mimes'               => 'Student photo must be a JPG, JPEG, BMP, or PNG file.',
             'student_main_image.max'                 => 'Student photo size must not be greater than 5 MB.',
             'student_main_image.dimensions'          => 'Student photo resolution must be at least 300x400 pixels.',
+            'blood_group.required'                  => 'Please select blood group.',
+            'religion.required'                     => 'Please select religion.',
 
         ];
     }

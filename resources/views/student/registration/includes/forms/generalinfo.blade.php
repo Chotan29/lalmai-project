@@ -140,13 +140,33 @@
 
         {!! Form::label('gender', __('form_fields.student.fields.gender').' <span class="text-danger">*</span>', ['class' => 'col-sm-2 control-label'], false) !!}
         <div class="col-sm-2">
-            {!! Form::select('gender', __('common.gender'), isset($data['row']) ? $data['row']->gender : null, ['class'=>'form-control border-form',"required"]); !!}
+            @php
+                $selectedGender = isset($data['row']) ? strtoupper(trim((string)$data['row']->gender)) : null;
+            @endphp
+            {!! Form::select('gender', __('common.gender'), $selectedGender, ['class'=>'form-control border-form',"required"]); !!}
             @include('includes.form_fields_validation_message', ['name' => 'gender'])
         </div>
 
         {!! Form::label('blood_group', __('form_fields.student.fields.blood_group'), ['class' => 'col-sm-2 control-label']) !!}
         <div class="col-sm-2">
-            {!! Form::select('blood_group', __('common.blood_group'), null,
+            @php
+                $selectedBloodGroup = isset($data['row']) ? strtoupper(trim((string)$data['row']->blood_group)) : null;
+                $normalizedBloodGroup = $selectedBloodGroup ? str_replace(' ', '', $selectedBloodGroup) : null;
+                $bloodGroupMap = [
+                    'A+' => 'A+',
+                    'A-' => 'A-',
+                    'B+' => 'B+',
+                    'B-' => 'B-',
+                    'AB+' => 'AB+',
+                    'AB-' => 'AB-',
+                    'O+' => 'O+',
+                    'O-' => 'O-',
+                ];
+                if ($normalizedBloodGroup && array_key_exists($normalizedBloodGroup, $bloodGroupMap)) {
+                    $selectedBloodGroup = $bloodGroupMap[$normalizedBloodGroup];
+                }
+            @endphp
+            {!! Form::select('blood_group', __('common.blood_group'), $selectedBloodGroup,
             [ 'class'=>'form-control border-form']); !!}
             @include('includes.form_fields_validation_message', ['name' => 'blood_group'])
         </div>
@@ -162,10 +182,45 @@
         {!! Form::label('religion', __('form_fields.student.fields.religion').' <span class="text-danger">*</span>', ['class' => 'col-sm-2 control-label'], false) !!}
         <div class="col-sm-4">
             @php
-                $selectedReligion = isset($data['row']) ? $data['row']->religion : null;
-                if (strtoupper((string)$selectedReligion) === 'HINDU') { $selectedReligion = 'Hinduism'; }
+                $selectedReligion = isset($data['row']) ? trim((string)$data['row']->religion) : null;
+                $religionMap = [
+                    'ISLAM' => 'Islam',
+                    'MUSLIM' => 'Islam',
+                    'ইসলাম' => 'Islam',
+                    'HINDU' => 'Hinduism',
+                    'HINDUISM' => 'Hinduism',
+                    'হিন্দু' => 'Hinduism',
+                    'BUDDHIST' => 'Buddhism',
+                    'BUDDHISM' => 'Buddhism',
+                    'বৌদ্ধ' => 'Buddhism',
+                    'CHRISTIAN' => 'Christianity',
+                    'CHRISTIANITY' => 'Christianity',
+                    'খ্রিস্টান' => 'Christianity',
+                    'OTHER' => 'Other',
+                    'অন্যান্য' => 'Other',
+                ];
+                $selectedReligionUpper = strtoupper($selectedReligion);
+                if (array_key_exists($selectedReligionUpper, $religionMap)) {
+                    $selectedReligion = $religionMap[$selectedReligionUpper];
+                } elseif (array_key_exists($selectedReligion, $religionMap)) {
+                    $selectedReligion = $religionMap[$selectedReligion];
+                }
+
+                $religionOptions = [
+                    '' => 'Select Religion',
+                    'Islam' => 'Islam',
+                    'Hinduism' => 'Hinduism',
+                    'Buddhism' => 'Buddhism',
+                    'Christianity' => 'Christianity',
+                    'Other' => 'Other'
+                ];
+
+                // Keep legacy/custom stored values visible and selected instead of showing blank.
+                if ($selectedReligion && !array_key_exists($selectedReligion, $religionOptions)) {
+                    $religionOptions[$selectedReligion] = $selectedReligion;
+                }
             @endphp
-            {!! Form::select('religion', ['' => 'Select Religion', 'Islam' => 'Islam', 'Hinduism' => 'Hinduism', 'Buddhism' => 'Buddhism', 'Christianity' => 'Christianity', 'Other' => 'Other'], $selectedReligion, ["class" => "form-control border-form"]) !!}
+            {!! Form::select('religion', $religionOptions, $selectedReligion, ["class" => "form-control border-form"]) !!}
             @include('includes.form_fields_validation_message', ['name' => 'religion'])
         </div>
     </div>

@@ -19,7 +19,7 @@
         <div class="profile-card text-center">
             <div class="profile-image-container">
                 @if($data['student']->student_image != '')
-                    <img class="profile-image" src="{{ asset('images'.DIRECTORY_SEPARATOR.$folder_name.DIRECTORY_SEPARATOR.$data['student']->student_image) }}" alt="Student Photo">
+                    <img class="profile-image" src="{{ asset('images/' . $folder_name . '/' . $data['student']->student_image) }}" alt="Student Photo">
                 @else
                     <img class="profile-image" src="{{ asset('assets/images/avatars/profile-pic.jpg') }}" alt="Default Profile">
                 @endif
@@ -28,7 +28,7 @@
             @if($data['student']->student_signature != '')
                 <div class="signature-container">
                     <div class="signature-label">Signature</div>
-                    <img class="signature-image" src="{{ asset('images'.DIRECTORY_SEPARATOR.$folder_name.DIRECTORY_SEPARATOR.$data['student']->student_signature) }}" alt="Student Signature">
+                    <img class="signature-image" src="{{ asset('images/' . $folder_name . '/' . $data['student']->student_signature) }}" alt="Student Signature">
                 </div>
             @endif
             

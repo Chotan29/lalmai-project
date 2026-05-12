@@ -86,6 +86,11 @@ class OnlineRegistrationSettingController extends CollegeBaseController
         $request->request->add(['logo' => isset($logo_image_name)?$logo_image_name:'']);
         $request->request->add(['start_date' => Carbon::parse($request->start_date)->format('Y-m-d')]);
         $request->request->add(['end_date' => Carbon::parse($request->end_date)->format('Y-m-d')]);
+        // Booleans: unchecked checkboxes are not sent in POST data, default to 0
+        $request->request->add(['new_student_enabled'        => $request->has('new_student_enabled') ? 1 : 0]);
+        $request->request->add(['old_student_enabled'        => $request->has('old_student_enabled') ? 1 : 0]);
+        $request->request->add(['payment_required'           => $request->has('payment_required') ? 1 : 0]);
+        $request->request->add(['hide_payment_for_old_student' => $request->has('hide_payment_for_old_student') ? 1 : 0]);
 
         OnlineRegistrationSetting::create($request->all());
 
@@ -123,6 +128,11 @@ class OnlineRegistrationSettingController extends CollegeBaseController
         $request->request->add(['start_date' => Carbon::parse($request->start_date)->format('Y-m-d')]);
         $request->request->add(['end_date' => Carbon::parse($request->end_date)->format('Y-m-d')]);
         $request->request->add(['last_updated_by' => auth()->user()->id]);
+        // Booleans: unchecked checkboxes are not sent in POST data, default to 0
+        $request->request->add(['new_student_enabled'        => $request->has('new_student_enabled') ? 1 : 0]);
+        $request->request->add(['old_student_enabled'        => $request->has('old_student_enabled') ? 1 : 0]);
+        $request->request->add(['payment_required'           => $request->has('payment_required') ? 1 : 0]);
+        $request->request->add(['hide_payment_for_old_student' => $request->has('hide_payment_for_old_student') ? 1 : 0]);
 
         $row->update($request->all());
 

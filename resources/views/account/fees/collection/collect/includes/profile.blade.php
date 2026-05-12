@@ -182,7 +182,7 @@
             <div class="profile-picture-wrapper">
                 @if ($data['student']->student_image != '')
                     <img id="avatar" class="profile-picture" alt="Student Photo"
-                        src="{{ asset('images' . DIRECTORY_SEPARATOR . 'studentProfile' . DIRECTORY_SEPARATOR . $data['student']->student_image) }}" />
+                        src="{{ asset('images/studentProfile/' . $data['student']->student_image) }}" />
                 @else
                     <img id="avatar" class="profile-picture" alt="Student Photo"
                         src="{{ asset('assets/images/avatars/profile-pic.jpg') }}" />

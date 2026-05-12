@@ -33,6 +33,7 @@ use App\Models\FormSetting;
 use App\Models\GuardianDetail;
 use App\Models\LibraryMember;
 use App\Models\Note;
+use App\Models\OnlineRegistrationProgram;
 use App\Models\ParentDetail;
 use App\Models\ResidentHistory;
 use App\Models\Semester;
@@ -135,8 +136,7 @@ class StudentController extends CollegeBaseController
             $data['student'] = Student::select('students.id', 'students.reg_no', 'students.faculty', 'students.semester',
                 'students.academic_status', 'students.first_name', 'students.middle_name', 'students.last_name', 'students.status',
                 'f.faculty','s.semester','ss.title as academic_status')
-                //->Active()
-                ->where('students.status',1)
+                ->orderBy('students.id', 'desc')
                 ->join('faculties as f','f.id','=','students.faculty')
                 ->join('semesters as s','s.id','=','students.semester')
                 ->join('student_statuses as ss','ss.id','=','students.academic_status')
@@ -526,13 +526,13 @@ class StudentController extends CollegeBaseController
 
         )
             ->where('students.id','=',$id)
-            ->join('parent_details as pd', 'pd.students_id', '=', 'students.id')
-            ->join('student_guardians as sg', 'sg.students_id','=','students.id')
-            ->join('guardian_details as gd', 'gd.id', '=', 'sg.guardians_id')
-            ->join('addressinfos as ai', 'ai.students_id', '=', 'students.id')
-            ->join('student_extra_infos as ei', 'ei.students_id','=','students.id')
-            ->join('student_scholarships as ss', 'ss.students_id','=','students.id')
-            ->join('student_placements as pl', 'pl.students_id','=','students.id')
+            ->leftJoin('parent_details as pd', 'pd.students_id', '=', 'students.id')
+            ->leftJoin('student_guardians as sg', 'sg.students_id','=','students.id')
+            ->leftJoin('guardian_details as gd', 'gd.id', '=', 'sg.guardians_id')
+            ->leftJoin('addressinfos as ai', 'ai.students_id', '=', 'students.id')
+            ->leftJoin('student_extra_infos as ei', 'ei.students_id','=','students.id')
+            ->leftJoin('student_scholarships as ss', 'ss.students_id','=','students.id')
+            ->leftJoin('student_placements as pl', 'pl.students_id','=','students.id')
             ->first();
 
 
@@ -859,13 +859,13 @@ class StudentController extends CollegeBaseController
             //'sd.degrees_id', 'sd.obtained_mark', 'sd.total_marks', 'sd.receive_in_college_date', 'sd.issue_date'
             )
             ->where('students.id','=',$id)
-            ->join('parent_details as pd', 'pd.students_id', '=', 'students.id')
-            ->join('student_guardians as sg', 'sg.students_id','=','students.id')
-            ->join('guardian_details as gd', 'gd.id', '=', 'sg.guardians_id')
-            ->join('addressinfos as ai', 'ai.students_id', '=', 'students.id')
-            ->join('student_extra_infos as ei', 'ei.students_id','=','students.id')
-            ->join('student_scholarships as ss', 'ss.students_id','=','students.id')
-            ->join('student_placements as pl', 'pl.students_id','=','students.id')
+            ->leftJoin('parent_details as pd', 'pd.students_id', '=', 'students.id')
+            ->leftJoin('student_guardians as sg', 'sg.students_id','=','students.id')
+            ->leftJoin('guardian_details as gd', 'gd.id', '=', 'sg.guardians_id')
+            ->leftJoin('addressinfos as ai', 'ai.students_id', '=', 'students.id')
+            ->leftJoin('student_extra_infos as ei', 'ei.students_id','=','students.id')
+            ->leftJoin('student_scholarships as ss', 'ss.students_id','=','students.id')
+            ->leftJoin('student_placements as pl', 'pl.students_id','=','students.id')
            // ->join('student_degrees as sd', 'sd.students_id','=','students.id')
             ->first();
             
@@ -1862,15 +1862,45 @@ class StudentController extends CollegeBaseController
         if ($request->has('faculty_id')) {
             $faculty = Faculty::find($request->get('faculty_id'));
             if ($faculty) {
-                $response['semester'] = $faculty->semesters()->select('semesters.id', 'semesters.semester', 'semesters.slug')->get();
-                $response['error'] = false;
-                $response['message'] = 'Semester/Sec. Available For This Faculty/Program/Class.';
+                $activeProgramSemesterIds = OnlineRegistrationProgram::query()
+                    ->where('faculties_id', $faculty->id)
+                    ->whereDate('start_date', '<=', Carbon::now())
+                    ->whereDate('end_date', '>=', Carbon::now())
+                    ->pluck('semesters_id')
+                    ->filter()
+                    ->unique()
+                    ->values();
+
+                if ($activeProgramSemesterIds->isNotEmpty()) {
+                    $semesterList = $faculty->semesters()
+                        ->whereIn('semesters.id', $activeProgramSemesterIds)
+                        ->select('semesters.id', 'semesters.semester', 'semesters.slug')
+                        ->get();
+
+                    if ($semesterList->isEmpty()) {
+                        $semesterList = Semester::query()
+                            ->whereIn('id', $activeProgramSemesterIds)
+                            ->select('id', 'semester', 'slug')
+                            ->orderBy('semester')
+                            ->get();
+                    }
+                } else {
+                    $semesterList = $faculty->semesters()
+                        ->select('semesters.id', 'semesters.semester', 'semesters.slug')
+                        ->get();
+                }
+
+                if ($semesterList->isNotEmpty()) {
+                    $response['semester'] = $semesterList->values();
+                    $response['error'] = false;
+                    $response['message'] = 'Semester/Sec. Available For This Faculty/Program/Class.';
+                } else {
+                    $response['message'] = 'No Any Semester Assign on This Faculty/Program/Class.';
+                }
             } else {
-                $response['error'] = true;
                 $response['message'] = 'No Any Semester Assign on This Faculty/Program/Class.';
             }
         } else {
-            $response['error'] = true;
             $response['message'] = 'Invalid request!!';
         }
         return response()->json($response);

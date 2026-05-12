@@ -706,10 +706,10 @@ class RegistrationPaymentController extends Controller
                 'value_b' => $studentType,
                 'product_name' => 'Online Registration - ' . ucfirst($studentType) . ' Student',
                 'product_category' => 'Registration',
-                'successUrl' => $this->buildPublicCallbackUrl('registration-payment.ssl-success'),
-                'failUrl' => $this->buildPublicCallbackUrl('registration-payment.ssl-fail'),
-                'cancelUrl' => $this->buildPublicCallbackUrl('registration-payment.ssl-cancel'),
-                'ipnUrl' => $this->buildPublicCallbackUrl('registration-payment.ssl-ipn'),
+                'successUrl' => route('registration-payment.ssl-success'),
+                'failUrl' => route('registration-payment.ssl-fail'),
+                'cancelUrl' => route('registration-payment.ssl-cancel'),
+                'ipnUrl' => route('registration-payment.ssl-ipn'),
                 'studentName' => 'Student Registration',
                 'studentEmail' => 'registration@college.edu',
                 'studentPhone' => '01000000000',
@@ -752,8 +752,8 @@ class RegistrationPaymentController extends Controller
                 'amount' => $amount,
                 'reference' => $ref,
                 'description' => 'Online Registration - ' . ucfirst($studentType) . ' Student',
-                'return_url' => $this->buildPublicCallbackUrl('registration-payment.ucb-success'),
-                'cancel_url' => $this->buildPublicCallbackUrl('registration-payment.ucb-cancel'),
+                'return_url' => route('registration-payment.ucb-success'),
+                'cancel_url' => route('registration-payment.ucb-cancel'),
             ];
 
             $response = $this->ucb->initiatePayment($paymentData);
@@ -770,23 +770,5 @@ class RegistrationPaymentController extends Controller
                 'message' => 'UCB initialization failed: ' . $e->getMessage()
             ];
         }
-    }
-
-    protected function buildPublicCallbackUrl(string $routeName): string
-    {
-        $publicBase = rtrim((string) config('app.url'), '/');
-
-        $currentHost = request()->getHost();
-        if (!empty($currentHost) && !in_array($currentHost, ['127.0.0.1', 'localhost'], true)) {
-            $publicBase = 'https://' . $currentHost;
-        }
-
-        if (strpos($publicBase, 'http://') === 0) {
-            $publicBase = 'https://' . ltrim(substr($publicBase, 7), '/');
-        }
-
-        $path = route($routeName, [], false);
-
-        return $publicBase . '/' . ltrim($path, '/');
     }
 }

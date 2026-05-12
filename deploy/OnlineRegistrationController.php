@@ -763,24 +763,7 @@ class OnlineRegistrationController extends CollegeBaseController
 
     public function print($id)
     {
-        try {
-            $id = decrypt($id);
-        } catch (\Exception $e) {
-            \Log::error('[REGISTRATION_PAYMENT_DEBUG] Decryption failed for print route', ['error' => $e->getMessage()]);
-            request()->session()->flash($this->message_warning, "Invalid student reference. Please try again.");
-            return redirect()->route($this->base_route);
-        }
-
-        \Log::info('[REGISTRATION_PAYMENT_DEBUG] print() called with student_id', ['decrypted_id' => $id, 'id_type' => gettype($id)]);
-
-        // First, try to find the student with a simple query to verify it exists
-        $studentExists = Student::where('students.id', '=', $id)->first();
-        if (!$studentExists) {
-            \Log::error('[REGISTRATION_PAYMENT_DEBUG] Student not found in print()', ['student_id' => $id, 'searched_table' => 'students', 'id_type' => gettype($id)]);
-            request()->session()->flash($this->message_warning, "Not a Valid Student (ID: {$id}). This student record may have been deleted or is not yet created. Please verify the student exists in the system.");
-            return redirect()->route($this->base_route);
-        }
-
+        $id = decrypt($id);
         $data = [];
         $data['student'] = Student::select('students.id','students.reg_no', 'students.reg_date', 'students.university_reg',
             'students.faculty','students.semester','students.batch', 'students.academic_status', 'students.first_name', 'students.middle_name',
@@ -811,7 +794,6 @@ class OnlineRegistrationController extends CollegeBaseController
             ->first();
 
         if (!$data['student']){
-            \Log::error('[REGISTRATION_PAYMENT_DEBUG] Query returned no student despite existence check', ['student_id' => $id]);
             request()->session()->flash($this->message_warning, "Not a Valid Student");
             return redirect()->route($this->base_route);
         }
@@ -826,24 +808,7 @@ class OnlineRegistrationController extends CollegeBaseController
 
     public function pdf($id)
     {
-        try {
-            $id = decrypt($id);
-        } catch (\Exception $e) {
-            \Log::error('[REGISTRATION_PAYMENT_DEBUG] Decryption failed for pdf route', ['error' => $e->getMessage()]);
-            request()->session()->flash($this->message_warning, "Invalid student reference. Please try again.");
-            return redirect()->route($this->base_route);
-        }
-
-        \Log::info('[REGISTRATION_PAYMENT_DEBUG] pdf() called with student_id', ['decrypted_id' => $id, 'id_type' => gettype($id)]);
-
-        // First, try to find the student with a simple query to verify it exists
-        $studentExists = Student::where('students.id', '=', $id)->first();
-        if (!$studentExists) {
-            \Log::error('[REGISTRATION_PAYMENT_DEBUG] Student not found in pdf()', ['student_id' => $id, 'searched_table' => 'students', 'id_type' => gettype($id)]);
-            request()->session()->flash($this->message_warning, "Not a Valid Student (ID: {$id}). This student record may have been deleted or is not yet created. Please verify the student exists in the system.");
-            return redirect()->route($this->base_route);
-        }
-
+        $id = decrypt($id);
         $data = [];
         $data['student'] = Student::select('students.id','students.reg_no', 'students.reg_date', 'students.university_reg',
             'students.faculty','students.semester','students.batch', 'students.academic_status', 'students.first_name', 'students.middle_name',
@@ -867,15 +832,14 @@ class OnlineRegistrationController extends CollegeBaseController
 //           'students.national_id_type', 'students.national_id_number', 'students.extra_id_card_type','students.extra_id_card_number',
         )
             ->where('students.id','=',$id)
-            ->leftJoin('parent_details as pd', 'pd.students_id', '=', 'students.id')
-            ->leftJoin('addressinfos as ai', 'ai.students_id', '=', 'students.id')
-            ->leftJoin('student_guardians as sg', 'sg.students_id','=','students.id')
-            ->leftJoin('guardian_details as gd', 'gd.id', '=', 'sg.guardians_id')
+            ->join('parent_details as pd', 'pd.students_id', '=', 'students.id')
+            ->join('addressinfos as ai', 'ai.students_id', '=', 'students.id')
+            ->join('student_guardians as sg', 'sg.students_id','=','students.id')
+            ->join('guardian_details as gd', 'gd.id', '=', 'sg.guardians_id')
             ->first();
 
 
         if (!$data['student']){
-            \Log::error('[REGISTRATION_PAYMENT_DEBUG] Query returned no student in pdf() despite existence check', ['student_id' => $id]);
             request()->session()->flash($this->message_warning, "Not a Valid Student");
             return redirect()->route($this->base_route);
         }

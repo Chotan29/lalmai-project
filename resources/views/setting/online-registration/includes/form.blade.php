@@ -103,11 +103,30 @@
     <div class="col-sm-10">
         <div class="checkbox">
             <label>
-                {!! Form::checkbox('payment_required', true, null) !!}
+                {!! Form::checkbox('payment_required', 1, isset($data['row']) ? (bool)$data['row']->payment_required : true) !!}
                 Require Payment for Registration (if fees are set above)
             </label>
         </div>
         <small class="text-muted">If checked, students must make payment before completing registration. The payment will be recorded as their admission/registration fee.</small>
+    </div>
+</div>
+
+<div class="space-4"></div>
+
+<!-- Hide Payment for Old Students -->
+<div class="form-group">
+    <label class="col-sm-2 control-label">Old Student Payment</label>
+    <div class="col-sm-10">
+        <div class="checkbox">
+            <label>
+                {!! Form::checkbox('hide_payment_for_old_student', 1, isset($data['row']) ? (bool)$data['row']->hide_payment_for_old_student : false) !!}
+                Hide payment option when <strong>Old Student</strong> is selected
+            </label>
+        </div>
+        <small class="text-muted">
+            <i class="fa fa-info-circle text-info"></i>
+            When enabled, the Payment tab will be hidden and old/returning students can submit the form without payment.
+        </small>
     </div>
 </div>
 

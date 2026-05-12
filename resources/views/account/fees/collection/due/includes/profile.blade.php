@@ -4,7 +4,7 @@
         <div>
             <span class="profile-picture">
                 @if($data['student']->student_image != '')
-                    <img id="avatar-small" class="editable img-responsive" alt="{{ $data['student']->title }}" src="{{ asset('images'.DIRECTORY_SEPARATOR.'studentProfile'.DIRECTORY_SEPARATOR.$data['student']->student_image) }}" />
+                    <img id="avatar-small" class="editable img-responsive" alt="{{ $data['student']->title }}" src="{{ asset('images/studentProfile/' . $data['student']->student_image) }}" />
                 @else
                     <img id="avatar-small" class="editable img-responsive" alt="{{ $data['student']->title }}" src="{{ asset('assets/images/avatars/profile-pic.jpg') }}" />
                 @endif

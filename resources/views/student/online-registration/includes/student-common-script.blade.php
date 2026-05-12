@@ -397,12 +397,17 @@
             success: function (response) {
                 var data = (typeof response === 'string' ? $.parseJSON(response) : response);
                 if (data.error) {
-                    $.notify(data.message, "warning");
+                    $('.semester').html('').append('<option value="0">Select Sem./Sec.</option>');
+                    $.notify(data.message || 'Semester list unavailable for this faculty/program.', "warning");
                 } else {
                     $('.semester').html('').append('<option value="0">Select Sem./Sec.</option>');
-                    $.each(data.semester, function(key, valueObj) {
-                        $('.semester').append('<option value="' + valueObj.id + '">' + valueObj.semester + '</option>');
-                    });
+                    if (data.semester && data.semester.length) {
+                        $.each(data.semester, function(key, valueObj) {
+                            $('.semester').append('<option value="' + valueObj.id + '">' + valueObj.semester + '</option>');
+                        });
+                    } else {
+                        $.notify(data.message || 'No semester found for this faculty/program.', "warning");
+                    }
                 }
             }
         });
