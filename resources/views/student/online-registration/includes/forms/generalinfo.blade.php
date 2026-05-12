@@ -401,28 +401,45 @@
             <hr class="hr-8">
         @endif
         @if(Config::get('edufirmconfig.student.online_registration.tabs.general_info.guardian') == 1)
+            @php
+                $guardianRelation = strtoupper(trim(old('guardian_relation', isset($data['row']) ? ($data['row']->guardian_relation ?? '') : '')));
+                $guardianIs = old('guardian_is');
+                if (!$guardianIs) {
+                    if ($guardianRelation === 'FATHER') {
+                        $guardianIs = 'father_as_guardian';
+                    } elseif ($guardianRelation === 'MOTHER') {
+                        $guardianIs = 'mother_as_guardian';
+                    } elseif ($guardianRelation === 'SELF') {
+                        $guardianIs = 'self_guardian';
+                    } elseif ($guardianRelation !== '') {
+                        $guardianIs = 'other_guardian';
+                    } else {
+                        $guardianIs = 'self_guardian';
+                    }
+                }
+            @endphp
             <div class="label label-warning arrowed-in arrowed-right arrowed">{{ __('form_fields.student.section_label.guardian')}}</div>
 
             <div class="control-group col-sm-12">
                 <div class="radio">
                     <label>
-                        {!! Form::radio('guardian_is', 'father_as_guardian', false, ['class' => 'ace', "onclick"=>"FatherAsGuardian(this.form)"]) !!}
+                        {!! Form::radio('guardian_is', 'father_as_guardian', $guardianIs === 'father_as_guardian', ['class' => 'ace', "onclick"=>"FatherAsGuardian(this.form)"]) !!}
                         <span class="lbl"> Father is Guardian</span>
                     </label>
                     <label>
-                        {!! Form::radio('guardian_is', 'mother_as_guardian', false, ['class' => 'ace',"onclick"=>"MotherAsGuardian(this.form)"]) !!}
+                        {!! Form::radio('guardian_is', 'mother_as_guardian', $guardianIs === 'mother_as_guardian', ['class' => 'ace',"onclick"=>"MotherAsGuardian(this.form)"]) !!}
                         <span class="lbl"> Mother is Guardian</span>
                     </label>
                     <label>
-                        {!! Form::radio('guardian_is', 'self_guardian', true, ['class' => 'ace', "onclick"=>"SelfGuardian(this.form)"]) !!}
+                        {!! Form::radio('guardian_is', 'self_guardian', $guardianIs === 'self_guardian', ['class' => 'ace', "onclick"=>"SelfGuardian(this.form)"]) !!}
                         <span class="lbl"> Self</span>
                     </label>
                     <label>
-                        {!! Form::radio('guardian_is', 'other_guardian', true, ['class' => 'ace', "onclick"=>"OtherGuardian(this.form)"]) !!}
+                        {!! Form::radio('guardian_is', 'other_guardian', $guardianIs === 'other_guardian', ['class' => 'ace', "onclick"=>"OtherGuardian(this.form)"]) !!}
                         <span class="lbl"> Other's</span>
                     </label>
                     <label>
-                        {!! Form::radio('guardian_is', 'link_guardian', false, ['class' => 'ace', "onclick"=>"linkGuardian(this.form)"]) !!}
+                        {!! Form::radio('guardian_is', 'link_guardian', $guardianIs === 'link_guardian', ['class' => 'ace', "onclick"=>"linkGuardian(this.form)"]) !!}
                         <span class="lbl"> Link Guardian</span>
                     </label>
                 </div>
