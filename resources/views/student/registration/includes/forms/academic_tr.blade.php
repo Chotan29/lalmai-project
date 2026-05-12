@@ -1,12 +1,9 @@
 @if(isset($academicInfoRow) && $academicInfoRow->count() >0)
     @foreach($academicInfoRow as $row)
-        @php
-            $academicTitle = strtoupper(trim($row->title)) === 'BOARD' ? 'SSC/DAKHIL/EQUIVALENT' : $row->title;
-        @endphp
         <tr class="option_value">
             <td>
-                {!! Form::label('board', $academicTitle, ['class' => 'col-sm-12 control-label']) !!}
-                {!! Form::hidden('board[]', $academicTitle, ["class" => "col-md-12"]) !!}
+                {!! Form::label('board', 'SSC/DAKHIL/EQUIVALENT', ['class' => 'col-sm-12 control-label']) !!}
+                {!! Form::hidden('board[]', 'SSC/DAKHIL/EQUIVALENT', ["class" => "col-md-12"]) !!}
                 {{--["class" => "col-xs-10 col-sm-11"]--}}
             </td>
             <td>

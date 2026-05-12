@@ -1,12 +1,9 @@
 @foreach($academicInfos as $academicInfo)
-@php
-    $academicTitle = strtoupper(trim($academicInfo->title)) === 'BOARD' ? 'SSC/DAKHIL/EQUIVALENT' : $academicInfo->title;
-@endphp
 <tr class="option_value">
     <td>
         {!! Form::hidden('academic_info_id[]', $academicInfo->id, ["class" => "col-md-12"]) !!}
         {!! Form::hidden('board[]', $academicInfo->board, ["class" => "col-md-12"]) !!}
-        {!! Form::label('board', $academicTitle, ['class' => 'col-sm-12 control-label']) !!}
+        {!! Form::label('board', 'SSC/DAKHIL/EQUIVALENT', ['class' => 'col-sm-12 control-label']) !!}
 {{--        {!! Form::hidden('board[]', $row->title, ["class" => "col-md-12"]) !!}--}}
         {{--["class" => "col-xs-10 col-sm-11"]--}}
     </td>
