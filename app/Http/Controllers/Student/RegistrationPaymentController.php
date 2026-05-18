@@ -52,10 +52,10 @@ class RegistrationPaymentController extends Controller
                 'payment_method' => 'required|in:ssl,ucb',
                 'amount' => 'required|numeric|min:1',
                 'registration_data' => 'required',
-                'student_main_image' => 'nullable|file|mimes:jpeg,jpg,png|max:5120',
-                'father_main_image' => 'nullable|file|mimes:jpeg,jpg,png|max:5120',
-                'mother_main_image' => 'nullable|file|mimes:jpeg,jpg,png|max:5120',
-                'guardian_main_image' => 'nullable|file|mimes:jpeg,jpg,png|max:5120',
+                'student_main_image' => 'nullable',
+                'father_main_image' => 'nullable',
+                'mother_main_image' => 'nullable',
+                'guardian_main_image' => 'nullable',
             ]);
 
             if (!is_array($registrationData)) {
