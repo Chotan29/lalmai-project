@@ -576,7 +576,7 @@
                                     <div class="col-md-6">
                                         <div class="form-group">
                                             <label>Student Type <span class="text-danger">*</span></label>
-                                            <select name="student_type" id="studentTypeSelect" class="form-control" onchange="updatePaymentInfo()" required>
+                                            <select name="student_type" id="studentTypeSelect" class="form-control" required>
                                                 <option value="">Select Student Type</option>
                                                 @if($data['registration_setting']->new_student_enabled)
                                                     <option value="new">New Student</option>
@@ -1206,12 +1206,12 @@
                                             <tr>
                                                 <th>Level</th>
                                                 <th>Pass Year</th>
-                                                <th>Institution</th>
-                                                <th>Roll No</th>
+                                                <th>Board Name</th>
+                                                <th>Reg No.</th>
                                                 <th>Major Subjects</th>
-                                                <th>Mark Obtained</th>
-                                                <th>Maximum Mark</th>
-                                                <th>Percentage</th>
+                                                <th class="d-none academic-score-col">Mark Obtained</th>
+                                                <th class="d-none academic-score-col">Maximum Mark</th>
+                                                <th class="d-none academic-score-col">Percentage</th>
                                                 <th>Grade Point</th>
                                                 <th>Grade</th>
                                                 <th>Action</th>
@@ -1522,6 +1522,178 @@
         ];
         // Immutable copy used to restore tabOrder when switching back to new student
         const baseTabOrder = tabOrder.slice();
+        const studentTypeFormSnapshots = { new: null, old: null };
+        let lastStudentTypeSelection = null;
+        const academicBoardOptions = [
+            'Dhaka', 'Cumilla', 'Chattogram', 'Rajshahi', 'Jashore', 'Barishal', 'Sylhet', 'Dinajpur', 'Mymensingh',
+            'Madrasah', 'Technical', 'Open University', 'Others'
+        ];
+        const gradeLetterOptions = ['A+', 'A', 'A-', 'B', 'C', 'D', 'F'];
+
+        function buildSelectOptions(options, selectedValue, includePlaceholder, placeholderText) {
+            let html = '';
+            if (includePlaceholder) {
+                html += '<option value="">' + placeholderText + '</option>';
+            }
+
+            options.forEach(function(option) {
+                const selected = (String(selectedValue || '').toUpperCase() === String(option).toUpperCase()) ? ' selected' : '';
+                html += '<option value="' + option + '"' + selected + '>' + option + '</option>';
+            });
+
+            return html;
+        }
+
+        function normalizeAcademicInfoRows() {
+            const $rows = $('#academicInfo_wrapper').find('tr.option_value');
+            if (!$rows.length) {
+                return;
+            }
+
+            $rows.each(function() {
+                const $row = $(this);
+                const $cells = $row.children('td');
+
+                const $boardCell = $cells.eq(2);
+                const $institutionInput = $boardCell.find('input[name="institution[]"]');
+                if ($institutionInput.length && !$boardCell.find('select[name="institution[]"]').length) {
+                    const currentBoard = $institutionInput.val();
+                    const boardSelectHtml = '<select name="institution[]" class="col-md-12">' +
+                        buildSelectOptions(academicBoardOptions, currentBoard, true, 'Select Board Name') +
+                        '</select>';
+                    $institutionInput.replaceWith(boardSelectHtml);
+                }
+
+                [5, 6, 7].forEach(function(index) {
+                    $cells.eq(index).addClass('d-none academic-score-col');
+                });
+
+                const $gradeCell = $cells.eq(9);
+                const $gradeInput = $gradeCell.find('input[name="grade_letter[]"]');
+                if ($gradeInput.length && !$gradeCell.find('select[name="grade_letter[]"]').length) {
+                    const currentGrade = $gradeInput.val();
+                    const gradeSelectHtml = '<select name="grade_letter[]" class="col-md-12">' +
+                        buildSelectOptions(gradeLetterOptions, currentGrade, true, 'Select Grade') +
+                        '</select>';
+                    $gradeInput.replaceWith(gradeSelectHtml);
+                }
+            });
+        }
+
+        function collectCurrentFormState() {
+            const state = {};
+            $('#validation-form').find('input, select, textarea').each(function() {
+                const element = this;
+                const $element = $(element);
+                const name = element.name;
+
+                if (!name || name === '_token' || name === 'student_type' || element.type === 'file') {
+                    return;
+                }
+
+                if (element.type === 'radio') {
+                    if (!state[name]) {
+                        state[name] = { type: 'radio', value: null };
+                    }
+                    if (element.checked) {
+                        state[name].value = element.value;
+                    }
+                    return;
+                }
+
+                if (element.type === 'checkbox') {
+                    if (name.endsWith('[]')) {
+                        if (!state[name]) {
+                            state[name] = { type: 'checkbox-array', values: [] };
+                        }
+                        if (element.checked) {
+                            state[name].values.push(element.value);
+                        }
+                    } else {
+                        state[name] = { type: 'checkbox', checked: element.checked };
+                    }
+                    return;
+                }
+
+                if (name.endsWith('[]')) {
+                    if (!state[name]) {
+                        state[name] = { type: 'array', values: [] };
+                    }
+                    state[name].values.push($element.val());
+                    return;
+                }
+
+                state[name] = { type: 'value', value: $element.val() };
+            });
+
+            return state;
+        }
+
+        function applyFormState(state) {
+            if (!state) {
+                return;
+            }
+
+            Object.keys(state).forEach(function(name) {
+                const fieldState = state[name];
+                const $elements = $('[name="' + name + '"]');
+
+                if (!$elements.length || !fieldState) {
+                    return;
+                }
+
+                if (fieldState.type === 'radio') {
+                    $elements.prop('checked', false);
+                    if (fieldState.value !== null) {
+                        $elements.filter('[value="' + String(fieldState.value) + '"]').prop('checked', true);
+                    }
+                    return;
+                }
+
+                if (fieldState.type === 'checkbox') {
+                    $elements.prop('checked', !!fieldState.checked);
+                    return;
+                }
+
+                if (fieldState.type === 'checkbox-array') {
+                    const selectedValues = fieldState.values || [];
+                    $elements.prop('checked', false);
+                    selectedValues.forEach(function(value) {
+                        $elements.filter('[value="' + String(value) + '"]').prop('checked', true);
+                    });
+                    return;
+                }
+
+                if (fieldState.type === 'array') {
+                    const values = fieldState.values || [];
+                    $elements.each(function(index) {
+                        $(this).val(values[index] !== undefined ? values[index] : '');
+                    });
+                    return;
+                }
+
+                if (fieldState.type === 'value') {
+                    $elements.first().val(fieldState.value !== undefined ? fieldState.value : '');
+                }
+            });
+
+            initializeGuardianSelection(document.getElementById('validation-form'));
+            normalizeAcademicInfoRows();
+        }
+
+        function cacheCurrentStudentTypeSnapshot(studentType) {
+            if (studentType !== 'new' && studentType !== 'old') {
+                return;
+            }
+            studentTypeFormSnapshots[studentType] = collectCurrentFormState();
+        }
+
+        function restoreStudentTypeSnapshot(studentType) {
+            if (studentType !== 'new' && studentType !== 'old') {
+                return;
+            }
+            applyFormState(studentTypeFormSnapshots[studentType]);
+        }
 
         const generalFieldRules = [
             { field: 'input[name="first_name"]', message: "Please enter first name" },
@@ -2032,7 +2204,7 @@
 
         // Form submission handler
         $('#validation-form').on('submit', function(e) {
-            if (!validateTab($('.tab-pane.active').attr('id'))) {
+            if (!validateAllRequiredTabsBeforeSubmit()) {
                 e.preventDefault();
                 toastr.error("Please correct the errors before submitting", "Submission Error");
                 return;
@@ -2126,7 +2298,6 @@
                 const $studentTypeSelect = $('#studentTypeSelect');
                 if ($studentTypeSelect.length) {
                     $studentTypeSelect.val(preferredType);
-                    updatePaymentInfo();
                 }
             }
         }
@@ -2134,6 +2305,15 @@
         // Initialize on page load
         $(document).ready(function() {
             restoreStudentTypeFromState();
+            normalizeAcademicInfoRows();
+
+            const $studentTypeSelect = $('#studentTypeSelect');
+            lastStudentTypeSelection = $studentTypeSelect.val() || null;
+            if (lastStudentTypeSelection === 'new' || lastStudentTypeSelection === 'old') {
+                cacheCurrentStudentTypeSnapshot(lastStudentTypeSelection);
+            }
+            $studentTypeSelect.on('change', handleStudentTypeChange);
+            updatePaymentInfo();
 
             const queryParams = new URLSearchParams(window.location.search);
             const requestedTab = queryParams.get('tab');
@@ -2179,10 +2359,12 @@
 
             $('#validation-form').on('input', 'input, textarea', function(e) {
                 runRealtimeValidationForField($(this), e.type);
+                cacheCurrentStudentTypeSnapshot($('#studentTypeSelect').val());
             });
 
             $('#validation-form').on('change focusout', 'input, select, textarea', function(e) {
                 runRealtimeValidationForField($(this), e.type);
+                cacheCurrentStudentTypeSnapshot($('#studentTypeSelect').val());
             });
 
             $('#subjects_wrapper').on('change', 'input[name="subject[]"]', function() {
@@ -2197,6 +2379,7 @@
                 }
 
                 validateSubjectSelection(false);
+                cacheCurrentStudentTypeSnapshot($('#studentTypeSelect').val());
             });
 
             var today = new Date();
@@ -2530,6 +2713,7 @@
                     if (!data.error) {
                         $('#academicInfo_wrapper').empty();
                         $('#academicInfo_wrapper').append(data.html);
+                        normalizeAcademicInfoRows();
                     }
                 },
                 error: function() {
@@ -2590,6 +2774,47 @@
                 setPaymentButtonState(false);
                 window.localStorage.removeItem('online_registration_student_type');
             }
+        }
+
+        function handleStudentTypeChange() {
+            const selectedType = $('#studentTypeSelect').val();
+
+            if (lastStudentTypeSelection === 'new' || lastStudentTypeSelection === 'old') {
+                cacheCurrentStudentTypeSnapshot(lastStudentTypeSelection);
+            }
+
+            updatePaymentInfo();
+
+            if (selectedType === 'new' || selectedType === 'old') {
+                restoreStudentTypeSnapshot(selectedType);
+            }
+
+            lastStudentTypeSelection = selectedType || null;
+        }
+
+        function validateAllRequiredTabsBeforeSubmit() {
+            const tabsToValidate = tabOrder.filter(function(tab) {
+                return tab !== 'payment';
+            });
+
+            for (let i = 0; i < tabsToValidate.length; i++) {
+                const tabName = tabsToValidate[i];
+                const valid = validateTab(tabName, {
+                    showToast: false,
+                    focusOnError: false
+                });
+
+                if (!valid) {
+                    activateTab(tabName);
+                    validateTab(tabName, {
+                        showToast: true,
+                        focusOnError: true
+                    });
+                    return false;
+                }
+            }
+
+            return true;
         }
 
         let selectedPaymentMethod = null;
