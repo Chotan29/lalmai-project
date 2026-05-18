@@ -1461,10 +1461,12 @@
                         @endif
                     {{-- Hidden submit button shown by JS when old student skips payment --}}
                     @if($data['registration_setting']->payment_required && $data['registration_setting']->hide_payment_for_old_student)
-                    <button type="submit" class="btn btn-success" name="add_student"
-                            id="add-student-skip-payment" style="display:none;">
-                        <i class="fa fa-check"></i> Submit Application
-                    </button>
+                    <div class="text-right mt-4" id="skip-payment-submit-wrapper" style="display:none;">
+                        <button type="submit" class="btn btn-success" name="add_student"
+                                id="add-student-skip-payment">
+                            <i class="fa fa-check"></i> Submit Application
+                        </button>
+                    </div>
                     @endif
                     {!! Form::close() !!}
                 </div>
@@ -2092,16 +2094,16 @@
                 const oldStudentSkipsPayment = hidePaymentForOldStudent &&
                     $('#studentTypeSelect').val() === 'old';
                 if (oldStudentSkipsPayment) {
-                    $('#add-student-skip-payment').show();
+                    $('#skip-payment-submit-wrapper').show();
                     $('#add-student').hide();
                 } else {
                     $('#add-student').show();
-                    $('#add-student-skip-payment').hide();
+                    $('#skip-payment-submit-wrapper').hide();
                 }
             } else {
                 nextButton.show();
                 $('#add-student').hide();
-                $('#add-student-skip-payment').hide();
+                $('#skip-payment-submit-wrapper').hide();
             }
         }
 
