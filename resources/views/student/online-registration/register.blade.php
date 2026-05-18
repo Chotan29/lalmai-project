@@ -1461,7 +1461,7 @@
                         @endif
                     {{-- Hidden submit button shown by JS when old student skips payment --}}
                     @if($data['registration_setting']->payment_required && $data['registration_setting']->hide_payment_for_old_student)
-                    <div class="text-right mt-4" id="skip-payment-submit-wrapper" style="display:none;">
+                    <div class="d-flex justify-content-end mt-4" id="skip-payment-submit-wrapper" style="display:none;">
                         <button type="submit" class="btn btn-success" name="add_student"
                                 id="add-student-skip-payment">
                             <i class="fa fa-check"></i> Submit Application
