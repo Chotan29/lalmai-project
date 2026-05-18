@@ -20,6 +20,7 @@ use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Validation\ValidationException;
 use Carbon\Carbon;
 use App\User;
 
@@ -51,10 +52,10 @@ class RegistrationPaymentController extends Controller
                 'payment_method' => 'required|in:ssl,ucb',
                 'amount' => 'required|numeric|min:1',
                 'registration_data' => 'required',
-                'student_main_image' => 'nullable|image|mimes:jpeg,jpg,png|max:5120',
-                'father_main_image' => 'nullable|image|mimes:jpeg,jpg,png|max:5120',
-                'mother_main_image' => 'nullable|image|mimes:jpeg,jpg,png|max:5120',
-                'guardian_main_image' => 'nullable|image|mimes:jpeg,jpg,png|max:5120',
+                'student_main_image' => 'nullable|file|mimes:jpeg,jpg,png|max:5120',
+                'father_main_image' => 'nullable|file|mimes:jpeg,jpg,png|max:5120',
+                'mother_main_image' => 'nullable|file|mimes:jpeg,jpg,png|max:5120',
+                'guardian_main_image' => 'nullable|file|mimes:jpeg,jpg,png|max:5120',
             ]);
 
             if (!is_array($registrationData)) {
@@ -156,6 +157,12 @@ class RegistrationPaymentController extends Controller
 
             return response()->json($paymentResponse);
 
+        } catch (ValidationException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation failed.',
+                'errors' => $e->errors(),
+            ], 422);
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,

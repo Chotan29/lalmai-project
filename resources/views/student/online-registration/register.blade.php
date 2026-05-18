@@ -1267,7 +1267,7 @@
 
                                     <div class="col-md-3">
                                         <div id="imagePreview" class="preview-image-container">
-                                            <img id="previewImage" src="{{ asset('images/default-user.png') }}"
+                                            <img id="photoPreviewImg" src="{{ asset('images/default-user.png') }}"
                                                 class="img-thumbnail preview-image">
                                         </div>
                                     </div>
@@ -1514,10 +1514,10 @@
                 'rules',
             @endif
             @if($data['registration_setting']->agreement_status == '1')
-                'agreement'
+                'agreement',
             @endif
             @if($data['registration_setting']->payment_required == true)
-                ,'payment'
+                'payment',
             @endif
         ];
         // Immutable copy used to restore tabOrder when switching back to new student
@@ -1978,7 +1978,7 @@
             input.value = '';
             setFieldInvalid($(input), message, false);
             $(input).next('.custom-file-label').removeClass('selected').html('Choose file');
-            $('#previewImage').attr('src', '{{ asset('images/default-user.png') }}');
+            $('#photoPreviewImg').attr('src', '{{ asset('images/default-user.png') }}');
             toastr.warning(message, 'Photo Validation');
         }
 
@@ -2019,7 +2019,7 @@
                 profileImageValidationInProgress = false;
                 profileImageValidationError = '';
                 clearFieldInvalid($(input));
-                $('#previewImage').attr('src', imageSource);
+                $('#photoPreviewImg').attr('src', imageSource);
             };
 
             image.onerror = function() {
@@ -2035,7 +2035,10 @@
             if (!validateTab($('.tab-pane.active').attr('id'))) {
                 e.preventDefault();
                 toastr.error("Please correct the errors before submitting", "Submission Error");
+                return;
             }
+            // Double-submit prevention: disable submit button after first valid submit
+            $(this).find('[type="submit"]').prop('disabled', true).html('<i class="fa fa-spinner fa-spin"></i> Submitting...');
         });
 
         // Image preview function
@@ -2060,7 +2063,7 @@
                 profileImageValidationError = '';
                 clearFieldInvalid($(input));
                 $(input).next('.custom-file-label').removeClass('selected').html('Choose file');
-                $('#previewImage').attr('src', '{{ asset('images/default-user.png') }}');
+                $('#photoPreviewImg').attr('src', '{{ asset('images/default-user.png') }}');
             }
         }
 
@@ -2268,8 +2271,8 @@
                 });
             });
 
-            // Initialize navigation buttons
-            updateNavigationButtons('generalInfo');
+            // Initialize navigation buttons (studentType is the first tab)
+            updateNavigationButtons('studentType');
         });
 
         /*copy permanent address on temporary address*/

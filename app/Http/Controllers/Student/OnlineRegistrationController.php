@@ -268,9 +268,10 @@ class OnlineRegistrationController extends CollegeBaseController
             $name = isset($student->middle_name)?$student->first_name.' '.$student->middle_name.' '.$student->last_name:$student->first_name.' '.$student->last_name;
 
             if($existUser){
-                $user = $existUser->update([
+                $existUser->update([
                     'password' => Hash::make($password)
                 ]);
+                $user = $existUser; // Bug fix: update() returns bool, must keep the model instance
 
                 //$subject = 'Login Detail Reset';
                 //$message = 'Dear ' . $name.', Your login detail Updated in our system. Please Login with  <br> email: '.$emailIds.' And Password: '. $password ;
@@ -489,11 +490,9 @@ class OnlineRegistrationController extends CollegeBaseController
 
             $PublishMessage = 'Dear, ' . $name.' Thank you for register with us. Your registration number is.'.$regNum;
 
-            /*SMS & Email Alert*/
+            /*SMS & Email Alert — skip gracefully if AlertSetting not configured */
             $alert = AlertSetting::where('event','=','StudentRegistration')->first();
-            if(!$alert) {
-                return back()->with($this->message_warning, "Alert Setting not Setup. Contact Admin For More Detail.");
-            }else {
+            if($alert) {
                 $subject = $alert->subject;
 
                 //SMS Template
@@ -504,9 +503,9 @@ class OnlineRegistrationController extends CollegeBaseController
                 $message = str_replace('{{password}}', $password, $message);
                 $emailMessage = str_replace('{{password}}', $password, $emailMessage);
                 //Dear {{first_name}}, you are successfully registered in our institution with RegNo.{{reg_no}}. Your login password is {{password}} , Thank You.
-                $emailIds = [];
+                $notifEmails = [];
                 $contactNumbers= [];
-                $emailIds[] = $student->email;
+                $notifEmails[] = $student->email;
                 $contactNumbers[] = $request->mobile_1;
 
                 /*Now Send SMS On First Mobile Number*/
@@ -517,8 +516,8 @@ class OnlineRegistrationController extends CollegeBaseController
 
                 /*Now Send Email With Subject*/
                 if ($alert->email == 1) {
-                    $emailIds = $this->emailFilter($emailIds);
-                    $emailSuccess = $this->sendEmail($emailIds, $subject, $emailMessage);
+                    $notifEmails = $this->emailFilter($notifEmails);
+                    $emailSuccess = $this->sendEmail($notifEmails, $subject, $emailMessage);
                 }
             }
             //end sms email
