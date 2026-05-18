@@ -607,7 +607,7 @@
                                 </div>
                             </div>
 
-                            <div class="form-navigation d-flex justify-content-between mt-4">
+                            <div class="form-navigation mt-4">
                                 <button type="button" class="btn btn-primary btn-next" onclick="navigateTab('next')" id="studentTypeNextBtn" disabled>
                                     <i class="fa fa-arrow-right mr-2"></i> Next
                                 </button>
@@ -1199,7 +1199,7 @@
                                 </div>
                             </div>
 
-                            <div class="form-navigation d-flex justify-content-between mt-4">
+                            <div class="form-navigation mt-4">
                                 <div></div>
                                 <button type="button" class="btn btn-primary btn-next"
                                     onclick="navigateTab('next')">
@@ -1243,7 +1243,7 @@
                                 </div>
                             </div>
 
-                            <div class="form-navigation d-flex justify-content-between mt-4">
+                            <div class="form-navigation mt-4">
                                 <button type="button" class="btn btn-secondary btn-prev"
                                     onclick="navigateTab('prev')">
                                     <i class="fa fa-arrow-left mr-2"></i> Previous
@@ -1286,7 +1286,7 @@
                                 </div>
                             </div>
 
-                            <div class="form-navigation d-flex justify-content-between mt-4">
+                            <div class="form-navigation mt-4">
                                 <button type="button" class="btn btn-secondary btn-prev" onclick="navigateTab('prev')">
                                     <i class="fa fa-arrow-left mr-2"></i> Previous
                                 </button>
@@ -1321,7 +1321,7 @@
                                 </div>
                             </div>
 
-                            <div class="form-navigation d-flex justify-content-between mt-4">
+                            <div class="form-navigation mt-4">
                                 <button type="button" class="btn btn-secondary btn-prev" onclick="navigateTab('prev')">
                                     <i class="fa fa-arrow-left mr-2"></i> Previous
                                 </button>
@@ -1349,7 +1349,7 @@
                                 </div>
                             </div>
 
-                            <div class="form-navigation d-flex justify-content-between mt-4">
+                            <div class="form-navigation mt-4">
                                 <button type="button" class="btn btn-secondary btn-prev" onclick="navigateTab('prev')">
                                     <i class="fa fa-arrow-left mr-2"></i> Previous
                                 </button>
@@ -1377,7 +1377,7 @@
                                 </div>
                             </div>
 
-                            <div class="form-navigation d-flex justify-content-between mt-4">
+                            <div class="form-navigation mt-4">
                                 <button type="button" class="btn btn-secondary btn-prev" onclick="navigateTab('prev')">
                                     <i class="fa fa-arrow-left mr-2"></i> Previous
                                 </button>
@@ -1419,7 +1419,7 @@
                                 </div>
                             </div>
 
-                            <div class="form-navigation d-flex justify-content-between mt-4">
+                            <div class="form-navigation mt-4">
                                 <button type="button" class="btn btn-secondary btn-prev" onclick="navigateTab('prev')">
                                     <i class="fa fa-arrow-left mr-2"></i> Previous
                                 </button>
