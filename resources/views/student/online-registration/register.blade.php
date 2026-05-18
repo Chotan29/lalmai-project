@@ -1208,7 +1208,7 @@
                                                 <th>Pass Year</th>
                                                 <th>Board Name</th>
                                                 <th>Reg No.</th>
-                                                <th>Major Subjects</th>
+                                                <th>Group</th>
                                                 <th class="d-none academic-score-col">Mark Obtained</th>
                                                 <th class="d-none academic-score-col">Maximum Mark</th>
                                                 <th class="d-none academic-score-col">Percentage</th>
@@ -1528,9 +1528,7 @@
             'Dhaka', 'Cumilla', 'Chattogram', 'Rajshahi', 'Jashore', 'Barishal', 'Sylhet', 'Dinajpur', 'Mymensingh',
             'Madrasah', 'Technical', 'Open University', 'Others'
         ];
-        const majorSubjectGroupOptions = [
-            'Science', 'Business Studies', 'Humanities', 'Commerce', 'Arts', 'General', 'Others'
-        ];
+        const majorSubjectGroupOptions = ['Science', 'Business', 'Humanities'];
         const gradeLetterOptions = ['A+', 'A', 'A-', 'B+', 'B', 'B-', 'C+', 'C', 'D', 'F'];
 
         function buildSelectOptions(options, selectedValue, includePlaceholder, placeholderText) {
@@ -1572,7 +1570,7 @@
                 if ($majorControl.length) {
                     const currentMajor = $majorControl.val();
                     const majorSelectHtml = '<select name="major_subjects[]" class="col-md-12">' +
-                        buildSelectOptions(majorSubjectGroupOptions, currentMajor, true, 'Select Major Subjects Group') +
+                        buildSelectOptions(majorSubjectGroupOptions, currentMajor, true, 'Select Group') +
                         '</select>';
                     $majorControl.replaceWith(majorSelectHtml);
                 }
@@ -1767,7 +1765,8 @@
             checked: false,
             isChecking: false,
             isUnique: false,
-            message: ''
+            message: '',
+            serviceUnavailable: false
         };
         let emailCheckDebounceTimer = null;
 
@@ -1777,6 +1776,7 @@
             emailUniquenessState.isChecking = false;
             emailUniquenessState.isUnique = false;
             emailUniquenessState.message = '';
+            emailUniquenessState.serviceUnavailable = false;
         }
 
         function verifyEmailUniqueness(showToast) {
@@ -1812,6 +1812,7 @@
                         return;
                     }
 
+                    emailUniquenessState.serviceUnavailable = false;
                     emailUniquenessState.isChecking = false;
                     emailUniquenessState.checked = true;
                     emailUniquenessState.isUnique = !response.exists;
@@ -1829,11 +1830,15 @@
                         return;
                     }
 
+                    emailUniquenessState.serviceUnavailable = true;
                     emailUniquenessState.isChecking = false;
-                    emailUniquenessState.checked = false;
-                    emailUniquenessState.isUnique = false;
-                    emailUniquenessState.message = 'Could not verify email right now. Please try again.';
-                    setFieldInvalid($emailField, emailUniquenessState.message, showToast);
+                    emailUniquenessState.checked = true;
+                    emailUniquenessState.isUnique = true;
+                    emailUniquenessState.message = 'Realtime email check is temporarily unavailable. We will verify it on final submit.';
+                    clearFieldInvalid($emailField);
+                    if (showToast && typeof toastr !== 'undefined' && toastr.warning) {
+                        toastr.warning(emailUniquenessState.message);
+                    }
                 }
             });
         }
@@ -1946,6 +1951,8 @@
             if (fieldName === 'email') {
                 if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {
                     message = 'Please enter a genuine valid email address.';
+                } else if (emailUniquenessState.serviceUnavailable) {
+                    message = '';
                 } else {
                     const normalizedEmail = value.toLowerCase();
                     if (emailUniquenessState.isChecking && emailUniquenessState.lastCheckedEmail === normalizedEmail) {
@@ -2302,15 +2309,94 @@
             image.src = imageSource;
         }
 
-        // Form submission handler
+        // Form submission handler (AJAX to keep form state on validation errors)
+        let registrationSubmitInProgress = false;
         $('#validation-form').on('submit', function(e) {
+            e.preventDefault();
+
+            if (registrationSubmitInProgress) {
+                return;
+            }
+
             if (!validateAllRequiredTabsBeforeSubmit()) {
-                e.preventDefault();
                 toastr.error("Please correct the errors before submitting", "Submission Error");
                 return;
             }
-            // Double-submit prevention: disable submit button after first valid submit
-            $(this).find('[type="submit"]').prop('disabled', true).html('<i class="fa fa-spinner fa-spin"></i> Submitting...');
+
+            const $form = $(this);
+            const $submitButtons = $form.find('[type="submit"]');
+
+            // Normalize uppercase fields before payload build for consistent server values.
+            $form.find('.upper').each(function() {
+                if (typeof this.value === 'string') {
+                    this.value = this.value.toUpperCase();
+                }
+            });
+
+            registrationSubmitInProgress = true;
+            $submitButtons.prop('disabled', true).html('<i class="fa fa-spinner fa-spin"></i> Submitting...');
+
+            const formData = new FormData($form.get(0));
+
+            $.ajax({
+                url: $form.attr('action'),
+                type: 'POST',
+                data: formData,
+                processData: false,
+                contentType: false,
+                headers: {
+                    'Accept': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                success: function(response) {
+                    if (response && response.success && response.redirect_url) {
+                        window.location.href = response.redirect_url;
+                        return;
+                    }
+
+                    registrationSubmitInProgress = false;
+                    $submitButtons.prop('disabled', false).html('<i class="fa fa-check"></i> Submit Application');
+                    toastr.success((response && response.message) ? response.message : 'Submitted successfully.');
+                },
+                error: function(xhr) {
+                    registrationSubmitInProgress = false;
+                    $submitButtons.prop('disabled', false).html('<i class="fa fa-check"></i> Submit Application');
+
+                    const errors = xhr.responseJSON && xhr.responseJSON.errors ? xhr.responseJSON.errors : null;
+                    if (errors) {
+                        const errorMessages = [];
+                        let firstField = null;
+
+                        Object.keys(errors).forEach(function(fieldName) {
+                            const messageList = Array.isArray(errors[fieldName]) ? errors[fieldName] : [errors[fieldName]];
+                            const message = messageList.length ? messageList[0] : 'Invalid value.';
+                            errorMessages.push(message);
+
+                            const selector = '[name="' + fieldName + '"]';
+                            const $field = $(selector).first();
+                            if ($field.length) {
+                                setFieldInvalid($field, message, false);
+                                if (!firstField) {
+                                    firstField = $field;
+                                }
+                            }
+                        });
+
+                        if (firstField && firstField.length) {
+                            const targetOffset = Math.max(0, firstField.offset().top - 100);
+                            $('html, body').animate({ scrollTop: targetOffset }, 300);
+                        }
+
+                        toastr.error(errorMessages.join('<br>'), 'Validation Errors Found');
+                        return;
+                    }
+
+                    const genericMessage = (xhr.responseJSON && xhr.responseJSON.message)
+                        ? xhr.responseJSON.message
+                        : 'Submission failed. Please try again.';
+                    toastr.error(genericMessage, 'Submission Error');
+                }
+            });
         });
 
         // Image preview function

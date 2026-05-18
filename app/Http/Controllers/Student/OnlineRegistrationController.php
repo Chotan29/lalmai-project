@@ -523,9 +523,26 @@ class OnlineRegistrationController extends CollegeBaseController
             //end sms email
 
             $request->session()->flash($this->message_success, $PublishMessage);
+
+            if ($request->expectsJson() || $request->ajax()) {
+                return response()->json([
+                    'success' => true,
+                    'message' => $PublishMessage,
+                    'redirect_url' => route('online-registration.print', encrypt($student->id)),
+                ]);
+            }
+
             return redirect()->route('online-registration.print',encrypt($student->id));
         }else{
             $request->session()->flash($this->message_warning, $this->panel. ' Getting Err. While submitting.');
+
+            if ($request->expectsJson() || $request->ajax()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => $this->panel . ' Getting Err. While submitting.',
+                ], 422);
+            }
+
             return back();
         }
 /*
