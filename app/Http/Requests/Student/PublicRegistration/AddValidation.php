@@ -51,58 +51,20 @@ class AddValidation extends FormRequest
             'guardian_last_name'              => 'max:25',
             'guardian_mobile_1'               => 'max:25',
             'guardian_email'                  => 'max:100',
-            'student_main_image'            => 'required|image|mimes:jpeg,jpg,bmp,png|max:5120|dimensions:min_width=300,min_height=400',
+            // Image validation only client-side, server-side only required
+            'student_main_image'            => 'required',
         ];
 
     }
 
-    public function withValidator($validator)
-    {
-        $validator->after(function ($validator) {
-            if (!$this->hasFile('student_main_image')) {
-                return;
-            }
-
-            $image = $this->file('student_main_image');
-
-            if (!$image || !$image->isValid()) {
-                return;
-            }
-
-            $imageInfo = @getimagesize($image->getRealPath());
-            if (!$imageInfo || count($imageInfo) < 2) {
-                $validator->errors()->add('student_main_image', 'Uploaded photo could not be read. Please upload a clear JPG, JPEG, BMP, or PNG image.');
-                return;
-            }
-
-            $width = (int) $imageInfo[0];
-            $height = (int) $imageInfo[1];
-
-            if ($width < self::PASSPORT_MIN_WIDTH || $height < self::PASSPORT_MIN_HEIGHT) {
-                $validator->errors()->add('student_main_image', 'Photo resolution is too low. Minimum size is 300x400 pixels.');
-            }
-
-            if ($height > 0) {
-                $ratio = $width / $height;
-                if (abs($ratio - self::PASSPORT_RATIO) > self::PASSPORT_RATIO_TOLERANCE) {
-                    $validator->errors()->add('student_main_image', 'Photo must be passport style with a portrait ratio close to 35x45.');
-                }
-            }
-        });
-    }
 
     public function messages()
     {
         return [
             'reg_no.unique'                          => 'Enter Unique Reg.No.',
             'student_main_image.required'            => 'Image Required, Please Upload Image',
-            'student_main_image.image'               => 'Student photo must be a valid image file.',
-            'student_main_image.mimes'               => 'Student photo must be a JPG, JPEG, BMP, or PNG file.',
-            'student_main_image.max'                 => 'Student photo size must not be greater than 5 MB.',
-            'student_main_image.dimensions'          => 'Student photo resolution must be at least 300x400 pixels.',
             'blood_group.required'                  => 'Please select blood group.',
             'religion.required'                     => 'Please select religion.',
-
         ];
     }
 }
