@@ -919,4 +919,26 @@ class OnlineRegistrationController extends CollegeBaseController
         return response()->json($response);
     }
 
+    public function checkEmail(Request $request)
+    {
+        $email = strtolower(trim((string) $request->input('email')));
+
+        if ($email === '' || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Please provide a valid email address.'
+            ], 422);
+        }
+
+        $exists = Student::whereRaw('LOWER(email) = ?', [$email])->exists();
+
+        return response()->json([
+            'success' => true,
+            'exists' => $exists,
+            'message' => $exists
+                ? 'This email address already exists in registration records.'
+                : 'Email is available.'
+        ]);
+    }
+
 }

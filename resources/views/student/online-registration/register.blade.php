@@ -1528,7 +1528,10 @@
             'Dhaka', 'Cumilla', 'Chattogram', 'Rajshahi', 'Jashore', 'Barishal', 'Sylhet', 'Dinajpur', 'Mymensingh',
             'Madrasah', 'Technical', 'Open University', 'Others'
         ];
-        const gradeLetterOptions = ['A+', 'A', 'A-', 'B', 'C', 'D', 'F'];
+        const majorSubjectGroupOptions = [
+            'Science', 'Business Studies', 'Humanities', 'Commerce', 'Arts', 'General', 'Others'
+        ];
+        const gradeLetterOptions = ['A+', 'A', 'A-', 'B+', 'B', 'B-', 'C+', 'C', 'D', 'F'];
 
         function buildSelectOptions(options, selectedValue, includePlaceholder, placeholderText) {
             let html = '';
@@ -1555,13 +1558,23 @@
                 const $cells = $row.children('td');
 
                 const $boardCell = $cells.eq(2);
-                const $institutionInput = $boardCell.find('input[name="institution[]"]');
-                if ($institutionInput.length && !$boardCell.find('select[name="institution[]"]').length) {
-                    const currentBoard = $institutionInput.val();
+                const $boardControl = $boardCell.find('[name="institution[]"]').first();
+                if ($boardControl.length) {
+                    const currentBoard = $boardControl.val();
                     const boardSelectHtml = '<select name="institution[]" class="col-md-12">' +
                         buildSelectOptions(academicBoardOptions, currentBoard, true, 'Select Board Name') +
                         '</select>';
-                    $institutionInput.replaceWith(boardSelectHtml);
+                    $boardControl.replaceWith(boardSelectHtml);
+                }
+
+                const $majorCell = $cells.eq(4);
+                const $majorControl = $majorCell.find('[name="major_subjects[]"]').first();
+                if ($majorControl.length) {
+                    const currentMajor = $majorControl.val();
+                    const majorSelectHtml = '<select name="major_subjects[]" class="col-md-12">' +
+                        buildSelectOptions(majorSubjectGroupOptions, currentMajor, true, 'Select Major Subjects Group') +
+                        '</select>';
+                    $majorControl.replaceWith(majorSelectHtml);
                 }
 
                 [5, 6, 7].forEach(function(index) {
@@ -1569,13 +1582,13 @@
                 });
 
                 const $gradeCell = $cells.eq(9);
-                const $gradeInput = $gradeCell.find('input[name="grade_letter[]"]');
-                if ($gradeInput.length && !$gradeCell.find('select[name="grade_letter[]"]').length) {
-                    const currentGrade = $gradeInput.val();
+                const $gradeControl = $gradeCell.find('[name="grade_letter[]"]').first();
+                if ($gradeControl.length) {
+                    const currentGrade = $gradeControl.val();
                     const gradeSelectHtml = '<select name="grade_letter[]" class="col-md-12">' +
                         buildSelectOptions(gradeLetterOptions, currentGrade, true, 'Select Grade') +
                         '</select>';
-                    $gradeInput.replaceWith(gradeSelectHtml);
+                    $gradeControl.replaceWith(gradeSelectHtml);
                 }
             });
         }
@@ -1749,6 +1762,81 @@
         };
 
         const touchedFieldState = {};
+        const emailUniquenessState = {
+            lastCheckedEmail: '',
+            checked: false,
+            isChecking: false,
+            isUnique: false,
+            message: ''
+        };
+        let emailCheckDebounceTimer = null;
+
+        function resetEmailUniquenessState(emailValue) {
+            emailUniquenessState.lastCheckedEmail = (emailValue || '').toLowerCase();
+            emailUniquenessState.checked = false;
+            emailUniquenessState.isChecking = false;
+            emailUniquenessState.isUnique = false;
+            emailUniquenessState.message = '';
+        }
+
+        function verifyEmailUniqueness(showToast) {
+            const $emailField = $('input[name="email"]');
+            const rawValue = $emailField.val();
+            const emailValue = rawValue === null ? '' : rawValue.toString().trim().toLowerCase();
+
+            if (!emailValue || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailValue)) {
+                resetEmailUniquenessState(emailValue);
+                return;
+            }
+
+            if (emailUniquenessState.checked && emailUniquenessState.lastCheckedEmail === emailValue) {
+                return;
+            }
+
+            emailUniquenessState.lastCheckedEmail = emailValue;
+            emailUniquenessState.checked = false;
+            emailUniquenessState.isChecking = true;
+            emailUniquenessState.message = 'Checking email availability...';
+
+            $.ajax({
+                type: 'POST',
+                url: '{{ route('online-registration.check-email', [], false) }}',
+                dataType: 'json',
+                data: {
+                    _token: '{{ csrf_token() }}',
+                    email: emailValue
+                },
+                success: function(response) {
+                    const currentEmail = (($emailField.val() || '').toString().trim().toLowerCase());
+                    if (currentEmail !== emailValue) {
+                        return;
+                    }
+
+                    emailUniquenessState.isChecking = false;
+                    emailUniquenessState.checked = true;
+                    emailUniquenessState.isUnique = !response.exists;
+                    emailUniquenessState.message = response.message || (response.exists ? 'Email already exists.' : 'Email is available.');
+
+                    if (!emailUniquenessState.isUnique) {
+                        setFieldInvalid($emailField, emailUniquenessState.message, showToast);
+                    } else {
+                        clearFieldInvalid($emailField);
+                    }
+                },
+                error: function() {
+                    const currentEmail = (($emailField.val() || '').toString().trim().toLowerCase());
+                    if (currentEmail !== emailValue) {
+                        return;
+                    }
+
+                    emailUniquenessState.isChecking = false;
+                    emailUniquenessState.checked = false;
+                    emailUniquenessState.isUnique = false;
+                    emailUniquenessState.message = 'Could not verify email right now. Please try again.';
+                    setFieldInvalid($emailField, emailUniquenessState.message, showToast);
+                }
+            });
+        }
 
         function getFieldKey($element) {
             return $element.attr('name') || $element.attr('id') || 'field';
@@ -1857,7 +1945,19 @@
 
             if (fieldName === 'email') {
                 if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {
-                    message = 'Please enter a valid email address.';
+                    message = 'Please enter a genuine valid email address.';
+                } else {
+                    const normalizedEmail = value.toLowerCase();
+                    if (emailUniquenessState.isChecking && emailUniquenessState.lastCheckedEmail === normalizedEmail) {
+                        message = 'Email availability is being verified. Please wait.';
+                    } else if (emailUniquenessState.checked && emailUniquenessState.lastCheckedEmail === normalizedEmail) {
+                        if (!emailUniquenessState.isUnique) {
+                            message = emailUniquenessState.message || 'This email address already exists.';
+                        }
+                    } else {
+                        message = 'Please wait while email uniqueness is confirmed.';
+                        verifyEmailUniqueness(false);
+                    }
                 }
             }
 
@@ -2241,15 +2341,38 @@
 
         function runRealtimeValidationForField($field, triggerType) {
             const fieldName = $field.attr('name');
-            const shouldMarkTouched = triggerType === 'change' || triggerType === 'focusout';
+            const shouldMarkTouched = triggerType === 'change' || triggerType === 'focusout' || (fieldName === 'email' && triggerType === 'input');
 
             if (shouldMarkTouched) {
                 markFieldTouched($field);
             }
 
             if (fieldName && realtimeFieldMessages[fieldName]) {
-                if (hasFieldBeenTouched($field) || $field.hasClass('is-invalid') || triggerType === 'change') {
+                if (hasFieldBeenTouched($field) || $field.hasClass('is-invalid') || triggerType === 'change' || (fieldName === 'email' && triggerType === 'input')) {
                     validateSingleFieldByName(fieldName, false);
+                }
+            }
+
+            if (fieldName === 'email') {
+                const currentEmail = (($field.val() || '').toString().trim().toLowerCase());
+
+                if (triggerType === 'input') {
+                    if (emailCheckDebounceTimer) {
+                        clearTimeout(emailCheckDebounceTimer);
+                    }
+                    resetEmailUniquenessState(currentEmail);
+
+                    if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(currentEmail)) {
+                        emailCheckDebounceTimer = setTimeout(function() {
+                            verifyEmailUniqueness(false);
+                        }, 350);
+                    }
+                }
+
+                if (triggerType === 'change' || triggerType === 'focusout') {
+                    if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(currentEmail)) {
+                        verifyEmailUniqueness(false);
+                    }
                 }
             }
 

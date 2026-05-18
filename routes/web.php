@@ -434,6 +434,7 @@ Route::get('online-registration',                    ['as' => 'online-registrati
 Route::post('online-registration/prepare-payment',  ['as' => 'online-registration.prepare-payment',   'uses' => 'Student\OnlineRegistrationController@preparePayment']);
 Route::post('online-registration/find-semester',     ['as' => 'online-registration.find-semester',      'uses' => 'Student\OnlineRegistrationController@findSemester']);
 Route::post('online-registration/find-subject',      ['as' => 'online-registration.find-subject',       'uses' => 'Student\OnlineRegistrationController@findSubject']);
+Route::post('online-registration/check-email',       ['as' => 'online-registration.check-email',        'uses' => 'Student\OnlineRegistrationController@checkEmail']);
 //print registration
 Route::get('online-registration/find',             ['as' => 'online-registration.find',         'uses' => 'Student\OnlineRegistrationController@findRegistration']);
 Route::get('online-registration/{id}/print',       ['as' => 'online-registration.print',        'uses' => 'Student\OnlineRegistrationController@print']);
