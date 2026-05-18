@@ -673,7 +673,7 @@
                                         <div class="form-group">
                                             <label>Date of Birth <span class="text-danger">*</span></label>
                                             <input type="date" name="date_of_birth"
-                                                class="form-control date-picker input-mask-date" required>
+                                                class="form-control" onfocus="if(this.showPicker){this.showPicker();}" required>
                                         </div>
                                     </div>
                                     <div class="col-md-4">
@@ -792,7 +792,7 @@
                                     <div class="col-md-4">
                                         <div class="form-group">
                                             <label>Country <span class="text-danger">*</span></label>
-                                            <input type="text" name="country" class="form-control upper" required>
+                                            <input type="text" name="country" class="form-control" value="Bangladesh" readonly required>
                                         </div>
                                     </div>
                                 </div>
