@@ -286,6 +286,18 @@
 
         .form-navigation {
             margin-top: 30px;
+            display: block;
+            overflow: auto;
+        }
+
+        .form-navigation .btn-prev {
+            float: left;
+        }
+
+        .form-navigation .btn-next,
+        .form-navigation .btn-success,
+        .form-navigation #proceedPaymentBtn {
+            float: right;
         }
 
         .preview-image-container {
@@ -1461,7 +1473,7 @@
                         @endif
                     {{-- Hidden submit button shown by JS when old student skips payment --}}
                     @if($data['registration_setting']->payment_required && $data['registration_setting']->hide_payment_for_old_student)
-                    <div class="d-flex justify-content-end mt-4" id="skip-payment-submit-wrapper" style="display:none;">
+                    <div id="skip-payment-submit-wrapper" style="display:none; text-align:right; margin-top:16px;">
                         <button type="submit" class="btn btn-success" name="add_student"
                                 id="add-student-skip-payment">
                             <i class="fa fa-check"></i> Submit Application
