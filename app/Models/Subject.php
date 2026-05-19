@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\DB;
 
 class Subject extends Model
 {
@@ -10,9 +11,25 @@ class Subject extends Model
         'full_mark_practical', 'pass_mark_practical', 'credit_hour', 'sub_type', 'class_type', 'staff_id',
         'description', 'status'];
 
-
     public function semester()
     {
         return $this->belongsToMany(Semester::class);
+    }
+
+    // Add model event for deletion logging
+    protected static function boot()
+    {
+        parent::boot();
+
+        static::deleting(function ($subject) {
+            DB::table('deletion_logs')->insert([
+                'model' => 'Subject',
+                'model_id' => $subject->id,
+                'data' => json_encode($subject->attributesToArray()),
+                'user_id' => auth()->id() ?? null,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+        });
     }
 }

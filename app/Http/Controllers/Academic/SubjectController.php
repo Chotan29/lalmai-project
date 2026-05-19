@@ -92,8 +92,12 @@ class SubjectController extends CollegeBaseController
         $id = decrypt($id);
         if (!$row = Subject::find($id)) return parent::invalidRequest();
 
+        if ($row->semester()->exists()) {
+            $request->session()->flash($this->message_warning, 'This subject is mapped with one or more semesters. Please remove mapping first.');
+            return redirect()->route($this->base_route);
+        }
+
         $row->delete();
-        $row->semester()->detach();
 
         $request->session()->flash($this->message_success, $this->panel.' Deleted Successfully.');
         return redirect()->route($this->base_route);
@@ -116,7 +120,13 @@ class SubjectController extends CollegeBaseController
                             break;
                         case 'delete':
                             $row = Subject::find(decrypt($row_id));
-                            $row->delete();
+                            if ($row) {
+                                if ($row->semester()->exists()) {
+                                    continue;
+                                }
+
+                                $row->delete();
+                            }
                             break;
                     }
                 }
@@ -124,7 +134,7 @@ class SubjectController extends CollegeBaseController
                 if ($request->get('bulk_action') == 'active' || $request->get('bulk_action') == 'in-active')
                     $request->session()->flash($this->message_success, $this->panel.' '.ucfirst($request->get('bulk_action')) . ' Successfully.');
                 else
-                    $request->session()->flash($this->message_success, $this->panel.' '.ucfirst($request->get('bulk_action')).' successfully.');
+                    $request->session()->flash($this->message_success, $this->panel.' '.ucfirst($request->get('bulk_action')).' successfully. Mapped subjects were skipped.');
 
                 return redirect()->route($this->base_route);
 
