@@ -916,6 +916,7 @@ class OnlineRegistrationController extends CollegeBaseController
             $faculty = Faculty::find($request->get('faculty_id'));
             if ($faculty) {
                 $semesterList = $faculty->semesters()
+                    ->whereHas('subjects')
                     ->select('semesters.id', 'semesters.semester', 'semesters.slug')
                     ->orderBy('semesters.semester')
                     ->get();
@@ -925,7 +926,7 @@ class OnlineRegistrationController extends CollegeBaseController
                     $response['error'] = false;
                     $response['message'] = 'Semester/Sec. Available For This Faculty/Program/Class.';
                 } else {
-                    $response['message'] = 'No Any Semester Assign on This Faculty/Program/Class.';
+                    $response['message'] = 'No semester with assigned subjects found for this faculty/program.';
                 }
             } else {
                 $response['message'] = 'No Any Semester Assign on This Faculty/Program/Class.';
