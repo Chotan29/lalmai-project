@@ -81,6 +81,29 @@
     function clearRegistrationValidationState() {
         $('#validation-form .field-invalid').removeClass('field-invalid');
         $('#validation-form .validation-note').remove();
+        clearSubjectWrapperInvalid();
+    }
+
+    function clearSubjectWrapperInvalid() {
+        $('#subjects_wrapper').removeClass('field-invalid live-invalid-container');
+        $('#subjects_wrapper').find('> .validation-note').remove();
+    }
+
+    function setSubjectWrapperInvalid(message, showToast) {
+        var $wrapper = $('#subjects_wrapper');
+        if (!$wrapper.length) {
+            return false;
+        }
+
+        $wrapper.addClass('field-invalid live-invalid-container');
+        $wrapper.find('> .validation-note').remove();
+        $wrapper.prepend('<div class="validation-note is-visible">' + message + '</div>');
+
+        if (showToast) {
+            toastr.warning(message, 'Info:');
+        }
+
+        return false;
     }
 
     $(document).ready(function () {
@@ -292,6 +315,12 @@
             return invalidateFieldAndStop('select[name="semester"]', 'Please select Sem./Sec.', "Please, Select Faculty/Program/Class & Sem./Sec.", activeGeneralInfo);
         }
 
+        if ($('input[name="subject[]"]').length && !validateSubjectSelection(true)) {
+            activeGeneralInfo(true);
+            focusAndScrollToField('#subjects_wrapper');
+            return false;
+        }
+
 
         if (batch > 0) {
 
@@ -455,6 +484,7 @@
                     } else {
                         $('#subjects_wrapper').html('')
                         $('#subjects_wrapper').append(data.subjects);
+                        clearSubjectWrapperInvalid();
                         //$(document).find('option[value="0"]').attr("value", "");
                         toastr.info(data.success, "Info:");
                     }
@@ -670,30 +700,78 @@
 
 
 
-    function checkSubjectMinMaxSelection(){
-        //subject checked validation
-        $max_subjects_count = $('input[name="max_subjects_count"]').val();
-        $subjectChkIds = document.getElementsByName('subject[]');
-        var $subjectChkCount = 0;
-        $length = $subjectChkIds.length;
-
-        for (var $i = 0; $i < $length; $i++) {
-            if ($subjectChkIds[$i].type == 'checkbox' && $subjectChkIds[$i].checked) {
-                $subjectChkCount++;
-            }
+    function getSubjectMaxCount() {
+        var maxFromInput = parseInt($('input[name="max_subjects_count"]').val(), 10);
+        if (!isNaN(maxFromInput) && maxFromInput > 0) {
+            return Math.min(maxFromInput, 7);
         }
 
-        if ($subjectChkCount == 0 || $subjectChkCount < $max_subjects_count) {
-            toastr.warning("Please, Select At Least "+ $max_subjects_count +" Subject.", "Info:");
-            flag = true;
-            return false;
-        }
-
-        if($subjectChkCount > $max_subjects_count){
-            toastr.warning("You are not eligible to choose greater than "+ $max_subjects_count +" subject.", "Warning:");
-            flag = true;
-            return false;
-        }
+        return Math.min($('#subjects_wrapper').find('input[name="subject[]"]').length, 7);
     }
+
+    function validateSubjectSelection(showToast) {
+        var $wrapper = $('#subjects_wrapper');
+        var $subjects = $wrapper.find('input[name="subject[]"]');
+
+        if (!$subjects.length) {
+            return setSubjectWrapperInvalid('Please load subjects for the selected semester.', showToast);
+        }
+
+        var selectedCount = $subjects.filter(':checked').length;
+        var maxCount = getSubjectMaxCount();
+        var selectedOptionalCount = $subjects.filter(':checked').filter('[data-subject-type="optional"]').length;
+        var selectedCompulsoryCount = $subjects.filter(':checked').filter('[data-subject-type="compulsory"]').length;
+
+        if (selectedCount < 1) {
+            return setSubjectWrapperInvalid('Please select at least 1 subject.', showToast);
+        }
+
+        if (selectedOptionalCount > 1) {
+            return setSubjectWrapperInvalid('You can select maximum 1 optional subject.', showToast);
+        }
+
+        if (selectedCompulsoryCount > 6) {
+            return setSubjectWrapperInvalid('You can select maximum 6 compulsory subjects.', showToast);
+        }
+
+        if (selectedCount > maxCount) {
+            return setSubjectWrapperInvalid('You can select maximum ' + maxCount + ' subjects.', showToast);
+        }
+
+        clearSubjectWrapperInvalid();
+        return true;
+    }
+
+    function checkSubjectMinMaxSelection(){
+        return validateSubjectSelection(true);
+    }
+
+    $('#subjects_wrapper').on('change', 'input[name="subject[]"]', function() {
+        var maxCount = getSubjectMaxCount();
+        var $subjects = $('#subjects_wrapper').find('input[name="subject[]"]');
+        var selectedCount = $subjects.filter(':checked').length;
+        var selectedOptionalCount = $subjects.filter(':checked').filter('[data-subject-type="optional"]').length;
+        var selectedCompulsoryCount = $subjects.filter(':checked').filter('[data-subject-type="compulsory"]').length;
+
+        if ($(this).is(':checked') && $(this).data('subject-type') === 'optional' && selectedOptionalCount > 1) {
+            this.checked = false;
+            setSubjectWrapperInvalid('You can select maximum 1 optional subject.', true);
+            return;
+        }
+
+        if ($(this).is(':checked') && $(this).data('subject-type') === 'compulsory' && selectedCompulsoryCount > 6) {
+            this.checked = false;
+            setSubjectWrapperInvalid('You can select maximum 6 compulsory subjects.', true);
+            return;
+        }
+
+        if ($(this).is(':checked') && selectedCount > maxCount) {
+            this.checked = false;
+            setSubjectWrapperInvalid('You can select maximum ' + maxCount + ' subjects.', true);
+            return;
+        }
+
+        validateSubjectSelection(false);
+    });
 
 </script>

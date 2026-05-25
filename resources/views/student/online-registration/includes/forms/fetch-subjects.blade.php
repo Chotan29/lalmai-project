@@ -1,13 +1,17 @@
 @if(isset($subjects))
     @php
+        $selectedSubjectIds = collect($selectedSubjectIds ?? [])->map(function ($id) {
+            return (int) $id;
+        })->all();
+
         $maxAllowedSubjects = min((int) $numOfSubject, 7);
 
         $optionalSubjects = $subjects->filter(function ($subject) {
-            return strtolower(trim($subject->subject_type ?? '')) === 'optional';
+            return strtolower(trim((string) ($subject->subject_type ?? $subject->sub_type ?? ''))) === 'optional';
         })->values();
 
         $compulsorySubjects = $subjects->reject(function ($subject) {
-            return strtolower(trim($subject->subject_type ?? '')) === 'optional';
+            return strtolower(trim((string) ($subject->subject_type ?? $subject->sub_type ?? ''))) === 'optional';
         })->values();
     @endphp
 
@@ -36,9 +40,13 @@
                 <div class="subject-group-card__body">
                     @if($compulsorySubjects->count())
                         @foreach($compulsorySubjects as $subject)
+                            @php
+                                $subjectId = (int) ($subject->subject_id ?? $subject->id ?? 0);
+                                $subjectTitle = $subject->subject_title ?? $subject->title ?? 'Unknown Subject';
+                            @endphp
                             <label class="subject-option-row">
-                                {!! Form::checkbox('subject[]', $subject->subject_id, false, ['class' => 'ace', 'data-subject-type' => 'compulsory']) !!}
-                                <span class="lbl">{{ $subject->subject_title }}</span>
+                                {!! Form::checkbox('subject[]', $subjectId, in_array($subjectId, $selectedSubjectIds, true), ['class' => 'ace', 'data-subject-type' => 'compulsory']) !!}
+                                <span class="lbl">{{ $subjectTitle }}</span>
                             </label>
                         @endforeach
                     @else
@@ -59,9 +67,13 @@
                 <div class="subject-group-card__body">
                     @if($optionalSubjects->count())
                         @foreach($optionalSubjects as $subject)
+                            @php
+                                $subjectId = (int) ($subject->subject_id ?? $subject->id ?? 0);
+                                $subjectTitle = $subject->subject_title ?? $subject->title ?? 'Unknown Subject';
+                            @endphp
                             <label class="subject-option-row">
-                                {!! Form::checkbox('subject[]', $subject->subject_id, false, ['class' => 'ace', 'data-subject-type' => 'optional']) !!}
-                                <span class="lbl">{{ $subject->subject_title }}</span>
+                                {!! Form::checkbox('subject[]', $subjectId, in_array($subjectId, $selectedSubjectIds, true), ['class' => 'ace', 'data-subject-type' => 'optional']) !!}
+                                <span class="lbl">{{ $subjectTitle }}</span>
                             </label>
                         @endforeach
                     @else

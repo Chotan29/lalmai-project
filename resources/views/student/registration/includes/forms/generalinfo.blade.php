@@ -62,28 +62,11 @@
         </div>
 
         <div class="form-group">
-            @if(isset($data['subjects']) && $data['subjects']->count() >0)
-                <input type="hidden" name="max_subjects_count" value="{{ $data['max_subjects_count'] }}">
-                <div class="row">
-                    <div class="col-md-12 padding-5">
-                        <div class="label label-warning arrowed-in arrowed-right arrowed">Applied For Following Subjects</div>
-                        <hr class="hr-2">
-                        @foreach($data['subjects'] as $subjects)
-                            <div class="col-md-4">
-                                <label>
-                                    @if (!isset($data['row']))
-                                        {!! Form::checkbox('subject[]', $subjects->id, false, ['class' => 'ace subject']) !!}
-                                    @else
-                                        {!! Form::checkbox('subject[]', $subjects->id, array_key_exists($subjects->id, $data['existing_subjects']), ['class' => 'ace subject']) !!}
-                                    @endif
-                                    <span class="lbl"> {{ $subjects->title}} </span>
-                                </label>
-                                <hr class="hr-2">
-                            </div>
-                        @endforeach
-                    </div>
+            <div class="col-md-12 padding-5">
+                <div id="subjects_wrapper">
+                    {!! $data['subjects_html'] ?? '' !!}
                 </div>
-            @endif
+            </div>
         </div>
     @endif
 

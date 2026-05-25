@@ -2,7 +2,7 @@
     @foreach($academicInfoRow as $row)
         <tr class="option_value">
             <td>
-                {!! Form::label('board', $row->title, ['class' => 'col-sm-12 control-label']) !!}
+                <span class="academic-exam-title">{{ $row->title }}</span>
                 {!! Form::hidden('board[]', $row->title, ["class" => "col-md-12"]) !!}
                 {{--["class" => "col-xs-10 col-sm-11"]--}}
             </td>

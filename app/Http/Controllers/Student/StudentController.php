@@ -94,6 +94,108 @@ class StudentController extends CollegeBaseController
         $this->folder_path = public_path().DIRECTORY_SEPARATOR.'images'.DIRECTORY_SEPARATOR.$this->folder_name.DIRECTORY_SEPARATOR;
     }
 
+    protected function normalizeAcademicBoard($value)
+    {
+        return strtoupper(preg_replace('/\s+/', '', trim((string) $value)));
+    }
+
+    protected function academicInfoCompletenessScore($academicInfo)
+    {
+        $score = 0;
+        $fields = [
+            'institution',
+            'roll_no',
+            'pass_year',
+            'major_subjects',
+            'mark_obtained',
+            'maximum_mark',
+            'percentage',
+            'grade_point',
+            'grade_letter',
+        ];
+
+        foreach ($fields as $field) {
+            $value = $academicInfo->{$field} ?? null;
+            if ($value !== null && trim((string) $value) !== '' && trim((string) $value) !== '0') {
+                $score++;
+            }
+        }
+
+        return $score;
+    }
+
+    protected function mergeAcademicInfoRows($primary, $secondary)
+    {
+        $fields = [
+            'institution',
+            'roll_no',
+            'pass_year',
+            'major_subjects',
+            'mark_obtained',
+            'maximum_mark',
+            'percentage',
+            'grade_point',
+            'grade_letter',
+        ];
+
+        $updates = [];
+
+        foreach ($fields as $field) {
+            $primaryValue = $primary->{$field} ?? null;
+            $secondaryValue = $secondary->{$field} ?? null;
+
+            if (($primaryValue === null || trim((string) $primaryValue) === '' || trim((string) $primaryValue) === '0')
+                && $secondaryValue !== null
+                && trim((string) $secondaryValue) !== '') {
+                $updates[$field] = $secondaryValue;
+            }
+        }
+
+        if (!empty($updates)) {
+            $primary->update($updates);
+            foreach ($updates as $field => $value) {
+                $primary->{$field} = $value;
+            }
+        }
+    }
+
+    protected function deduplicateAcademicInfoRows(Student $student)
+    {
+        $academicInfos = $student->academicInfo()->orderBy('sorting_order', 'asc')->orderBy('id', 'asc')->get();
+
+        if ($academicInfos->count() <= 1) {
+            return;
+        }
+
+        $grouped = $academicInfos->groupBy(function ($academicInfo) {
+            return $this->normalizeAcademicBoard($academicInfo->board);
+        });
+
+        foreach ($grouped as $normalizedBoard => $rows) {
+            if ($normalizedBoard === '' || $rows->count() <= 1) {
+                continue;
+            }
+
+            $sortedRows = $rows->sort(function ($left, $right) {
+                $leftScore = $this->academicInfoCompletenessScore($left);
+                $rightScore = $this->academicInfoCompletenessScore($right);
+
+                if ($leftScore === $rightScore) {
+                    return $left->id <=> $right->id;
+                }
+
+                return $rightScore <=> $leftScore;
+            })->values();
+
+            $primary = $sortedRows->shift();
+
+            foreach ($sortedRows as $duplicate) {
+                $this->mergeAcademicInfoRows($primary, $duplicate);
+                $duplicate->delete();
+            }
+        }
+    }
+
     public function index(Request $request)
     {
         $data = [];
@@ -874,6 +976,8 @@ class StudentController extends CollegeBaseController
         if (!$data['row'])
             return parent::invalidRequest();
 
+        $this->deduplicateAcademicInfoRows($data['row']);
+
         $data['faculties'] = $this->activeFaculties();
         $data['semester'] = $this->activeSemester();
         $data['batch'] = $this->activeBatch();
@@ -893,7 +997,23 @@ class StudentController extends CollegeBaseController
         //academic info not exist and except exist
         $semester = Semester::find($data['row']->semester);
         if(isset($data['academicInfo']) && $data['academicInfo']->count()>0){
-            $academicInfoRow = $semester->programNeedAcademicLevel('academic_info_levels.id as academicInfolevelId','academic_info_levels.title','academic_info_levels.status as academicInfoleveStatus')->whereNotIn('academic_info_levels.title',[$data['academicInfo']->pluck('institution')])->Active()->get();
+            $existingAcademicBoards = $data['academicInfo']
+                ->pluck('board')
+                ->filter()
+                ->map(function ($board) {
+                    return strtoupper(preg_replace('/\s+/', '', trim((string) $board)));
+                })
+                ->unique()
+                ->values();
+
+            $academicInfoRow = $semester->programNeedAcademicLevel('academic_info_levels.id as academicInfolevelId','academic_info_levels.title','academic_info_levels.status as academicInfoleveStatus')
+                ->Active()
+                ->get()
+                ->reject(function ($level) use ($existingAcademicBoards) {
+                    $normalizedTitle = strtoupper(preg_replace('/\s+/', '', trim((string) $level->title)));
+                    return $existingAcademicBoards->contains($normalizedTitle);
+                })
+                ->values();
             $data['academicInfoRows-html'] = view($this->view_path.'.registration.includes.forms.academic_tr', [
                 'academicInfoRow' => $academicInfoRow
             ])->render();
@@ -906,10 +1026,17 @@ class StudentController extends CollegeBaseController
 
 
         //semesters Subjects
-        $data['max_subjects_count'] =  Semester::find($data['row']->semester)->major_subject_count;
-        $data['subjects'] =  Semester::find($data['row']->semester)->subjects()->get();
+        $semesterModel = Semester::find($data['row']->semester);
+        $data['max_subjects_count'] =  $semesterModel ? $semesterModel->major_subject_count : 0;
+        $data['subjects'] =  $semesterModel ? $semesterModel->subjects()->orderBy('subjects.title')->get() : collect();
         //$data['existing_subjects'] = $data['row']->majorSubject()->join('subjects as s','s.id','=','student_subjects.subjects_id')->pluck('s.title', 's.id')->toArray();
         $data['existing_subjects'] = $data['row']->majorSubject()->join('subjects as s','s.id','=','student_subject.subjects_id')->pluck('s.title', 's.id')->toArray();
+        $data['selected_subject_ids'] = array_map('intval', array_keys($data['existing_subjects']));
+        $data['subjects_html'] = view('student.online-registration.includes.forms.fetch-subjects', [
+            'subjects' => $data['subjects'],
+            'numOfSubject' => $data['max_subjects_count'] ?: $data['subjects']->count(),
+            'selectedSubjectIds' => $data['selected_subject_ids'],
+        ])->render();
 
         $data['annexures'] = Annexure::select('id', 'title')->Active()->get();
         $data['existing_annexure'] = $data['row']->annexure()->join('annexures as an','an.id','=','student_annexures.annexures_id')->pluck('an.title', 'an.id')->toArray();
@@ -930,6 +1057,51 @@ class StudentController extends CollegeBaseController
         $id = decrypt($id);
         if (!$row = Student::find($id))
             return parent::invalidRequest();
+
+        $selectedSubjects = array_values(array_unique(array_filter((array) $request->get('subject'), function ($subjectId) {
+            return (int) $subjectId > 0;
+        })));
+
+        if (empty($selectedSubjects)) {
+            return back()->withInput()->withErrors([
+                'subject' => 'Please select at least 1 subject.'
+            ]);
+        }
+
+        $semester = Semester::find($row->semester);
+        $maxAllowedSubjects = min((int) ($semester->major_subject_count ?? count($selectedSubjects)), 7);
+        $semesterSubjects = $semester
+            ? $semester->subjects()->select('subjects.id', 'subjects.sub_type')->whereIn('subjects.id', $selectedSubjects)->get()
+            : collect();
+
+        if ($semesterSubjects->count() !== count($selectedSubjects)) {
+            return back()->withInput()->withErrors([
+                'subject' => 'Selected subjects must belong to the student semester.'
+            ]);
+        }
+
+        $optionalCount = $semesterSubjects->filter(function ($subject) {
+            return strtolower(trim((string) ($subject->sub_type ?? ''))) === 'optional';
+        })->count();
+        $compulsoryCount = $semesterSubjects->count() - $optionalCount;
+
+        if (count($selectedSubjects) > $maxAllowedSubjects) {
+            return back()->withInput()->withErrors([
+                'subject' => 'You can select maximum '.$maxAllowedSubjects.' subjects.'
+            ]);
+        }
+
+        if ($optionalCount > 1) {
+            return back()->withInput()->withErrors([
+                'subject' => 'You can select maximum 1 optional subject.'
+            ]);
+        }
+
+        if ($compulsoryCount > 6) {
+            return back()->withInput()->withErrors([
+                'subject' => 'You can select maximum 6 compulsory subjects.'
+            ]);
+        }
 
 
         if($row) {
@@ -1079,22 +1251,55 @@ class StudentController extends CollegeBaseController
             //Academic Info Start
             if ($request->has('institution')) {
                 foreach ($request->get('institution') as $key => $institution) {
-                    $academicInfoId = isset($request->get('academic_info_id')[$key]) ? $request->get('academic_info_id')[$key] : $key + 1;
-                    $academicInfoExist = AcademicInfo::where('id', $academicInfoId)->first();
+                    $board = trim((string) ($request->get('board')[$key] ?? ''));
+                    $institution = trim((string) $institution);
+                    $rollNo = trim((string) ($request->get('roll_no')[$key] ?? ''));
+                    $passYear = trim((string) ($request->get('pass_year')[$key] ?? ''));
+                    $majorSubjects = trim((string) ($request->get('major_subjects')[$key] ?? ''));
+                    $markObtained = $request->get('mark_obtained')[$key] ?? null;
+                    $maximumMark = $request->get('maximum_mark')[$key] ?? null;
+                    $percentage = $request->get('percentage')[$key] ?? null;
+                    $gradePoint = trim((string) ($request->get('grade_point')[$key] ?? ''));
+                    $gradeLetter = trim((string) ($request->get('grade_letter')[$key] ?? ''));
+
+                    $isAcademicRowEmpty = $institution === ''
+                        && $rollNo === ''
+                        && $passYear === ''
+                        && $majorSubjects === ''
+                        && ($markObtained === null || $markObtained === '')
+                        && ($maximumMark === null || $maximumMark === '')
+                        && ($percentage === null || $percentage === '')
+                        && $gradePoint === ''
+                        && $gradeLetter === '';
+
+                    if ($isAcademicRowEmpty) {
+                        continue;
+                    }
+
+                    $academicInfoId = $request->get('academic_info_id')[$key] ?? null;
+                    $academicInfoExist = null;
+
+                    if ($academicInfoId) {
+                        $academicInfoExist = $row->academicInfo()->where('id', $academicInfoId)->first();
+                    }
+
+                    if (!$academicInfoExist && $board !== '') {
+                        $academicInfoExist = $row->academicInfo()->where('board', $board)->first();
+                    }
 
                     if ($academicInfoExist) {
                         $academicInfoUpdate = [
                             'students_id' => $row->id,
                             'institution' => $institution,
-                            'board' => $request->get('board')[$key],
-                            'roll_no' => $request->get('roll_no')[$key],
-                            'pass_year' => $request->get('pass_year')[$key],
-                            'major_subjects' => $request->get('major_subjects')[$key],
-                            'mark_obtained' => $request->get('mark_obtained')[$key],
-                            'maximum_mark' => $request->get('maximum_mark')[$key],
-                            'percentage' => $request->get('percentage')[$key],
-                            'grade_point' => $request->get('grade_point')[$key],
-                            'grade_letter' => $request->get('grade_letter')[$key],
+                            'board' => $board,
+                            'roll_no' => $rollNo,
+                            'pass_year' => $passYear,
+                            'major_subjects' => $majorSubjects,
+                            'mark_obtained' => $markObtained,
+                            'maximum_mark' => $maximumMark,
+                            'percentage' => $percentage,
+                            'grade_point' => $gradePoint,
+                            'grade_letter' => $gradeLetter,
                             'sorting_order' => $key + 1,
                             'last_updated_by' => auth()->user()->id
                         ];
@@ -1103,14 +1308,15 @@ class StudentController extends CollegeBaseController
                         AcademicInfo::create([
                             'students_id' => $row->id,
                             'institution' => $institution,
-                            'board' => $request->get('board')[$key],
-                            'pass_year' => $request->get('pass_year')[$key],
-                            'major_subjects' => $request->get('major_subjects')[$key],
-                            'mark_obtained' => $request->get('mark_obtained')[$key],
-                            'maximum_mark' => $request->get('maximum_mark')[$key],
-                            'percentage' => $request->get('percentage')[$key],
-                            'grade_point' => $request->get('grade_point')[$key],
-                            'grade_letter' => $request->get('grade_letter')[$key],
+                            'board' => $board,
+                            'roll_no' => $rollNo,
+                            'pass_year' => $passYear,
+                            'major_subjects' => $majorSubjects,
+                            'mark_obtained' => $markObtained,
+                            'maximum_mark' => $maximumMark,
+                            'percentage' => $percentage,
+                            'grade_point' => $gradePoint,
+                            'grade_letter' => $gradeLetter,
                             'sorting_order' => $key + 1,
                             'created_by' => auth()->user()->id,
                         ]);
@@ -1118,9 +1324,11 @@ class StudentController extends CollegeBaseController
                 }
             }
 
+            $this->deduplicateAcademicInfoRows($row);
+
             //student subjects
             if($request->has('subject')) {
-                $subjects = array_values(array_unique(array_filter((array) $request->get('subject'))));
+                $subjects = $selectedSubjects;
 
                 // dd($subjects);
 

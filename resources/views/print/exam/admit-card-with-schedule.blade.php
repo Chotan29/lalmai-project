@@ -1,188 +1,401 @@
 @extends('layouts.master')
 
 @section('css')
+<link href="https://fonts.googleapis.com/css2?family=Merriweather:wght@600;700&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+    .admit-print-page {
+        width: 210mm;
+        min-height: 297mm;
+        margin: 0 auto;
+        background: #fff;
+        border: 1.5px solid #0f3e6a;
+        border-radius: 8px;
+        padding: 14mm 12mm;
+        font-family: 'Poppins', sans-serif;
+        color: #1a2b3c;
+        box-sizing: border-box;
+    }
 
-    <link href="https://fonts.googleapis.com/css?family=Fugaz+One|Lobster|Merienda|Righteous|Black+Ops+One|Gilda+Display" rel="stylesheet">
-    <style>
+    .admit-print-toolbar {
+        text-align: right;
+        margin-bottom: 10px;
+    }
+
+    .admit-header {
+        display: grid;
+        grid-template-columns: 22mm 1fr 26mm;
+        gap: 10px;
+        align-items: start;
+        border-bottom: 1px solid #d7e2ef;
+        padding-bottom: 10px;
+    }
+
+    .admit-logo,
+    .admit-photo {
+        width: 100%;
+        max-height: 26mm;
+        object-fit: contain;
+        border-radius: 4px;
+    }
+
+    .admit-photo-wrap {
+        border: 1px solid #cbd8e6;
+        border-radius: 4px;
+        padding: 2px;
+        min-height: 30mm;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .admit-headline {
+        text-align: center;
+        line-height: 1.35;
+        font-family: 'Merriweather', serif;
+    }
+
+    .subtitle-normal {
+        font-weight: 500;
+        font-family: 'Poppins', sans-serif;
+    }
+
+    .admit-headline .small-line {
+        font-size: 12px;
+        letter-spacing: 0.2px;
+    }
+
+    .admit-headline .org {
+        font-size: 20px;
+        font-weight: 700;
+        letter-spacing: 0.5px;
+        margin: 2px 0;
+        white-space: nowrap;
+    }
+
+    .admit-headline .web {
+        font-size: 12px;
+        color: #395c7d;
+        margin-bottom: 6px;
+    }
+
+    .admit-title {
+        font-size: 20px;
+        font-weight: 700;
+        letter-spacing: 1.1px;
+        margin: 2px 0;
+        text-transform: uppercase;
+    }
+
+    .admit-subtitle {
+        font-size: 16px;
+        font-weight: 600;
+        margin: 0;
+    }
+
+    .admit-meta {
+        margin-top: 10px;
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px 20px;
+    }
+
+    .meta-col {
+        border: 1px solid #d7e2ef;
+        border-radius: 6px;
+        padding: 8px 10px;
+    }
+
+    .meta-row {
+        font-size: 12px;
+        margin-bottom: 5px;
+    }
+
+    .meta-row.single-line {
+        white-space: nowrap;
+    }
+
+    .meta-row:last-child {
+        margin-bottom: 0;
+    }
+
+    .meta-label {
+        font-weight: 700;
+    }
+
+    .schedule-wrap {
+        margin-top: 12px;
+        border: 1px solid #d8e2ee;
+        border-radius: 6px;
+        overflow: hidden;
+    }
+
+    .schedule-head {
+        padding: 8px 10px;
+        background: #f4f8fc;
+        border-bottom: 1px solid #d8e2ee;
+        font-size: 16px;
+        font-weight: 700;
+        text-align: center;
+        text-decoration: underline;
+        text-underline-offset: 3px;
+    }
+
+    .schedule-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 11px;
+    }
+
+    .schedule-table th,
+    .schedule-table td {
+        border: 1px solid #dde6f1;
+        padding: 5px 6px;
+        text-align: left;
+        vertical-align: top;
+    }
+
+    .schedule-table th {
+        background: #f8fbff;
+        font-weight: 700;
+        text-transform: uppercase;
+    }
+
+    .schedule-table .center {
+        text-align: center;
+    }
+
+    .schedule-table th:nth-child(4),
+    .schedule-table td:nth-child(4) {
+        text-align: center;
+    }
+
+    .abbr-note {
+        padding: 7px 9px;
+        border-top: 0;
+        font-size: 11px;
+        background: #fbfdff;
+    }
+
+    .optional-summary {
+        padding: 8px 9px;
+        border-top: 1px dashed #d8e2ee;
+        font-size: 11px;
+        text-transform: uppercase;
+        background: #f8fbff;
+    }
+
+    .optional-summary .label {
+        font-weight: 700;
+        color: #193653;
+    }
+
+    .optional-summary .value {
+        font-weight: 600;
+        color: #24415f;
+    }
+
+    .admit-signature {
+        margin-top: 24px;
+        display: flex;
+        justify-content: flex-end;
+    }
+
+    .signature-box {
+        text-align: center;
+        min-width: 170px;
+        font-size: 12px;
+    }
+
+    .signature-line {
+        border-top: 1px solid #203245;
+        margin-top: 22px;
+        padding-top: 4px;
+        font-weight: 600;
+    }
+
+    .admit-note {
+        margin-top: 15px;
+        padding: 8px 10px;
+        border-radius: 5px;
+        background: #f7fafc;
+        border: 1px solid #dbe4ef;
+        font-size: 12px;
+    }
+
+    @media print {
+        body {
+            background: #fff;
+        }
+
+        .main-content,
+        .main-content-inner,
         .page-content {
-            padding: 35px 30px !important;
-            border: 30px #438eb9 solid;
+            margin: 0 !important;
+            padding: 0 !important;
+            border: 0 !important;
+            width: auto !important;
+            min-height: auto !important;
         }
-        @media print {
-            .main-content {
-                width: 210mm;
-                height: 297mm;
-                padding: 15px 15px !important;
-                border: 30px #438eb9 solid;
-            }
 
-            .page-content {
-                padding: 0;
-                border: none;
-            }
-            /* ... the rest of the rules ... */
+        .hidden-print,
+        .admit-print-toolbar {
+            display: none !important;
         }
-    </style>
+
+        .admit-print-page {
+            border: 1.2px solid #0f3e6a;
+            border-radius: 0;
+            width: 100%;
+            min-height: auto;
+            margin: 0;
+            padding: 10mm 8mm;
+            page-break-inside: avoid;
+        }
+
+        @page {
+            size: A4 portrait;
+            margin: 8mm;
+        }
+    }
+</style>
 @endsection
 
 @section('content')
-    @if($data['student'] && $data['student']->count() > 0)
-        @foreach($data['student'] as $student)
-            <div class="main-content " {{--style="page-break-after:always;"--}}>
-                <div class="col-sm-12 align-right hidden-print">
-                    <a href="#" class="btn btn-primary" onclick="window.print();">
-                        <i class="ace-icon fa fa-print bigger-200"></i> Print
-                    </a>
-                </div>
-                <div class="main-content-inner">
-                    <div class="page-content">
-                        <div class="row">
-                            <div class="col-xs-12">
-                                <!-- PAGE CONTENT BEGINS -->
-                                <div class="row">
-                                    <div class="col-sm-10 col-sm-offset-1">
-                                        <div class="widget-box transparent">
+@if($data['student'] && $data['student']->count() > 0)
+    @foreach($data['student'] as $student)
+        <div class="main-content">
+            <div class="admit-print-toolbar hidden-print">
+                <a href="#" class="btn btn-primary" onclick="window.print(); return false;">
+                    <i class="ace-icon fa fa-print bigger-120"></i> Print
+                </a>
+            </div>
 
-                                            <div class="row">
-                                                <div class="col-md-2 col-print-2 align-left">
-                                                    @if(isset($generalSetting->logo))
-                                                        <img src="{{ asset('images'.DIRECTORY_SEPARATOR.'setting'.DIRECTORY_SEPARATOR.'general'.DIRECTORY_SEPARATOR.$generalSetting->logo) }}" width="150px">
-                                                    @endif
-                                                </div>
-                                                <div class="col-md-8 col-print-8 align-left">
-                                                    <div class="text-center">
-                                                        <h2 class="no-margin-top" style="font-family: 'Merienda', cursive; font-size: 20px">
-                                                            <strong>{{$generalSetting->institute}}</strong>
-                                                        </h2>
-                                                        <h4 class="text-uppercase no-margin-top">Department of Examination</h4>
+            <div class="admit-print-page">
+                <div class="admit-header">
+                    <div>
+                        @if(isset($generalSetting->logo) && $generalSetting->logo)
+                            <img class="admit-logo" src="{{ asset('images'.DIRECTORY_SEPARATOR.'setting'.DIRECTORY_SEPARATOR.'general'.DIRECTORY_SEPARATOR.$generalSetting->logo) }}" alt="Logo">
+                        @endif
+                    </div>
 
-                                                        <div class="space-4"></div>
-                                                        <h2 class="no-margin text-uppercase" style="font-family: 'Black Ops One', cursive;font-size: 30px">
-                                                            <strong><u>Admit Card</u></strong>
-                                                        </h2>
-                                                        <h3 class="no-margin-top" style="font-family: 'Righteous', cursive;">for</h3>
-                                                        <h3 class="no-margin no-margin-top text-uppercase" style="font-family: 'Black Ops One', cursive;font-size: 22px">
-                                                            <strong><u>{{ ViewHelper::getExamById($data['exam']) }} - {{ ViewHelper::getYearById($data['year']) }}</u></strong>
-                                                        </h3>
-                                                    </div>
-                                                </div>
-                                                <div class="col-md-2 col-print-2 align-right">
-                                                    @if($student->student_image != '')
-                                                        <img class="img-thumbnail"  alt="{{ $student->title }}" src="{{ asset('images'.DIRECTORY_SEPARATOR.'studentProfile'.DIRECTORY_SEPARATOR.$student->student_image) }}" width="120px" />
-                                                    @endif
-                                                </div>
-                                            </div>
-                                            <div class="space-8"></div>
-                                            <div class=row">
-                                                <div class="profile-user-info profile-user-info-striped">
-                                                    <div class="profile-info-row">
-                                                        <div class="profile-info-name"> Level : </div>
-                                                        <div class="profile-info-value">
-                                                            <span class="editable" id="faculty">{{  ViewHelper::getFacultyTitle( $data['faculty'] ) }}/{{  ViewHelper::getSemesterTitle( $data['semester'] ) }}</span>
-                                                        </div>
-                                                        <div class="profile-info-name"> Reg. No.: </div>
-                                                        <div class="profile-info-value">
-                                                            <span class="editable" id="reg_no"><strong>{{ $student->reg_no }}</strong></span>
-                                                        </div>
-                                                    </div>
+                    <div class="admit-headline">
+                        <div class="small-line">The People's Republic of Bangladesh</div>
+                        <div class="org">Lalmai Government College, Cumilla</div>
+                        <div class="web">Web:https://lalmaigc.edu.bd</div>
+                        <div class="admit-title">ADMIT CARD</div>
+                        <p class="admit-subtitle">
+                            HSC Examination-2026
+                            <span class="subtitle-normal">(Class Test/Practical/Half Yearly/Year Final)</span>
+                        </p>
+                    </div>
 
-                                                    <div class="profile-info-row">
-                                                        <div class="profile-info-name"> Name : </div>
-                                                        <div class="profile-info-value">
-                                                            <span class="editable" id="student_name"><strong>{{ $student->first_name.' '.$student->middle_name.' '.$student->last_name }}</strong></span>
-                                                        </div>
-                                                        <div class="profile-info-name"> Date Of Birth :</div>
-                                                        <div class="profile-info-value">
-                                                            <span class="editable" id="reg_date">{{ \Carbon\Carbon::parse($student->date_of_birth)->format('Y-m-d')}}</span>
-                                                        </div>
-                                                    </div>
-                                                </div>
-
-                                            </div>
-                                            <div class="text-center">
-                                            <div class="space-4"></div>
-                                                <h2 class="no-margin text-uppercase" style="font-family: 'Black Ops One', cursive;font-size: 30px">
-                                                    <strong><u>Schedule</u></strong>
-                                                </h2>
-                                            </div>
-                                            <div class=row">
-                                                <table class="table table-striped table-bordered no-margin-bottom text-uppercase">
-                                                    <thead>
-                                                    <tr class="text-center">
-                                                        <th class="center"></th>
-                                                        <th>Date</th>
-                                                        <th>Time</th>
-                                                        <th>Subject</th>
-                                                        <th>FM(T)</th>
-                                                        <th>PM(T)</th>
-                                                        <th>FM(P)</th>
-                                                        <th>PM(P)</th>
-                                                    </tr>
-                                                    </thead>
-
-                                                    <tbody>
-                                                    @if($data['subjects']  && $data['subjects'] ->count() > 0)
-                                                        @php($i=1)
-                                                        @foreach($data['subjects']  as $subject)
-                                                            <tr>
-                                                                <td class="center">{{ $i }}</td>
-                                                                <td> {{ \Carbon\Carbon::parse($subject->date)->format('Y-m-d') }}</td>
-                                                                <td>
-                                                                    {{ \Carbon\Carbon::parse($subject->start_time )->format('g:i A') }}
-                                                                    To
-                                                                    {{ \Carbon\Carbon::parse($subject->end_time )->format('g:i A') }}
-                                                                </td>
-                                                                <td> {{ $subject->title }}  [{{ $subject->code }}] </td>
-                                                                <td class="center">{{ $subject->full_mark_theory?$subject->full_mark_theory:'-' }}</td>
-                                                                <td class="center">{{ $subject->pass_mark_theory?$subject->pass_mark_theory:'-' }}</td>
-                                                                <td class="center">{{ $subject->full_mark_practical?$subject->full_mark_practical:'-' }}</td>
-                                                                <td class="center">{{ $subject->pass_mark_practical?$subject->pass_mark_practical:'-' }}</td>
-                                                            </tr>
-                                                            @php($i++)
-                                                        @endforeach
-                                                    @else
-                                                        <tr colspan="6"></tr>
-                                                    @endif
-                                                    </tbody>
-                                                </table>
-                                                <div class="well well-sm">
-                                                    Abbreviations | FM:Full Mark, PM: Pass Mark, T:Theory,P:Practical
-                                                </div>
-                                            </div>
-
-                                            <div class="space-18"></div>
-                                            <div class="row text-uppercase">
-                                                <div class="pull-left text-center" >
-                                                        <span>
-                                                            <strong style="border-bottom: 2px black solid"  >{{\Carbon\Carbon::now()->format('Y-m-d')}}</strong ><br>
-                                                            Print Date
-                                                        </span>
-                                                </div>
-                                                <div class="pull-right text-center">
-                                                    <br>
-                                                    <span style="border-top: 2px black solid; padding: 0px 50px;">&nbsp;Controller of Examination&nbsp;</span >
-                                                </div>
-                                            </div>
-                                            <div class="space-10"></div>
-                                            <div class="well well-sm">
-                                                Note:Student will give his/her exam with our examinations rule & regulation.
-                                            </div>
-                                        </div>
-                                        <!-- PAGE CONTENT ENDS -->
-
-                                    </div><!-- /.col -->
-                                </div><!-- /.row -->
-                            </div><!-- /.page-content -->
-                        </div>
+                    <div class="admit-photo-wrap">
+                        @if($student->student_image)
+                            <img class="admit-photo" src="{{ asset('images'.DIRECTORY_SEPARATOR.'studentProfile'.DIRECTORY_SEPARATOR.$student->student_image) }}" alt="Student Photo">
+                        @endif
                     </div>
                 </div>
-            </div><!-- /.main-content -->
-            {{--<div style="page-break-after:always;"></div>--}}
-        @endforeach
-    @endif
+
+                <div class="admit-meta">
+                    <div class="meta-col">
+                        <div class="meta-row"><span class="meta-label">Group:</span> {{ ViewHelper::getFacultyTitle($student->faculty) ?: 'N/A' }}</div>
+                        <div class="meta-row single-line"><span class="meta-label">Name (Capital Letter):</span> {{ strtoupper(trim($student->first_name.' '.$student->middle_name.' '.$student->last_name)) }}</div>
+                        <div class="meta-row"><span class="meta-label">Subject:</span> Compulsory/ Optional</div>
+                    </div>
+
+                    <div class="meta-col">
+                        <div class="meta-row"><span class="meta-label">Reg. No:</span> {{ $student->reg_no ?: 'N/A' }}</div>
+                        <div class="meta-row"><span class="meta-label">Board Roll:</span> {{ $student->university_reg ?: 'N/A' }}</div>
+                        <div class="meta-row"><span class="meta-label">Session:</span> {{ ViewHelper::getStudentBatchById($student->batch) ?: 'N/A' }}</div>
+                    </div>
+                </div>
+
+                <div class="schedule-wrap">
+                    <div class="schedule-head">Code &amp; Subject</div>
+                    @php
+                        $admitSubjects = $student->admit_subjects ?? collect();
+
+                        $optionalSubjects = $admitSubjects->filter(function ($subject) {
+                            return strtolower(trim((string) ($subject->subject_type ?? ''))) === 'optional';
+                        })->values();
+                    @endphp
+                    <table class="schedule-table text-uppercase">
+                        <thead>
+                        <tr>
+                            <th class="center" style="width:30px;">#</th>
+                            <th style="width:82px;">Date</th>
+                            <th style="width:112px;">Time</th>
+                            <th>Code &amp; Subject</th>
+                            <th class="center" style="width:50px;">FM(T)</th>
+                            <th class="center" style="width:50px;">PM(T)</th>
+                            <th class="center" style="width:50px;">FM(P)</th>
+                            <th class="center" style="width:50px;">PM(P)</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        @if($admitSubjects->count() > 0)
+                            @php($i = 1)
+                            @foreach($admitSubjects as $subject)
+                                <tr>
+                                    <td class="center">{{ $i }}</td>
+                                    <td>
+                                        @if(!empty($subject->date))
+                                            {{ \Carbon\Carbon::parse($subject->date)->format('Y-m-d') }}
+                                        @else
+                                            -
+                                        @endif
+                                    </td>
+                                    <td>
+                                        @if(!empty($subject->start_time) && !empty($subject->end_time))
+                                            {{ \Carbon\Carbon::parse($subject->start_time)->format('g:i A') }} -
+                                            {{ \Carbon\Carbon::parse($subject->end_time)->format('g:i A') }}
+                                        @else
+                                            -
+                                        @endif
+                                    </td>
+                                    <td>{{ $subject->title }}@if(!empty($subject->code)) [{{ $subject->code }}]@endif</td>
+                                    <td class="center">{{ $subject->full_mark_theory ? $subject->full_mark_theory : '-' }}</td>
+                                    <td class="center">{{ $subject->pass_mark_theory ? $subject->pass_mark_theory : '-' }}</td>
+                                    <td class="center">{{ $subject->full_mark_practical ? $subject->full_mark_practical : '-' }}</td>
+                                    <td class="center">{{ $subject->pass_mark_practical ? $subject->pass_mark_practical : '-' }}</td>
+                                </tr>
+                                @php($i++)
+                            @endforeach
+                        @else
+                            <tr>
+                                <td colspan="8" class="center">No schedule found.</td>
+                            </tr>
+                        @endif
+                        </tbody>
+                    </table>
+                    @if($optionalSubjects->count() > 0)
+                        <div class="optional-summary">
+                            <span class="label">Optional Subject:</span>
+                            <span class="value">
+                                @foreach($optionalSubjects as $subject)
+                                    {{ strtoupper($subject->title) }}@if(!$loop->last), @endif
+                                @endforeach
+                            </span>
+                        </div>
+                    @endif
+                    <div class="abbr-note">Abbreviations: FM = Full Mark, PM = Pass Mark, T = Theory, P = Practical</div>
+                </div>
+
+                <div class="admit-signature">
+                    <div class="signature-box">
+                        <div class="signature-line">Principal</div>
+                    </div>
+                </div>
+
+                <div class="admit-note">
+                    Note: Student must follow all examination rules and regulations.
+                </div>
+            </div>
+        </div>
+    @endforeach
+@endif
 @endsection
 
 @section('js')
-    <!-- inline scripts related to this page -->
-   @include('includes.scripts.print_script')
+@include('includes.scripts.print_script')
 @endsection

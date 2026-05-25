@@ -61,7 +61,7 @@ class ExamPrintController extends CollegeBaseController
             'exam_schedules.date', 'exam_schedules.start_time', 'exam_schedules.end_time',
             'exam_schedules.full_mark_theory', 'exam_schedules.pass_mark_theory',
             'exam_schedules.full_mark_practical',
-            'exam_schedules.pass_mark_practical', 's.code', 's.title')
+            'exam_schedules.pass_mark_practical', 's.code', 's.title', 's.sub_type as subject_type')
             ->where($whereCondition)
             ->join('subjects as s','s.id','=','exam_schedules.subjects_id')
             ->orderBy('sorting_order','asc')
@@ -70,9 +70,57 @@ class ExamPrintController extends CollegeBaseController
         if($data['subjects']->count() == 0)
             return back()->with($this->message_warning, 'No any Subject Scheduled in your target exam. Please, Schedule exam first. ');
 
-        $data['student'] = Student::select('id','reg_no','date_of_birth', 'first_name', 'middle_name', 'last_name','student_image','gender','blood_group' /*,'faculty', 'semester','status'*/)
+        $data['student'] = Student::select('id','reg_no','university_reg','date_of_birth', 'first_name', 'middle_name', 'last_name','student_image','gender','blood_group','faculty','batch' /*,'semester','status'*/)
             ->whereIn('id',$request->get('chkIds'))
+            ->with(['studentSubjects' => function ($query) {
+                $query->select('subjects.id', 'subjects.code', 'subjects.title', 'subjects.sub_type');
+            }])
             ->get();
+
+        $scheduledBySubject = $data['subjects']->keyBy('subjects_id');
+
+        foreach ($data['student'] as $student) {
+            $student->admit_subjects = $student->studentSubjects
+                ->filter(function ($subject) {
+                    return (int) ($subject->id ?? 0) > 0;
+                })
+                ->unique('id')
+                ->sort(function ($left, $right) {
+                    $leftKey = trim((string) ($left->code ?? ''));
+                    $rightKey = trim((string) ($right->code ?? ''));
+
+                    if ($leftKey === '') {
+                        $leftKey = trim((string) ($left->title ?? ''));
+                    }
+
+                    if ($rightKey === '') {
+                        $rightKey = trim((string) ($right->title ?? ''));
+                    }
+
+                    return strnatcasecmp($leftKey, $rightKey);
+                })
+                ->values()
+                ->take(7)
+                ->map(function ($subject) use ($scheduledBySubject) {
+                    $scheduled = $scheduledBySubject->get((int) $subject->id);
+
+                    return (object) [
+                        'subjects_id' => (int) $subject->id,
+                        'code' => $subject->code,
+                        'title' => $subject->title,
+                        'subject_type' => $subject->sub_type,
+                        'date' => $scheduled->date ?? null,
+                        'start_time' => $scheduled->start_time ?? null,
+                        'end_time' => $scheduled->end_time ?? null,
+                        'full_mark_theory' => $scheduled->full_mark_theory ?? null,
+                        'pass_mark_theory' => $scheduled->pass_mark_theory ?? null,
+                        'full_mark_practical' => $scheduled->full_mark_practical ?? null,
+                        'pass_mark_practical' => $scheduled->pass_mark_practical ?? null,
+                    ];
+                })
+                ->filter()
+                ->values();
+        }
 
         $data['url'] = URL::current();
         $data['filter_query'] = $this->filter_query;

@@ -7,7 +7,7 @@
                 <tr>
                     <th width="10%">Examination</th>
                     <th width="5%">Year</th>
-                    <th>Board/University</th>
+                    <th>Institution</th>
                     <th width="10%">ROLL NO</th>
                     <th width="25%">Subject</th>
                     <th width="5%">Marks Obtained</th>
