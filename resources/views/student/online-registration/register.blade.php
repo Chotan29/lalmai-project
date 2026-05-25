@@ -257,6 +257,155 @@
             background: #fff8f8;
         }
 
+        .subject-selection-header {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-between;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 16px;
+            padding: 12px 14px;
+            border: 1px solid #d6e2f0;
+            border-radius: 10px;
+            background: linear-gradient(135deg, #f5f9ff 0%, #eef5ff 100%);
+        }
+
+        .subject-selection-title {
+            font-size: 15px;
+            font-weight: 700;
+            color: #17324c;
+        }
+
+        .subject-selection-limit {
+            font-size: 13px;
+            font-weight: 500;
+            color: #2d5b8a;
+        }
+
+        .subject-structure-note {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            margin: -6px 0 16px;
+            padding: 10px 14px;
+            border-left: 4px solid #1e5799;
+            border-radius: 10px;
+            background: #f8fbff;
+            color: #4a5f75;
+            font-size: 13px;
+        }
+
+        .subject-structure-note span {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .subject-group-card {
+            height: 100%;
+            border: 1px solid #d8e4f0;
+            border-radius: 12px;
+            background: #fff;
+            box-shadow: 0 8px 20px rgba(15, 23, 42, 0.05);
+            overflow: hidden;
+        }
+
+        .subject-group-card__head {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 14px;
+            border-bottom: 1px solid #e5edf6;
+        }
+
+        .subject-group-card__head h4 {
+            margin: 0;
+            font-size: 15px;
+            font-weight: 700;
+            color: #17324c;
+        }
+
+        .subject-group-tag {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 54px;
+            padding: 4px 10px;
+            border-radius: 999px;
+            background: #17324c;
+            color: #fff;
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 0.04em;
+        }
+
+        .subject-group-tag--optional {
+            background: #8a5b11;
+        }
+
+        .subject-group-card--compulsory .subject-group-card__head {
+            background: #f2f9f5;
+        }
+
+        .subject-group-card--optional .subject-group-card__head {
+            background: #f9f7f0;
+        }
+
+        .subject-count {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 28px;
+            height: 28px;
+            padding: 0 8px;
+            border-radius: 999px;
+            background: #1e5799;
+            color: #fff;
+            font-size: 12px;
+            font-weight: 700;
+        }
+
+        .subject-group-card__body {
+            padding: 12px 14px;
+            max-height: 320px;
+            overflow-y: auto;
+        }
+
+        .subject-option-row {
+            display: flex;
+            align-items: flex-start;
+            gap: 8px;
+            margin-bottom: 10px;
+            padding-bottom: 10px;
+            border-bottom: 1px dashed #e3ebf4;
+            font-size: 14px;
+            color: #32485d;
+            cursor: pointer;
+        }
+
+        .subject-option-row:last-child {
+            margin-bottom: 0;
+            padding-bottom: 0;
+            border-bottom: 0;
+        }
+
+        .subject-option-row input[type="checkbox"] {
+            margin-top: 2px;
+        }
+
+        .subject-empty-state {
+            margin: 0;
+            font-size: 13px;
+            color: #6a7d91;
+            font-style: italic;
+        }
+
+        @media (max-width: 767.98px) {
+            .subject-group-card__body {
+                max-height: 220px;
+            }
+        }
+
         .section-title {
             display: flex;
             align-items: center;
@@ -520,7 +669,7 @@
                     @include('includes.validation_error_messages')
 
                     {!! Form::open([
-                        'route' => $base_route . '.register',
+                        'route' => 'online-registration.register',
                         'method' => 'POST',
                         'class' => 'registration-form',
                         'id' => 'validation-form',
@@ -1567,6 +1716,13 @@
 
             $rows.each(function() {
                 const $row = $(this);
+                const academicLevel = String($row.find('[name="board[]"]').first().val() || '').trim().toUpperCase();
+
+                if (academicLevel === 'BOARD') {
+                    $row.remove();
+                    return;
+                }
+
                 const $cells = $row.children('td');
 
                 const $boardCell = $cells.eq(2);
@@ -2031,10 +2187,10 @@
         function getSubjectMaxCount() {
             const maxFromInput = parseInt($('input[name="max_subjects_count"]').val(), 10);
             if (!Number.isNaN(maxFromInput) && maxFromInput > 0) {
-                return maxFromInput;
+                return Math.min(maxFromInput, 7);
             }
 
-            return $('#subjects_wrapper').find('input[name="subject[]"]').length;
+            return Math.min($('#subjects_wrapper').find('input[name="subject[]"]').length, 7);
         }
 
         function validateSubjectSelection(showToast) {
@@ -2047,9 +2203,23 @@
 
             const selectedCount = $subjects.filter(':checked').length;
             const maxCount = getSubjectMaxCount();
+            const selectedOptionalCount = $subjects.filter(':checked').filter('[data-subject-type="optional"]').length;
+            const selectedCompulsoryCount = $subjects.filter(':checked').filter('[data-subject-type="compulsory"]').length;
+            const maxOptionalCount = 1;
+            const maxCompulsoryCount = 6;
 
             if (selectedCount < 1) {
                 setFieldInvalid($wrapper, 'Please select at least 1 subject.', showToast);
+                return false;
+            }
+
+            if (selectedOptionalCount > maxOptionalCount) {
+                setFieldInvalid($wrapper, 'You can select maximum 1 optional subject.', showToast);
+                return false;
+            }
+
+            if (selectedCompulsoryCount > maxCompulsoryCount) {
+                setFieldInvalid($wrapper, 'You can select maximum 6 compulsory subjects.', showToast);
                 return false;
             }
 
@@ -2594,6 +2764,20 @@
                 const maxCount = getSubjectMaxCount();
                 const $subjects = $('#subjects_wrapper').find('input[name="subject[]"]');
                 const selectedCount = $subjects.filter(':checked').length;
+                const selectedOptionalCount = $subjects.filter(':checked').filter('[data-subject-type="optional"]').length;
+                const selectedCompulsoryCount = $subjects.filter(':checked').filter('[data-subject-type="compulsory"]').length;
+
+                if ($(this).is(':checked') && $(this).data('subject-type') === 'optional' && selectedOptionalCount > 1) {
+                    this.checked = false;
+                    setFieldInvalid($('#subjects_wrapper'), 'You can select maximum 1 optional subject.', true);
+                    return;
+                }
+
+                if ($(this).is(':checked') && $(this).data('subject-type') === 'compulsory' && selectedCompulsoryCount > 6) {
+                    this.checked = false;
+                    setFieldInvalid($('#subjects_wrapper'), 'You can select maximum 6 compulsory subjects.', true);
+                    return;
+                }
 
                 if ($(this).is(':checked') && selectedCount > maxCount) {
                     this.checked = false;

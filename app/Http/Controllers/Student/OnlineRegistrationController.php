@@ -185,6 +185,67 @@ class OnlineRegistrationController extends CollegeBaseController
     public function register(AddValidation $request)
     {
 
+        $selectedSubjects = $request->input('subject', []);
+        if (!is_array($selectedSubjects)) {
+            $selectedSubjects = [];
+        }
+
+        $selectedSubjects = array_values(array_unique(array_filter($selectedSubjects, function ($subjectId) {
+            return (int) $subjectId > 0;
+        })));
+
+        $subjectLimitErrors = [];
+
+        if (count($selectedSubjects) > 7) {
+            $subjectLimitErrors[] = 'You can select maximum 7 subjects.';
+        }
+
+        $semesterId = (int) $request->input('semester');
+        if ($semesterId > 0 && count($selectedSubjects) > 0) {
+            $semester = Semester::find($semesterId);
+
+            if ($semester) {
+                $subjectRows = $semester->subjects()
+                    ->select('subjects.id', 'subjects.sub_type')
+                    ->whereIn('subjects.id', $selectedSubjects)
+                    ->get();
+
+                if ($subjectRows->count() !== count($selectedSubjects)) {
+                    $subjectLimitErrors[] = 'One or more selected subjects are invalid for this semester.';
+                } else {
+                    $optionalCount = $subjectRows->filter(function ($subject) {
+                        return strtolower(trim((string) $subject->sub_type)) === 'optional';
+                    })->count();
+
+                    $compulsoryCount = $subjectRows->count() - $optionalCount;
+
+                    if ($optionalCount > 1) {
+                        $subjectLimitErrors[] = 'You can select maximum 1 optional subject.';
+                    }
+
+                    if ($compulsoryCount > 6) {
+                        $subjectLimitErrors[] = 'You can select maximum 6 compulsory subjects.';
+                    }
+                }
+            }
+        }
+
+        if (!empty($subjectLimitErrors)) {
+            $errorMessage = $subjectLimitErrors[0];
+
+            if ($request->expectsJson() || $request->ajax()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => $errorMessage,
+                    'errors' => [
+                        'subject[]' => $subjectLimitErrors,
+                    ],
+                ], 422);
+            }
+
+            return back()->withErrors(['subject' => $errorMessage])->withInput();
+        }
+
         //subject validation if choose
         /*if($request->subject){
             $subjectSelected = count($request->subject);
@@ -218,19 +279,33 @@ class OnlineRegistrationController extends CollegeBaseController
 
         }*/
 
-        $oldStudent = Student::where('batch',$request->batch)->orderBy('id', 'desc')->first();
-      
-        if (!$oldStudent){
-            $sn = 1;
-        }else{
-            $oldReg = intval(substr($oldStudent->reg_no,-4));
-            $sn = $oldReg + 1;
+        $batchModel = StudentBatch::find($request->batch);
+        $batchTitle = $batchModel->title;
+        $regPrefix = Str::slug($batchTitle);
+
+        $maxSerial = 0;
+        $existingRegNumbers = Student::where('batch', $request->batch)
+            ->whereNotNull('reg_no')
+            ->pluck('reg_no');
+
+        foreach ($existingRegNumbers as $existingRegNo) {
+            if (strpos($existingRegNo, $regPrefix) !== 0) {
+                continue;
+            }
+
+            if (preg_match('/(\d{1,4})$/', $existingRegNo, $matches)) {
+                $maxSerial = max($maxSerial, (int) $matches[1]);
+            }
         }
 
+        $sn = $maxSerial + 1;
 
-        $batchTitle = StudentBatch::find($request->batch)->title;
-        $sn = substr("00000{$sn}", - 4);
-        $regNum = $batchTitle.'/'.$sn;
+        do {
+            $serial = substr("00000{$sn}", -4);
+            $regNum = $batchTitle.'/'.$serial;
+            $sluggedRegNum = Str::slug($regNum);
+            $sn++;
+        } while (Student::where('reg_no', $sluggedRegNum)->exists());
        
         $request->request->add(['reg_no' => $regNum]);
         //reg generator End
@@ -238,7 +313,7 @@ class OnlineRegistrationController extends CollegeBaseController
         //upload student image
         if ($request->hasFile('student_main_image')){
             $student_image = $request->file('student_main_image');
-            $student_image_name = Str::slug($batchTitle.'-'.$sn).'.'.$student_image->getClientOriginalExtension();
+            $student_image_name = Str::slug($batchTitle.'-'.$serial).'.'.$student_image->getClientOriginalExtension();
             $student_image->move(public_path().DIRECTORY_SEPARATOR.'images'.DIRECTORY_SEPARATOR.'studentProfile'.DIRECTORY_SEPARATOR, $student_image_name);
         }else{
             $student_image_name = "";
@@ -674,7 +749,7 @@ class OnlineRegistrationController extends CollegeBaseController
             }
 
             $subjects = $semester->subjects()
-                ->select('subjects.id as subject_id', 'subjects.title as subject_title')
+                ->select('subjects.id as subject_id', 'subjects.title as subject_title', 'subjects.sub_type as subject_type')
                 ->orderBy('subjects.title')
                 ->get();
 
@@ -916,7 +991,6 @@ class OnlineRegistrationController extends CollegeBaseController
             $faculty = Faculty::find($request->get('faculty_id'));
             if ($faculty) {
                 $semesterList = $faculty->semesters()
-                    ->whereHas('subjects')
                     ->select('semesters.id', 'semesters.semester', 'semesters.slug')
                     ->orderBy('semesters.semester')
                     ->get();
@@ -926,7 +1000,7 @@ class OnlineRegistrationController extends CollegeBaseController
                     $response['error'] = false;
                     $response['message'] = 'Semester/Sec. Available For This Faculty/Program/Class.';
                 } else {
-                    $response['message'] = 'No semester with assigned subjects found for this faculty/program.';
+                    $response['message'] = 'No Any Semester Assign on This Faculty/Program/Class.';
                 }
             } else {
                 $response['message'] = 'No Any Semester Assign on This Faculty/Program/Class.';
