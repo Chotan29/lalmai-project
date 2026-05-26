@@ -261,6 +261,22 @@
             color: #343a40;
         }
 
+        .payment-button:disabled,
+        .payment-button.is-disabled {
+            background: #c4cad4 !important;
+            cursor: not-allowed !important;
+            box-shadow: none !important;
+            transform: none !important;
+            opacity: 0.9;
+        }
+
+        .payment-button:disabled:hover,
+        .payment-button.is-disabled:hover {
+            background: #c4cad4 !important;
+            transform: none !important;
+            box-shadow: none !important;
+        }
+
         /* Responsive adjustments */
         @media (max-width: 768px) {
             .payment-card-header {
@@ -346,13 +362,14 @@
 
                 @php
                     $singleFeeView = collect($data['current_installment_detail'] ?? [])->first();
-                    $displayDueAmount = (float) ($data['student']->balance ?? 0);
+                    $displayDueAmount = max((float) ($data['student']->balance ?? 0), 0);
+                    $hasAssignedFee = collect($data['fee_master'] ?? [])->isNotEmpty();
+                    $canPayNow = $hasAssignedFee && $displayDueAmount > 0;
                 @endphp
 
                 <div class="row">
                         <!-- Payment Section -->
                         <div class="col-md-4">
-                                @if ($displayDueAmount > 0)
                                 <div class="card payment-card">
                                     <div class="card-header payment-card-header">
                                         <div class="d-flex justify-content-between align-items-center">
@@ -385,13 +402,12 @@
                                             </div>
                                         </div>
                                         <!-- Pay Now Button - Moved inside the card -->
-                                        <button class="payment-button" id="openPaymentModalStudent" data-open-payment-modal="1" type="button" onclick="if (window.openPaymentGatewayModal) { window.openPaymentGatewayModal(); }">
+                                        <button class="payment-button {{ $canPayNow ? '' : 'is-disabled' }}" id="openPaymentModalStudent" data-open-payment-modal="{{ $canPayNow ? 1 : 0 }}" type="button" {{ $canPayNow ? '' : 'disabled aria-disabled=true title=No fee due available for payment' }} onclick="if (window.openPaymentGatewayModal) { window.openPaymentGatewayModal(); }">
                                             <span>💳</span>
-                                            <span>Pay Now</span>
+                                            <span>{{ $canPayNow ? 'Pay Now' : 'Pay Unavailable' }}</span>
                                         </button>
                                     </div>
                                 </div>
-                            @endif
                         
                         </div>
 
@@ -439,6 +455,27 @@
                                                 class="{{ ($data['student']->balance ?? 0) > 0 ? 'text-danger' : 'text-success' }}">
                                                 <small class="text-muted">Balance:</small>
                                                 {{ number_format($data['student']->balance ?? 0, 2) }}
+                                            </span>
+                                        </div>
+                                    </div>
+                                @else
+                                    <div class="compact-installment">
+                                        <div class="installment-header">
+                                            <strong>Current Due</strong>
+                                            <span class="badge badge-sm badge-secondary">No Fee Assigned</span>
+                                        </div>
+                                        <div class="amount-row">
+                                            <span>
+                                                <small class="text-muted">Due:</small>
+                                                --
+                                            </span>
+                                            <span>
+                                                <small class="text-muted">Amount:</small>
+                                                {{ number_format(0, 2) }}
+                                            </span>
+                                            <span class="text-success">
+                                                <small class="text-muted">Balance:</small>
+                                                {{ number_format(0, 2) }}
                                             </span>
                                         </div>
                                     </div>
@@ -964,6 +1001,34 @@
                                                         </div>
                                                     </div>
                                                 @endif
+                                            </div>
+                                        </div>
+                                    @else
+                                        <div class="timeline-item paid">
+                                            <div class="timeline-point">
+                                                <i class="fas fa-info-circle text-muted"></i>
+                                            </div>
+                                            <div class="timeline-content">
+                                                <div class="d-flex justify-content-between align-items-center">
+                                                    <h6 class="mb-0">Current Due</h6>
+                                                    <span class="due-date text-muted">No fee assigned</span>
+                                                </div>
+                                                <div class="progress mt-2 mb-1" style="height: 6px;">
+                                                    <div class="progress-bar bg-success" role="progressbar" style="width: 0%"
+                                                        aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
+                                                </div>
+                                                <div class="amount-details">
+                                                    <div class="row">
+                                                        <div class="col-6">
+                                                            <small class="text-muted">Total Amount</small>
+                                                            <div class="font-weight-bold">{{ number_format(0, 2) }}</div>
+                                                        </div>
+                                                        <div class="col-6 text-right">
+                                                            <small class="text-muted">Balance</small>
+                                                            <div class="font-weight-bold text-success">{{ number_format(0, 2) }}</div>
+                                                        </div>
+                                                    </div>
+                                                </div>
                                             </div>
                                         </div>
                                     @endif

@@ -352,14 +352,28 @@
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    @php($i=1)
+                                    <?php $i = 1; ?>
                                     @foreach($data['academicInfos'] as $academicInfo)
+                                        <?php
+                                            $examBoard = $academicInfo->board ?? ($academicInfo->examination ?? ($academicInfo->board_university ?? '-'));
+                                            $institution = $academicInfo->institution ?? '-';
+                                            $passYear = $academicInfo->pass_year ?? ($academicInfo->year_of_pass ?? '-');
+                                            $rawPercentage = $academicInfo->percentage;
+                                            $hasValidPercentage = $rawPercentage !== null && $rawPercentage !== '' && (float)$rawPercentage > 0;
+                                            if ($hasValidPercentage) {
+                                                $result = $rawPercentage;
+                                            } else {
+                                                $result = $academicInfo->division_grade
+                                                    ?? ($academicInfo->grade_letter
+                                                    ?? ($academicInfo->percentage_grade ?? '-'));
+                                            }
+                                        ?>
                                         <tr>
                                             <td>{{ $i++ }}</td>
-                                            <td>{{ $academicInfo->board }}</td>
-                                            <td>{{ $academicInfo->institution }}</td>
-                                            <td>{{ $academicInfo->pass_year }}</td>
-                                            <td>{{ $academicInfo->percentage }}</td>
+                                            <td>{{ $examBoard }}</td>
+                                            <td>{{ $institution }}</td>
+                                            <td>{{ $passYear }}</td>
+                                            <td>{{ $result }}</td>
                                         </tr>
                                     @endforeach
                                 </tbody>

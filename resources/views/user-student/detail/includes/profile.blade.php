@@ -4,12 +4,12 @@
         <div class="info-card animate__animated animate__fadeInUp">
             <h5><i class="bi bi-person-badge me-2"></i> Basic Information</h5>
             @foreach([
-                'Full Name' => $data['student']->first_name . ' ' . $data['student']->middle_name . ' ' . $data['student']->last_name,
+                'Full Name' => trim($data['student']->first_name . ' ' . $data['student']->middle_name . ' ' . $data['student']->last_name),
                 'Date of Birth' => $data['student']->date_of_birth ? \Carbon\Carbon::parse($data['student']->date_of_birth)->format('d M, Y') : 'N/A',
-                'Gender' => $data['student']->gender ?? 'N/A',
-                'Blood Group' => $data['student']->blood_group ?? 'N/A',
-                'Religion' => $data['student']->religion ?? 'N/A',
-                'Nationality' => $data['student']->nationality ?? 'N/A',
+                'Gender' => $data['student']->gender ?: 'N/A',
+                'Blood Group' => $data['student']->blood_group ?: 'N/A',
+                'Religion' => $data['student']->religion ?: 'N/A',
+                'Nationality' => $data['student']->nationality ?: 'N/A',
             ] as $label => $value)
                 <div class="info-item">
                     <div class="info-label">{{ $label }}</div>
@@ -78,9 +78,9 @@
         <div class="info-card animate__animated animate__fadeInUp" style="animation-delay: 0.4s;">
             <h5><i class="bi bi-mortarboard me-2"></i> Academic Information</h5>
             @foreach([
-                'Faculty' => ViewHelper::getFacultyTitle($data['student']->faculty),
-                'Semester' => ViewHelper::getSemesterTitle($data['student']->semester),
-                'Batch' => ViewHelper::getStudentBatchId($data['student']->batch),
+                'Faculty' => ViewHelper::getFacultyTitle($data['student']->faculty) ?: 'N/A',
+                'Semester' => ViewHelper::getSemesterTitle($data['student']->semester) ?: 'N/A',
+                'Batch' => ViewHelper::getStudentBatchId($data['student']->batch) ?: 'Unknown',
                 'Reg. Date' => $data['student']->reg_date ? \Carbon\Carbon::parse($data['student']->reg_date)->format('d M, Y') : 'N/A',
             ] as $label => $value)
                 <div class="info-item">

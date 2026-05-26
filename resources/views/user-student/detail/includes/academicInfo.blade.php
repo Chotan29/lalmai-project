@@ -15,12 +15,22 @@
         @if (isset($data['academicInfos']) && $data['academicInfos']->count() > 0)
             <div class="row">
                 @foreach($data['academicInfos'] as $academicInfo)
+                @php
+                    $examBoard = $academicInfo->board ?? ($academicInfo->examination ?? ($academicInfo->board_university ?? '-'));
+                    $passYear = $academicInfo->pass_year ?? ($academicInfo->year_of_pass ?? '-');
+                    $rollNo = $academicInfo->roll_no ?? ($academicInfo->symbol_no ?? '-');
+                    $rawPercentage = $academicInfo->percentage;
+                    $hasValidPercentage = $rawPercentage !== null && $rawPercentage !== '' && (float) $rawPercentage > 0;
+                    $resultValue = $hasValidPercentage
+                        ? $rawPercentage
+                        : ($academicInfo->division_grade ?? ($academicInfo->grade_letter ?? ($academicInfo->percentage_grade ?? '-')));
+                @endphp
                 <div class="col-md-6">
                     <div class="info-card animate__animated animate__fadeInUp" style="animation-delay: {{ $loop->index * 0.1 }}s">
                         <div class="d-flex justify-content-between align-items-start mb-3">
                             <div>
-                                <h6 class="font-weight-bold text-primary mb-1">{{ $academicInfo->board }}</h6>
-                                <p class="text-muted small mb-0">{{ $academicInfo->pass_year }}</p>
+                                <h6 class="font-weight-bold text-primary mb-1">{{ $examBoard }}</h6>
+                                <p class="text-muted small mb-0">{{ $passYear }}</p>
                             </div>
                             <div class="action-buttons">
                                 @ability('super-admin', 'student-delete-academic-info')
@@ -41,17 +51,17 @@
                                 </div>
                                 <div class="info-item">
                                     <div class="info-label">Board/University</div>
-                                    <div class="info-value">{{ $academicInfo->board }}</div>
+                                    <div class="info-value">{{ $examBoard }}</div>
                                 </div>
                             </div>
                             <div class="col-md-6">
                                 <div class="info-item">
                                     <div class="info-label">Symbol No</div>
-                                    <div class="info-value">{{ $academicInfo->symbol_no }}</div>
+                                    <div class="info-value">{{ $rollNo }}</div>
                                 </div>
                                 <div class="info-item">
                                     <div class="info-label">Percentage/Grade</div>
-                                    <div class="info-value">{{ $academicInfo->percentage }}</div>
+                                    <div class="info-value">{{ $resultValue }}</div>
                                 </div>
                             </div>
                         </div>
@@ -99,17 +109,26 @@
                         </tr>
                     </thead>
                     <tbody>
-                        @php($i=1)
+                        <?php $i = 1; ?>
                         @foreach($data['academicInfos'] as $academicInfo)
+                            @php
+                                $examBoard = $academicInfo->board ?? ($academicInfo->examination ?? ($academicInfo->board_university ?? '-'));
+                                $passYear = $academicInfo->pass_year ?? ($academicInfo->year_of_pass ?? '-');
+                                $rawPercentage = $academicInfo->percentage;
+                                $hasValidPercentage = $rawPercentage !== null && $rawPercentage !== '' && (float) $rawPercentage > 0;
+                                $resultValue = $hasValidPercentage
+                                    ? $rawPercentage
+                                    : ($academicInfo->division_grade ?? ($academicInfo->grade_letter ?? ($academicInfo->percentage_grade ?? '-')));
+                            @endphp
                             <tr>
                                 <td>{{ $i }}</td>
-                                <td>{{ $academicInfo->examination }}</td>
+                                <td>{{ $examBoard }}</td>
                                 <td>{{ $academicInfo->institution }}</td>
-                                <td>{{ $academicInfo->board_university }}</td>
-                                <td>{{ $academicInfo->year_of_pass }}</td>
-                                <td>{{ $academicInfo->percentage_grade }}</td>
+                                <td>{{ $examBoard }}</td>
+                                <td>{{ $passYear }}</td>
+                                <td>{{ $resultValue }}</td>
                             </tr>
-                            @php($i++)
+                            <?php $i++; ?>
                         @endforeach
                     </tbody>
                 </table>

@@ -309,9 +309,12 @@ class StudentController extends CollegeBaseController
         }
 
         if ($request->hasFile('student_main_image')){
-            $student_image = $request->file('student_main_image');
-            $student_image_name = $request->reg_no.'.'.$student_image->getClientOriginalExtension();
-            $student_image->move(public_path().DIRECTORY_SEPARATOR.'images'.DIRECTORY_SEPARATOR.'studentProfile'.DIRECTORY_SEPARATOR, $student_image_name);
+            $student_image_name = parent::uploadAttendanceProfileImage(
+                $request,
+                'student_main_image',
+                public_path().DIRECTORY_SEPARATOR.'images'.DIRECTORY_SEPARATOR.'studentProfile'.DIRECTORY_SEPARATOR,
+                $request->reg_no
+            );
         }else{
             $student_image_name = "";
         }
@@ -1112,9 +1115,12 @@ class StudentController extends CollegeBaseController
                     @unlink($this->folder_path . $row->student_image);
 
                 /*upload new student image*/
-                $student_image = $request->file('student_main_image');
-                $student_image_name = $request->reg_no . '.' . $student_image->getClientOriginalExtension();
-                $student_image->move($this->folder_path, $student_image_name);
+                $student_image_name = parent::uploadAttendanceProfileImage(
+                    $request,
+                    'student_main_image',
+                    $this->folder_path,
+                    $request->reg_no
+                );
             }
 
             if ($request->hasFile('student_signature_main_image')) {

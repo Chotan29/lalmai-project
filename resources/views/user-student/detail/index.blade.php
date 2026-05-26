@@ -1,33 +1,53 @@
 @extends('user-student.layouts.master')
 
 @section('css')
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css" rel="stylesheet">
     <style>
         :root {
-            --primary-color: #4361ee;
-            --primary-light: #ebedfc;
-            --secondary-color: #3f37c9;
-            --accent-color: #4895ef;
-            --light-color: #f8f9fa;
-            --dark-color: #212529;
-            --success-color: #4cc9f0;
-            --warning-color: #f8961e;
-            --danger-color: #f72585;
-            --border-radius: 12px;
-            --box-shadow: 0 10px 30px rgba(0,0,0,0.05);
+            --primary-color: #1f5aa6;
+            --primary-light: #eaf1ff;
+            --secondary-color: #12396b;
+            --accent-color: #16a3b7;
+            --light-color: #f4f6fb;
+            --dark-color: #142033;
+            --success-color: #2e9f6f;
+            --warning-color: #c98a1c;
+            --danger-color: #ce4b51;
+            --border-radius: 14px;
+            --box-shadow: 0 14px 36px rgba(16, 35, 62, 0.08);
             --transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+        }
+
+        .page-content {
+            background:
+                radial-gradient(1200px 280px at -5% -20%, rgba(31, 90, 166, 0.14), transparent 70%),
+                radial-gradient(900px 260px at 105% 0%, rgba(22, 163, 183, 0.14), transparent 70%),
+                #f7f9fc;
+            font-family: 'Plus Jakarta Sans', sans-serif;
+        }
+
+        .profile-header h2,
+        .panel-title,
+        .section-title h5,
+        #profileTabs .nav-link {
+            font-family: 'Space Grotesk', sans-serif;
+            letter-spacing: 0.2px;
         }
         
         .profile-header {
-            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            background: linear-gradient(135deg, #1c4f91 0%, #133e74 55%, #0d2f57 100%);
             color: white;
             border-radius: var(--border-radius);
-            padding: 2rem;
-            margin-bottom: 2rem;
+            padding: 2.2rem;
+            margin-bottom: 1.2rem;
             box-shadow: var(--box-shadow);
             position: relative;
             overflow: hidden;
+            border: 1px solid rgba(255, 255, 255, 0.16);
         }
         
         .profile-header::before {
@@ -37,8 +57,19 @@
             right: -50%;
             width: 100%;
             height: 200%;
-            background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
+            background: radial-gradient(circle, rgba(255,255,255,0.12) 0%, transparent 70%);
             transform: rotate(30deg);
+        }
+
+        .profile-header::after {
+            content: '';
+            position: absolute;
+            inset: auto -40px -50px auto;
+            width: 220px;
+            height: 220px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.06);
+            filter: blur(0.5px);
         }
         
         .profile-avatar {
@@ -57,9 +88,9 @@
             transform: scale(1.05);
         }
         
-        .nav-tabs {
+        #profileTabs {
             border-bottom: none;
-            background: white;
+            background: #ffffff;
             border-radius: var(--border-radius);
             padding: 0.75rem;
             box-shadow: var(--box-shadow);
@@ -68,11 +99,11 @@
             scrollbar-width: none;
         }
         
-        .nav-tabs::-webkit-scrollbar {
+        #profileTabs::-webkit-scrollbar {
             display: none;
         }
         
-        .nav-tabs .nav-link {
+        #profileTabs .nav-link {
             border: none;
             color: var(--dark-color);
             font-weight: 500;
@@ -84,29 +115,150 @@
             align-items: center;
         }
         
-        .nav-tabs .nav-link.active {
-            background-color: var(--primary-color);
+        #profileTabs .nav-link.active {
+            background: linear-gradient(135deg, #1f5aa6, #174a8b);
             color: white;
-            box-shadow: 0 4px 15px rgba(67, 97, 238, 0.3);
+            box-shadow: 0 8px 20px rgba(21, 70, 132, 0.28);
         }
         
-        .nav-tabs .nav-link:hover:not(.active) {
+        #profileTabs .nav-link:hover:not(.active) {
             background-color: var(--primary-light);
             color: var(--primary-color);
         }
         
-        .nav-tabs .nav-link .bi {
+        #profileTabs .nav-link .bi {
             margin-right: 8px;
             font-size: 1.1rem;
         }
         
-        .tab-content {
+        #profileTabsContent {
             background: white;
             border-radius: var(--border-radius);
-            padding: 2rem;
+            padding: 2rem 2rem 1.2rem;
             box-shadow: var(--box-shadow);
             margin-top: 1rem;
             animation: fadeIn 0.5s ease;
+            border: 1px solid #edf1f7;
+        }
+
+        .profile-quick-stats {
+            margin-bottom: 1.3rem;
+        }
+
+        .quick-stat-card {
+            background:
+                linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(247, 251, 255, 0.96));
+            border: 1px solid #dfe9f7;
+            border-radius: 14px;
+            box-shadow: 0 10px 24px rgba(18, 52, 92, 0.09);
+            padding: 1rem 1.1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.9rem;
+            min-height: 88px;
+            position: relative;
+            overflow: hidden;
+            transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
+        }
+
+        .quick-stat-card::before {
+            content: '';
+            position: absolute;
+            inset: 0 0 auto 0;
+            height: 4px;
+            background: linear-gradient(90deg, #1f5aa6, #16a3b7);
+            opacity: 0.8;
+        }
+
+        .quick-stat-card::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -120%;
+            width: 55%;
+            height: 100%;
+            background: linear-gradient(110deg, transparent, rgba(255, 255, 255, 0.42), transparent);
+            transition: left 0.55s ease;
+        }
+
+        .quick-stat-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 16px 34px rgba(16, 47, 90, 0.17);
+            border-color: #c6d9f3;
+        }
+
+        .quick-stat-card:hover::after {
+            left: 125%;
+        }
+
+        .quick-stat-icon {
+            width: 44px;
+            height: 44px;
+            border-radius: 12px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.1rem;
+            color: #fff;
+            flex-shrink: 0;
+            transition: transform 0.25s ease;
+            box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.18);
+        }
+
+        .quick-stat-card:hover .quick-stat-icon {
+            transform: rotate(-8deg) scale(1.08);
+        }
+
+        .quick-stat-icon.primary { background: linear-gradient(135deg, #1f5aa6, #174a8b); }
+        .quick-stat-icon.accent { background: linear-gradient(135deg, #0f9aa8, #147d8a); }
+        .quick-stat-icon.warn { background: linear-gradient(135deg, #c98a1c, #ad7617); }
+        .quick-stat-icon.dark { background: linear-gradient(135deg, #3c4a5f, #2d394b); }
+
+        .quick-stat-meta {
+            min-width: 0;
+            width: 100%;
+        }
+
+        .quick-stat-meta .label {
+            display: inline-flex;
+            align-items: center;
+            font-size: 0.82rem;
+            text-transform: uppercase;
+            letter-spacing: 0.6px;
+            color: #4f657f;
+            background: #eaf1fb;
+            border: 1px solid #d5e2f4;
+            border-radius: 999px;
+            padding: 0.28rem 0.7rem;
+            margin-bottom: 0.42rem;
+            font-weight: 800;
+        }
+
+        .quick-stat-meta .value {
+            font-size: 1.2rem;
+            color: #1f2e44;
+            font-weight: 800;
+            font-family: 'Space Grotesk', sans-serif;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            transition: color 0.25s ease;
+            display: block;
+            letter-spacing: 0.15px;
+        }
+
+        .quick-stat-meta .value.value-id {
+            letter-spacing: 0.45px;
+        }
+
+        .quick-stat-meta .value.value-mobile {
+            font-size: 1.05rem;
+            white-space: normal;
+            line-height: 1.35;
+        }
+
+        .quick-stat-card:hover .quick-stat-meta .value {
+            color: #143b6b;
         }
         
         @keyframes fadeIn {
@@ -117,10 +269,11 @@
         .info-card {
             background: white;
             border-radius: var(--border-radius);
-            padding: 1.75rem;
+            padding: 1.55rem;
             margin-bottom: 1.5rem;
             box-shadow: var(--box-shadow);
             border-left: 4px solid var(--primary-color);
+            border: 1px solid #edf1f7;
             transition: var(--transition);
             height: 100%;
         }
@@ -233,7 +386,7 @@
         }
         
         .table thead th {
-            background-color: var(--primary-color);
+            background: linear-gradient(135deg, #1f5aa6, #174a8b);
             color: white;
             border: none;
         }
@@ -320,13 +473,38 @@
                 min-width: auto;
             }
             
-            .nav-tabs .nav-link {
+            #profileTabs .nav-link {
                 padding: 0.5rem 1rem;
                 font-size: 0.9rem;
             }
             
-            .tab-content {
+            #profileTabsContent {
                 padding: 1.5rem;
+            }
+
+            .quick-stat-card {
+                min-height: 76px;
+                padding: 0.82rem 0.85rem;
+                gap: 0.65rem;
+            }
+
+            .quick-stat-icon {
+                width: 38px;
+                height: 38px;
+                border-radius: 10px;
+            }
+
+            .quick-stat-meta .label {
+                font-size: 0.74rem;
+                padding: 0.22rem 0.52rem;
+            }
+
+            .quick-stat-meta .value {
+                font-size: 1.08rem;
+            }
+
+            .quick-stat-meta .value.value-mobile {
+                font-size: 0.98rem;
             }
         }
     </style>
@@ -373,6 +551,51 @@
                                 <small class="text-white-50 d-block">Faculty</small>
                                 <p class="mb-0 font-weight-bold">{{ ViewHelper::getFacultyTitle($data['student']->faculty) }}</p>
                             </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row profile-quick-stats">
+                <div class="col-xs-12 col-sm-6 col-lg-3 mb-3">
+                    <div class="quick-stat-card">
+                        <span class="quick-stat-icon primary"><i class="bi bi-person-vcard"></i></span>
+                        <div class="quick-stat-meta">
+                            <span class="label">Registration No</span>
+                            <span class="value value-id">{{ $data['student']->reg_no ?: 'N/A' }}</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-xs-12 col-sm-6 col-lg-3 mb-3">
+                    <div class="quick-stat-card">
+                        <span class="quick-stat-icon accent"><i class="bi bi-collection"></i></span>
+                        <div class="quick-stat-meta">
+                            <span class="label">Batch</span>
+                            <span class="value">{{ ViewHelper::getStudentBatchId($data['student']->batch) ?: 'Unknown' }}</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-xs-12 col-sm-6 col-lg-3 mb-3">
+                    <div class="quick-stat-card">
+                        <span class="quick-stat-icon warn"><i class="bi bi-calendar2-week"></i></span>
+                        <div class="quick-stat-meta">
+                            <span class="label">Semester</span>
+                            <span class="value">{{ ViewHelper::getSemesterTitle($data['student']->semester) ?: 'N/A' }}</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-xs-12 col-sm-6 col-lg-3 mb-3">
+                    <div class="quick-stat-card">
+                        <span class="quick-stat-icon dark"><i class="bi bi-telephone-forward"></i></span>
+                        <div class="quick-stat-meta">
+                            <span class="label">Mobile</span>
+                            <span class="value value-mobile">
+                                @if($data['student']->mobile_1)
+                                    {{ $data['student']->mobile_1 }}{{ $data['student']->mobile_2 ? ', '.$data['student']->mobile_2 : '' }}
+                                @else
+                                    N/A
+                                @endif
+                            </span>
                         </div>
                     </div>
                 </div>
@@ -438,7 +661,7 @@
 @section('js')
 <script>
     // Smooth scroll for tabs on mobile
-    document.querySelectorAll('.nav-tabs .nav-link').forEach(link => {
+    document.querySelectorAll('#profileTabs .nav-link').forEach(link => {
         link.addEventListener('click', function(e) {
             const targetTab = document.querySelector(this.getAttribute('href'));
             targetTab.scrollIntoView({ behavior: 'smooth' });

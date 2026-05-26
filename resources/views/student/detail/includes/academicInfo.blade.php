@@ -9,7 +9,7 @@
                         <tr>
                             <th>Examination</th>
                             <th>Year</th>
-                            <th>Board/University</th>
+                            <th>Institution</th>
                             <th>ROLL NO</th>
                             <th>Subject</th>
                             <th>Marks Obtained</th>
@@ -22,15 +22,29 @@
                         </thead>
                         <tbody>
                         @foreach($data['academicInfos'] as $academicInfo)
+                            @php
+                                $examBoard = $academicInfo->board ?? ($academicInfo->examination ?? ($academicInfo->board_university ?? '-'));
+                                $passYear = $academicInfo->pass_year ?? ($academicInfo->year_of_pass ?? '-');
+                                $institution = $academicInfo->institution ?? '-';
+                                $rawPercentage = $academicInfo->percentage;
+                                $hasValidPercentage = $rawPercentage !== null && $rawPercentage !== '' && (float)$rawPercentage > 0;
+                                if ($hasValidPercentage) {
+                                    $resultPercent = $rawPercentage;
+                                } else {
+                                    $resultPercent = $academicInfo->division_grade
+                                        ?? ($academicInfo->grade_letter
+                                        ?? ($academicInfo->percentage_grade ?? '-'));
+                                }
+                            @endphp
                             <tr>
-                                <td>{{ $academicInfo->board }}</td>
-                                <td class="text-center">{{ $academicInfo->pass_year }}</td>
-                                <td>{{ $academicInfo->institution }}</td>
+                                <td>{{ $examBoard }}</td>
+                                <td class="text-center">{{ $passYear }}</td>
+                                <td>{{ $institution }}</td>
                                 <td class="text-center">{{ $academicInfo->roll_no }}</td>
                                 <td>{{ $academicInfo->major_subjects }}</td>
                                 <td class="text-center">{{ $academicInfo->mark_obtained }}</td>
                                 <td class="text-center">{{ $academicInfo->maximum_mark }}</td>
-                                <td class="text-center">{{ $academicInfo->percentage }}</td>
+                                <td class="text-center">{{ $resultPercent }}</td>
                                 <td class="text-center">{{ $academicInfo->grade_point }}</td>
                                 <td class="text-center">{{ $academicInfo->grade_letter }}</td>
                                 <td class="text-center">

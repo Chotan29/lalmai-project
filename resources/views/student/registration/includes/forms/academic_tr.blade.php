@@ -21,15 +21,15 @@
             </td>
 
             <td>
-                {!! Form::number('mark_obtained[]', 0, ["class" => "col-md-12 mark-obtained calculate-percent"]) !!}
+                {!! Form::number('mark_obtained[]', null, ["class" => "col-md-12 mark-obtained calculate-percent", "step" => "any", "min" => "0"]) !!}
             </td>
 
             <td>
-                {!! Form::number('maximum_mark[]', 0, ["class" => "col-md-12 maximum-mark calculate-percent"]) !!}
+                {!! Form::number('maximum_mark[]', null, ["class" => "col-md-12 maximum-mark calculate-percent", "step" => "any", "min" => "0"]) !!}
             </td>
 
             <td>
-                {!! Form::number('percentage[]', 0, ["class" => "col-md-12 percent-value","readonly"]) !!}
+                {!! Form::number('percentage[]', null, ["class" => "col-md-12 percent-value","readonly", "step" => "any", "min" => "0"]) !!}
             </td>
 
             <td>
@@ -47,9 +47,15 @@
 
 <script>
     $('.calculate-percent').change(function() {
-        $obtainMark = $(this).closest('tr').find('.mark-obtained').val();
-        $maximumMark = $(this).closest('tr').find('.maximum-mark').val();
-        $percentage = (($obtainMark * 100) / $maximumMark).toFixed(2);
-        $(this).closest('tr').find('.percent-value').val($percentage);
+        var $row = $(this).closest('tr');
+        var obtainMark = parseFloat($row.find('.mark-obtained').val());
+        var maximumMark = parseFloat($row.find('.maximum-mark').val());
+
+        if (!isNaN(obtainMark) && !isNaN(maximumMark) && maximumMark > 0) {
+            var percentage = ((obtainMark * 100) / maximumMark).toFixed(2);
+            $row.find('.percent-value').val(percentage);
+        } else {
+            $row.find('.percent-value').val('');
+        }
     });
 </script>

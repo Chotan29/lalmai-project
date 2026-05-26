@@ -74,11 +74,7 @@ class HomeController extends CollegeBaseController
             ->get();
 
         // Indicators
-        $data['studentIndicator'] = Student::where('students.status', 1)
-            ->join('faculties as f', 'f.id', '=', 'students.faculty')
-            ->join('semesters as s', 's.id', '=', 'students.semester')
-            ->join('student_statuses as ss', 'ss.id', '=', 'students.academic_status')
-            ->count('students.id');
+        $data['studentIndicator'] = Student::count();
         $data['staffIndicator'] = Staff::count();
         $data['onlineRegistrationIndicator'] = Student::where('students.status', 1)
             ->where('students.registration_payment_status', 'completed')

@@ -98,10 +98,12 @@ class HomeController extends CollegeBaseController
         $id = auth()->user()->hook_id;
         $data = [];
         $data['student'] = Student::select('students.id','students.reg_no', 'students.reg_date', 'students.university_reg',
-            'students.faculty','students.semester', 'students.academic_status', 'students.first_name', 'students.middle_name',
+            'students.faculty','students.semester', 'students.batch', 'students.academic_status', 'students.first_name', 'students.middle_name',
             'students.last_name', 'students.date_of_birth', 'students.gender', 'students.blood_group', 'students.nationality',
-            'students.mother_tongue', 'students.email', 'students.extra_info', 'students.student_image', 'students.status')
+            'students.mother_tongue', 'students.email', 'students.extra_info', 'students.student_image', 'students.status',
+            'ai.mobile_1', 'ai.mobile_2')
             ->where('students.id','=',$id)
+            ->leftJoin('addressinfos as ai', 'ai.students_id', '=', 'students.id')
             ->first();
 
         if (!$data['student']){
@@ -156,8 +158,8 @@ class HomeController extends CollegeBaseController
         $id = auth()->user()->hook_id;
         $data = [];
         $data['student'] = Student::select('students.id','students.reg_no', 'students.reg_date', 'students.university_reg',
-            'students.faculty','students.semester', 'students.academic_status', 'students.first_name', 'students.middle_name',
-            'students.last_name', 'students.date_of_birth', 'students.gender', 'students.blood_group', 'students.nationality',
+            'students.faculty','students.semester', 'students.batch', 'students.academic_status', 'students.first_name', 'students.middle_name',
+            'students.last_name', 'students.date_of_birth', 'students.gender', 'students.blood_group', 'students.religion', 'students.nationality',
             'students.mother_tongue', 'students.email', 'students.extra_info', 'students.student_image', 'students.status', 'pd.grandfather_first_name',
             'pd.grandfather_middle_name', 'pd.grandfather_last_name', 'pd.father_first_name', 'pd.father_middle_name',
             'pd.father_last_name', 'pd.father_eligibility', 'pd.father_occupation', 'pd.father_office', 'pd.father_office_number',

@@ -120,12 +120,13 @@
             $.ajax({
                 type: 'POST',
                 url: '{{ route('student.find-semester') }}',
+                dataType: 'json',
                 data: {
                     _token: '{{ csrf_token() }}',
                     faculty_id: $this.value
                 },
                 success: function (response) {
-                    var data = $.parseJSON(response);
+                    var data = (typeof response === 'string' ? $.parseJSON(response) : response);
                     if (data.error) {
                         $.notify(data.message, "warning");
                     } else {

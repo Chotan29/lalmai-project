@@ -122,7 +122,7 @@ class SubjectController extends CollegeBaseController
                             $row = Subject::find(decrypt($row_id));
                             if ($row) {
                                 if ($row->semester()->exists()) {
-                                    continue;
+                                    continue 2;
                                 }
 
                                 $row->delete();

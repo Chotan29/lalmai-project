@@ -6,6 +6,36 @@ use Intervention\Image\Facades\Image;
 
 trait UploadScope{
 
+    protected function uploadAttendanceProfileImage(Request $request, string $fieldName, string $targetPath, ?string $fileNameWithoutExtension = null): string
+    {
+        $imageFile = $request->file($fieldName);
+        $finalPath = rtrim($targetPath, DIRECTORY_SEPARATOR).DIRECTORY_SEPARATOR;
+
+        if (!file_exists($finalPath)) {
+            @mkdir($finalPath, 0755, true);
+        }
+
+        $imageName = ($fileNameWithoutExtension ?: rand(4585, 9857)).'.jpg';
+
+        // Normalize to attendance-friendly portrait and keep final file under 1MB.
+        $img = Image::make($imageFile->getRealPath())
+            ->orientate()
+            ->fit(300, 400, function ($constraint) {
+                $constraint->upsize();
+            });
+
+        $outputPath = $finalPath.$imageName;
+        $quality = 82;
+        $img->encode('jpg', $quality)->save($outputPath);
+
+        while (@filesize($outputPath) > (1024 * 1024) && $quality > 45) {
+            $quality -= 7;
+            $img->encode('jpg', $quality)->save($outputPath);
+        }
+
+        return $imageName;
+    }
+
     protected function uploadImages(Request $request, $image_name)
     {
         $image = $request->file($image_name);

@@ -115,12 +115,13 @@
             $.ajax({
                 type: 'POST',
                 url: '{{ route('student.find-semester') }}',
+                dataType: 'json',
                 data: {
                     _token: '{{ csrf_token() }}',
                     faculty_id: $this.value
                 },
                 success: function (response) {
-                    var data = $.parseJSON(response);
+                    var data = (typeof response === 'string' ? $.parseJSON(response) : response);
                     if (data.error) {
                         $.notify(data.message, "warning");
                     } else {
@@ -138,7 +139,7 @@
             var year = $('select[name="years_id"]').val();
             var month = $('select[name="months_id"]').val();
             var exam = $('select[name="exams_id"]').val();
-            var faculty = $('select[name="faculty"]').val();
+            var faculty = $('select[name="target_faculty"]').val();
             var semester = $('select[name="semester_select"]').val();
 
             if (year == 0) {
@@ -172,6 +173,7 @@
                 $.ajax({
                     type: 'POST',
                     url: '{{ route('exam.mark-ledger.find-subject') }}',
+                    dataType: 'json',
                     data: {
                         _token: '{{ csrf_token() }}',
                         years_id: year,
@@ -181,7 +183,7 @@
                         semester_id: semester
                     },
                     success: function (response) {
-                        var data = $.parseJSON(response);
+                        var data = (typeof response === 'string' ? $.parseJSON(response) : response);
                         if (data.error) {
                             $('.schedule_subject').html('')
                             toastr.warning(data.error, "Warning:");

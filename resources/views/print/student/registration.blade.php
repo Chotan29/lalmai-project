@@ -278,7 +278,7 @@
                 <td width="50%"><b>Subjects:</b> 
                     @if(isset($data['appliedSubjects']) && $data['appliedSubjects']->count() > 0)
                         @foreach($data['appliedSubjects'] as $subject)
-                            {{ ViewHelper::getSubjectById($subject->subject_id) }}@if(!$loop->last), @endif
+                            {{ ViewHelper::getSubjectById($subject->subjects_id ?? $subject->subject_id) }}@if(!$loop->last), @endif
                         @endforeach
                     @endif
                 </td>
@@ -289,7 +289,7 @@
             </tr>
             <tr>
                 <td><b>National ID:</b> {{ $data['student']->national_id_1 }}</td>
-                <td><b>PAN:</b> {{ $data['student']->national_id_2 }}</td>
+                <td></td>
             </tr>
             <tr>
                 <td><b>Mobile:</b> {{ $data['student']->mobile_1 }}</td>
@@ -297,19 +297,19 @@
             </tr>
             <tr>
                 <td><b>Religion:</b> {{ $data['student']->religion }}</td>
-                <td><b>Caste:</b> {{ $data['student']->caste }}</td>
+                <td></td>
             </tr>
         </table>
         
         <!-- Academic Information -->
         <table class="info-table">
             <tr>
-                <td><b>URN:</b> {{ $data['student']->university_reg }}</td>
+                <td></td>
                 <td><b>Enrollment No:</b> {{ $data['student']->university_enrollment_no }}</td>
             </tr>
             <tr>
-                <td><b>Special Category:</b> {{ $data['student']->special_category }}</td>
-                <td><b>Domicile State:</b> {{ $data['student']->state }}</td>
+                <td></td>
+                <td><b>Division:</b> {{ $data['student']->state }}</td>
             </tr>
         </table>
         

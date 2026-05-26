@@ -44,8 +44,15 @@
             
                 <!-- Row 5 -->
                 <div class="info-row">
-                    <div><span class="info-label">Batch:</span> {{ $data['student']->batch }}</div>
-                    <div><span class="info-label">Mobile:</span> {{ $data['student']->mobile_1 }}{{ $data['student']->mobile_2 ? ', '.$data['student']->mobile_2 : '' }}</div>
+                    <div><span class="info-label">Batch:</span> {{ ViewHelper::getStudentBatchId($data['student']->batch) ?: 'Unknown' }}</div>
+                    <div>
+                        <span class="info-label">Mobile:</span>
+                        @if($data['student']->mobile_1)
+                            {{ $data['student']->mobile_1 }}{{ $data['student']->mobile_2 ? ', '.$data['student']->mobile_2 : '' }}
+                        @else
+                            N/A
+                        @endif
+                    </div>
                 </div>
                 
                 <!-- Row 6 (Financial) -->

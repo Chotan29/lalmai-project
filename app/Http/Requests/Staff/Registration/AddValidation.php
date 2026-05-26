@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\Staff\Registration;
 
+use App\Rules\AttendanceProfilePhotoRule;
 use Illuminate\Foundation\Http\FormRequest;
 
 class AddValidation extends FormRequest
@@ -33,7 +34,7 @@ class AddValidation extends FormRequest
             'gender'                => 'required',
             'qualification'         => 'required',
             'mobile_1'              => 'required',
-            'main_image'           => 'mimes:jpg,jpeg,bmp,png',
+            'main_image'           => ['mimes:jpeg,jpg,png','max:5120', new AttendanceProfilePhotoRule()],
         ];
 
     }

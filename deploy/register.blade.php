@@ -508,7 +508,7 @@
                     @include('includes.validation_error_messages')
 
                     {!! Form::open([
-                        'route' => $base_route . '.register',
+                        'route' => 'online-registration.register',
                         'method' => 'POST',
                         'class' => 'registration-form',
                         'id' => 'validation-form',

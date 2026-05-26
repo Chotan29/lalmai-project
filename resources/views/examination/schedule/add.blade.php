@@ -84,12 +84,13 @@
             $.ajax({
                 type: 'POST',
                 url: '{{ route('student.find-semester') }}',
+                dataType: 'json',
                 data: {
                     _token: '{{ csrf_token() }}',
                     faculty_id: $this.value
                 },
                 success: function (response) {
-                    var data = $.parseJSON(response);
+                    var data = (typeof response === 'string' ? $.parseJSON(response) : response);
                     if (data.error) {
                         $.notify(data.message, "warning");
                     } else {
@@ -143,6 +144,7 @@
                 $.ajax({
                     type: 'POST',
                     url: '{{ route('exam.schedule.subject-html') }}',
+                    dataType: 'json',
                     data: {
                         _token: '{{ csrf_token() }}',
                         years_id: year,
@@ -152,7 +154,7 @@
                         semester_id: semester_id
                     },
                     success: function (response) {
-                        var data = $.parseJSON(response);
+                        var data = (typeof response === 'string' ? $.parseJSON(response) : response);
                         if (data.error) {
                             toastr.warning(data.message, "Warning:");
                         } else {

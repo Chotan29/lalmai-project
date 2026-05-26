@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\Student\PublicRegistration;
 
+use App\Rules\AttendanceProfilePhotoRule;
 use Illuminate\Foundation\Http\FormRequest;
 
 class EditValidation extends FormRequest
@@ -77,7 +78,7 @@ class EditValidation extends FormRequest
             'division_grade.*'                => 'max:10',
             'major_subjects.*'                => 'max:50',
 
-            'student_main_image'            => 'mimes:jpeg,jpg,bmp,png',
+            'student_main_image'            => ['mimes:jpeg,jpg,png','max:5120', new AttendanceProfilePhotoRule()],
             'student_signature_main_image'  => 'mimes:jpeg,jpg,bmp,png',
             'father_main_image'             => 'mimes:jpeg,jpg,bmp,png',
             'mother_main_image'             => 'mimes:jpeg,jpg,bmp,png',
@@ -90,6 +91,7 @@ class EditValidation extends FormRequest
     {
         return [
             'reg_no.unique'                  => 'Enter Unique Reg.No.',
+            'student_main_image.max'         => 'Photo must be within 5MB before processing.',
 
         ];
     }

@@ -101,7 +101,7 @@ class StaffController extends CollegeBaseController
     public function store(AddValidation $request)
     {
         if ($request->hasFile('main_image')){
-            $image_name = parent::uploadImages($request, 'main_image');
+            $image_name = parent::uploadAttendanceProfileImage($request, 'main_image', $this->folder_path);
         }else{
             $image_name = "";
         }
@@ -304,7 +304,7 @@ class StaffController extends CollegeBaseController
             return parent::invalidRequest();
 
         if ($request->hasFile('main_image')){
-            $image_name = parent::uploadImages($request, 'main_image');
+            $image_name = parent::uploadAttendanceProfileImage($request, 'main_image', $this->folder_path);
 
             // remove old image from folder
             if (file_exists($this->folder_path.$row->staff_image))

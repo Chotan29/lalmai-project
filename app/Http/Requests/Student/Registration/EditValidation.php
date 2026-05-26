@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\Student\Registration;
 
+use App\Rules\AttendanceProfilePhotoRule;
 use Illuminate\Foundation\Http\FormRequest;
 
 class EditValidation extends FormRequest
@@ -81,7 +82,7 @@ class EditValidation extends FormRequest
             'division_grade.*'                => 'max:10',
             'major_subjects.*'                => 'max:50',
 
-            'student_main_image'            => 'mimes:jpeg,jpg,bmp,png',
+            'student_main_image'            => ['mimes:jpeg,jpg,png','max:5120', new AttendanceProfilePhotoRule()],
             'student_signature_main_image'  => 'mimes:jpeg,jpg,bmp,png',
             'father_main_image'             => 'mimes:jpeg,jpg,bmp,png',
             'mother_main_image'             => 'mimes:jpeg,jpg,bmp,png',
@@ -97,6 +98,7 @@ class EditValidation extends FormRequest
             'religion.required'              => 'Please select religion.',
             'email.required'                 => 'Email address is required.',
             'email.email'                    => 'Enter a valid email address.',
+            'student_main_image.max'         => 'Student photo must be within 5MB before processing.',
 
         ];
     }
