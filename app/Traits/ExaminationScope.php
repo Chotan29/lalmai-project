@@ -703,7 +703,7 @@ trait ExaminationScope{
                 $value->total_obtain = $obtainedMark;
 
                 /*caculate percentage*/
-                $value->percentage = ($obtainedMark*100)/ $totalMark;
+                $value->percentage = $totalMark != 0 ? ($obtainedMark*100)/ $totalMark : 0;
 
                 /*Find the Pass Fail Remark*/
                 $remark = $value->subjects->pluck('remark')->toArray();
@@ -953,7 +953,7 @@ trait ExaminationScope{
                 if($value->percentage > 0) {
                     //$value->gpa_grade = $this->getGrade($semester, $value->percentage);
                     //$value->gpa_average = $this->getPoint($semester, $value->percentage);
-                    $value->gpa_average = round($value->subjects->sum('grade_point')/ $value->subjects->count(),2);
+                    $value->gpa_average = $value->subjects->count() > 0 ? round($value->subjects->sum('grade_point')/ $value->subjects->count(),2) : 0;
                     $value->gpa_grade = $this->getFinalGrade($semester, $value->gpa_average);
                     $value->gpa_remark = $this->getRemark($semester, $value->percentage);
                 }else{
@@ -1228,7 +1228,7 @@ trait ExaminationScope{
                 if($value->percentage > 0) {
                     //$value->gpa_grade = $this->getGrade($semester, $value->percentage);
                     //$value->gpa_average = $this->getPoint($semester, $value->percentage);
-                    $value->gpa_average = round($value->subjects->sum('grade_point')/ $value->subjects->count(),2);
+                    $value->gpa_average = $value->subjects->count() > 0 ? round($value->subjects->sum('grade_point')/ $value->subjects->count(),2) : 0;
                     // $value->gpa_grade = $this->getFinalGrade($semester, $value->gpa_average);
                     $value->gpa_remark = $this->getRemark($semester, $value->percentage);
                     //gpa according to university (credit*obtainGP)/CreditHour
@@ -1236,7 +1236,7 @@ trait ExaminationScope{
                     $value->creditHourSum = $creditHourSum = $value->subjects->sum('creditHour');
                     $gradeWithCreditSum = $value->subjects->sum('gradeWithCredit');
                     //  dd($gradeWithCreditSum , $creditHourSum);
-                    $value->gpa_grade = number_format((float)$gradeWithCreditSum / $creditHourSum,2);
+                    $value->gpa_grade = $creditHourSum != 0 ? number_format((float)$gradeWithCreditSum / $creditHourSum,2) : 0;
                     $value->gpa_gradeletter =  $this->getFinalGrade($semester, $value->gpa_grade);
 
                 }else{
@@ -1499,7 +1499,7 @@ trait ExaminationScope{
                     // $value->grade_point = round($value->subjects->sum('grade_point')/ $value->subjects->count(),2);
                     //$value->gpa_grade = $this->getGrade($semester, $value->percentage);
                     //$value->gpa_average = $this->getPoint($semester, $value->percentage);
-                    $value->grade_point = round($value->subjects->sum('grade_point')/ $value->subjects->count(),2);
+                    $value->grade_point = $value->subjects->count() > 0 ? round($value->subjects->sum('grade_point')/ $value->subjects->count(),2) : 0;
                     $value->final_grade = $this->getFinalGrade($semester, $value->grade_point);
                     $value->remark = $this->getRemark($semester, $value->percentage);
                 }else{
@@ -1825,12 +1825,12 @@ trait ExaminationScope{
                 $value->total_mark_practical = $obtainedMarkPr;
                 $value->total_obtain = $obtainedMark;
                 /*caculate percentage*/
-                $value->percentage = ($obtainedMark*100)/ $totalMark;
+                $value->percentage = $totalMark != 0 ? ($obtainedMark*100)/ $totalMark : 0;
 
                 /*calculate grading Score*/
                 //verify both th & pr absent
                 if($value->percentage > 0) {
-                    $value->grade_point = number_format($value->sum('grade_point')/ $value->count(),2);
+                    $value->grade_point = $value->count() > 0 ? number_format($value->sum('grade_point')/ $value->count(),2) : 0;
                     $value->final_grade = $this->getFinalGrade($semester, $value->grade_point);
                     $value->remark = $this->getRemark($semester, $value->percentage);
 
@@ -1854,7 +1854,7 @@ trait ExaminationScope{
 
                 $creditHourSum[$key] = $value->sum('creditHour');
                 $gradeWithCreditSum[$key] = $value->sum('gradeWithCredit');
-                $gpaGrade[$key] = $gpa_grade = number_format((float)$gradeWithCreditSum[$key] / $creditHourSum[$key],2);
+                $gpaGrade[$key] = $gpa_grade = $creditHourSum[$key] != 0 ? number_format((float)$gradeWithCreditSum[$key] / $creditHourSum[$key],2) : 0;
                 $GradeLetter[$key] = $this->getFinalGrade($semester, $gpa_grade);
 
                 $semesterDetailLedger[$key] = $value->toArray();
@@ -1869,7 +1869,7 @@ trait ExaminationScope{
             //transcript gpa calculation
             $student->transcriptCHS = $transcriptCHS = array_sum($creditHourSum);
             $student->transcriptGradeWithCredit = $transcriptGradeWithCredit = array_sum($gradeWithCreditSum);
-            $student->transcriptGPA = number_format((float)$transcriptGradeWithCredit / $transcriptCHS,2);
+            $student->transcriptGPA = $transcriptCHS != 0 ? number_format((float)$transcriptGradeWithCredit / $transcriptCHS,2) : 0;
             //$student->transcriptGPA = round($transcriptGradeWithCredit / $transcriptCHS,4);
             $student->transcriptGL = $this->getFinalGrade($semester, $gpa_grade);
 
@@ -2118,12 +2118,12 @@ trait ExaminationScope{
             $value->total_mark_practical = $obtainedMarkPr;
             $value->total_obtain = $obtainedMark;
             /*caculate percentage*/
-            $value->percentage = ($obtainedMark*100)/ $totalMark;
+            $value->percentage = $totalMark != 0 ? ($obtainedMark*100)/ $totalMark : 0;
 
             /*calculate grading Score*/
             //verify both th & pr absent
             if($value->percentage > 0) {
-                $value->grade_point = number_format($value->sum('grade_point')/ $value->count(),2);
+                $value->grade_point = $value->count() > 0 ? number_format($value->sum('grade_point')/ $value->count(),2) : 0;
                 $value->final_grade = $this->getFinalGrade($semester, $value->grade_point);
                 $value->remark = $this->getRemark($semester, $value->percentage);
 
@@ -2147,7 +2147,7 @@ trait ExaminationScope{
 
             $creditHourSum[$key] = $value->sum('creditHour');
             $gradeWithCreditSum[$key] = $value->sum('gradeWithCredit');
-            $gpaGrade[$key] = $gpa_grade = number_format((float)$gradeWithCreditSum[$key] / $creditHourSum[$key],2);
+            $gpaGrade[$key] = $gpa_grade = $creditHourSum[$key] != 0 ? number_format((float)$gradeWithCreditSum[$key] / $creditHourSum[$key],2) : 0;
             $GradeLetter[$key] = $this->getFinalGrade($semester, $gpa_grade);
 
             $semesterDetailLedger[$key] = $value->toArray();
@@ -2162,7 +2162,7 @@ trait ExaminationScope{
         //transcript gpa calculation
         $student->transcriptCHS = $transcriptCHS = array_sum($creditHourSum);
         $student->transcriptGradeWithCredit = $transcriptGradeWithCredit = array_sum($gradeWithCreditSum);
-        $student->transcriptGPA = number_format((float)$transcriptGradeWithCredit / $transcriptCHS,2);
+        $student->transcriptGPA = $transcriptCHS != 0 ? number_format((float)$transcriptGradeWithCredit / $transcriptCHS,2) : 0;
         //$student->transcriptGPA = round($transcriptGradeWithCredit / $transcriptCHS,4);
         $student->transcriptGL = $this->getFinalGrade($semester, $gpa_grade);
 

@@ -266,7 +266,7 @@ class ExamPrintController extends CollegeBaseController
                             //Final Grade
                             $subject->totalMark = $totalMark = $full_mark_theory + $full_mark_practical;
                             $subject->obtainedMark = $obtainedMark = $obtain_mark_theory + $obtain_mark_practical;
-                            $subject->percentage = $percentage = ($obtainedMark*100)/ $totalMark;
+                            $subject->percentage = $percentage = $totalMark != 0 ? ($obtainedMark*100)/ $totalMark : 0;
 
                             //verify both th & pr absent
                             if($absentBoth == false) {
@@ -375,12 +375,12 @@ class ExamPrintController extends CollegeBaseController
                         $value->total_mark_practical = $obtainedMarkPr;
                         $value->total_obtain = $obtainedMark;
                         /*caculate percentage*/
-                        $value->percentage = ($obtainedMark*100)/ $totalMark;
+                        $value->percentage = $totalMark != 0 ? ($obtainedMark*100)/ $totalMark : 0;
 
                         /*calculate grading Score*/
                         //verify both th & pr absent
                         if($value->percentage > 0) {
-                            $value->grade_point = round($value->sum('grade_point')/ $value->count(),2);
+                            $value->grade_point = $value->count() > 0 ? round($value->sum('grade_point')/ $value->count(),2) : 0;
                             $value->final_grade = $this->getFinalGrade($semester, $value->grade_point);
                             $value->remark = $this->getRemark($semester, $value->percentage);
 
@@ -404,7 +404,7 @@ class ExamPrintController extends CollegeBaseController
 
                         $creditHourSum[$key] = $value->sum('creditHour');
                         $gradeWithCreditSum[$key] = $value->sum('gradeWithCredit');
-                        $gpaGrade[$key] = $gpa_grade = round($gradeWithCreditSum[$key] / $creditHourSum[$key],4) ;
+                        $gpaGrade[$key] = $gpa_grade = $creditHourSum[$key] != 0 ? round($gradeWithCreditSum[$key] / $creditHourSum[$key],4) : 0;
                         $GradeLetter[$key] = $this->getFinalGrade($semester, $gpa_grade);
 
                         $semesterDetailLedger[$key] = $value->toArray();
@@ -419,7 +419,7 @@ class ExamPrintController extends CollegeBaseController
                     //transcript gpa calculation
                     $studentDetail->transcriptCHS = $transcriptCHS = array_sum($creditHourSum);
                     $studentDetail->transcriptGradeWithCredit = $transcriptGradeWithCredit = array_sum($gradeWithCreditSum);
-                    $studentDetail->transcriptGPA = round($transcriptGradeWithCredit / $transcriptCHS,4);
+                    $studentDetail->transcriptGPA = $transcriptCHS != 0 ? round($transcriptGradeWithCredit / $transcriptCHS,4) : 0;
                     $studentDetail->transcriptGL = $this->getFinalGrade($semester, $gpa_grade);
 
                     return $studentDetail;
@@ -524,7 +524,7 @@ class ExamPrintController extends CollegeBaseController
                         'exam_mark_ledgers.obtain_mark_theory', 'exam_mark_ledgers.obtain_mark_practical', 'exam_mark_ledgers.absent_theory','exam_mark_ledgers.absent_practical',
                         'exam_mark_ledgers.status', 's.id as student_id', 's.reg_no', 's.first_name', 's.middle_name', 's.last_name',
                         's.last_name')
-                        ->where('exam_mark_ledgers.exam_schedule_id', $examScheduleId)
+                        ->whereIn('exam_mark_ledgers.exam_schedule_id', $examScheduleId)
                         ->join('students as s', 's.id', '=', 'exam_mark_ledgers.students_id')
                         ->orderBy('exam_mark_ledgers.students_id','asc')
                         ->get();

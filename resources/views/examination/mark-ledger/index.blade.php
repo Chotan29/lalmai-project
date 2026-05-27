@@ -63,7 +63,7 @@
                 var semester = $('select[name="semester_select"]').val();
                 var subject = $('select[name="schedule_subject"]').val();
 
-                if (year !== 0) {
+                if (year != 0 && year) {
                     url += '?year=' + year;
                     flag = true;
                 }else{
@@ -71,7 +71,7 @@
                     return false;
                 }
 
-                if (month !== 0) {
+                if (month != 0 && month) {
                     if (flag) {
                         url += '&month=' + month;
                     } else {
@@ -84,7 +84,7 @@
                 }
 
 
-                if (exam !== 0) {
+                if (exam != 0 && exam) {
                     if (flag) {
                         url += '&exam=' + exam;
                     } else {
@@ -96,7 +96,7 @@
                     return false;
                 }
 
-                if (faculty !== 0) {
+                if (faculty != 0 && faculty) {
                     if (flag) {
                         url += '&faculty=' + faculty;
                     } else {
@@ -108,7 +108,7 @@
                     return false;
                 }
 
-                if (semester !== 0) {
+                if (semester != 0 && semester) {
                     if (flag) {
                         url += '&semester=' + semester;
                     } else {
@@ -120,7 +120,7 @@
                     return false;
                 }
 
-                if (subject !== 0) {
+                if (subject != 0 && subject) {
                     if (flag) {
                         url += '&subject=' + subject;
                     } else {
@@ -173,23 +173,22 @@
             }
 
             $.ajax({
-                type: 'POST',
-                url: '{{ route('student.find-semester') }}',
-                data: {
-                    _token: '{{ csrf_token() }}',
-                    faculty_id: $this.value
-                },
-                success: function (response) {
-                    var data = $.parseJSON(response);
-                    if (data.error) {
-                        toastr.warning(data.error, "Warning");
+                type: 'GET',
+                url: '{{ route('get-semesters') }}',
+                data: { faculty_id: $this.value },
+                success: function (data) {
+                    if ($.isEmptyObject(data)) {
+                        toastr.warning("No semester found for this faculty.", "Warning");
                     } else {
                         $('.semester_select').html('').append('<option value="0">Select Sem./Sec.</option>');
-                        $.each(data.semester, function(key,valueObj){
-                            $('.semester_select').append('<option value="'+valueObj.id+'">'+valueObj.semester+'</option>');
+                        $.each(data, function(id, name){
+                            $('.semester_select').append('<option value="'+id+'">'+name+'</option>');
                         });
-                        toastr.success(data.success, "Success:");
+                        toastr.success("Semester loaded.", "Success:");
                     }
+                },
+                error: function() {
+                    toastr.error("Failed to load semesters.", "Error");
                 }
             });
 

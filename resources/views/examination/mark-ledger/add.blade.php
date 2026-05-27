@@ -71,6 +71,56 @@
     @include('includes.scripts.jquery_validation_scripts')
     <!-- inline scripts related to this page -->
     <script type="text/javascript">
+
+        // Auto-restore semester & subject after save (uses old() flashed values)
+        $(document).ready(function () {
+            var oldFaculty  = '{{ old("faculty") }}';
+            var oldSemester = '{{ old("semester_select") }}';
+            var oldSubject  = '{{ old("schedule_subject") }}';
+
+            if (oldFaculty && oldFaculty !== '0') {
+                $.ajax({
+                    type: 'GET',
+                    url: '{{ route("get-semesters") }}',
+                    data: { faculty_id: oldFaculty },
+                    success: function (semData) {
+                        $('.semester_select').html('').append('<option value="0">Select Sem./Sec.</option>');
+                        $.each(semData, function (id, name) {
+                            var sel = (String(id) === String(oldSemester)) ? ' selected' : '';
+                            $('.semester_select').append('<option value="' + id + '"' + sel + '>' + name + '</option>');
+                        });
+
+                        if (oldSemester && oldSemester !== '0') {
+                            $.ajax({
+                                type: 'POST',
+                                url: '{{ route("exam.mark-ledger.find-subject") }}',
+                                data: {
+                                    _token: '{{ csrf_token() }}',
+                                    years_id:   $('select[name="years_id"]').val(),
+                                    months_id:  $('select[name="months_id"]').val(),
+                                    exams_id:   $('select[name="exams_id"]').val(),
+                                    faculty_id: oldFaculty,
+                                    semester_id: oldSemester
+                                },
+                                success: function (response) {
+                                    var data = $.parseJSON(response);
+                                    if (!data.error) {
+                                        $('.schedule_subject').html('').append('<option value="0">Select Subject</option>');
+                                        $.each(data.subjects, function (key, obj) {
+                                            $('.schedule_subject').append('<option value="' + obj.id + '">' + obj.title + '</option>');
+                                        });
+                                        // Clear student wrapper — teacher picks subject fresh
+                                        $('#student_wrapper').html('');
+                                        toastr.success('Mark saved! Select subject for next entry.', 'Success');
+                                    }
+                                }
+                            });
+                        }
+                    }
+                });
+            }
+        });
+
         function loadSemesters($this) {
             var year = $('select[name="years_id"]').val();
             var month = $('select[name="months_id"]').val();
@@ -98,23 +148,22 @@
             }
 
             $.ajax({
-                type: 'POST',
-                url: '{{ route('student.find-semester') }}',
-                data: {
-                    _token: '{{ csrf_token() }}',
-                    faculty_id: $this.value
-                },
-                success: function (response) {
-                    var data = $.parseJSON(response);
-                    if (data.error) {
-                        toastr.warning(data.error, "Warning");
+                type: 'GET',
+                url: '{{ route('get-semesters') }}',
+                data: { faculty_id: $this.value },
+                success: function (data) {
+                    if ($.isEmptyObject(data)) {
+                        toastr.warning("No semester found for this faculty.", "Warning");
                     } else {
                         $('.semester_select').html('').append('<option value="0">Select Sem./Sec.</option>');
-                        $.each(data.semester, function(key,valueObj){
-                            $('.semester_select').append('<option value="'+valueObj.id+'">'+valueObj.semester+'</option>');
+                        $.each(data, function(id, name){
+                            $('.semester_select').append('<option value="'+id+'">'+name+'</option>');
                         });
-                        toastr.success(data.success, "Success:");
+                        toastr.success("Semester loaded.", "Success:");
                     }
+                },
+                error: function() {
+                    toastr.error("Failed to load semesters.", "Error");
                 }
             });
 

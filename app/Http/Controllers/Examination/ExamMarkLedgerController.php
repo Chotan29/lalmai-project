@@ -70,7 +70,7 @@ class ExamMarkLedgerController extends CollegeBaseController
                 'exam_mark_ledgers.obtain_mark_theory', 'exam_mark_ledgers.obtain_mark_practical', 'exam_mark_ledgers.absent_theory','exam_mark_ledgers.absent_practical',
                 'exam_mark_ledgers.status', 's.id as student_id', 's.reg_no', 's.first_name', 's.middle_name', 's.last_name',
                 's.last_name')
-                ->where('exam_mark_ledgers.exam_schedule_id', $examScheduleId)
+                ->whereIn('exam_mark_ledgers.exam_schedule_id', $examScheduleId)
                 ->join('students as s', 's.id', '=', 'exam_mark_ledgers.students_id')
                 ->get();
 
@@ -182,11 +182,8 @@ class ExamMarkLedgerController extends CollegeBaseController
             $request->session()->flash($this->message_warning, 'You Have No Manage Student Mark Yet, Mark Ledger Not Manage. ');
         }
 
-        if($request->add_markledger_another) {
-            return back();
-        }else{
-            return redirect()->route($this->base_route);
-        }
+        // Always return to add page so teacher can enter marks for next subject
+        return back()->withInput();
     }
 
     public function delete(Request $request, $exam=null, $student=null)
@@ -312,7 +309,7 @@ class ExamMarkLedgerController extends CollegeBaseController
                 'exam_mark_ledgers.absent_theory',
                 'exam_mark_ledgers.absent_practical',
                 's.id as student_id','s.reg_no','s.first_name','s.middle_name','s.last_name')
-                ->where('exam_mark_ledgers.exam_schedule_id',$examScheduleId)
+                ->whereIn('exam_mark_ledgers.exam_schedule_id',$examScheduleId)
                 ->join('students as s','s.id','=','exam_mark_ledgers.students_id')
                 ->orderBy('s.reg_no','asc')
                 ->get();
