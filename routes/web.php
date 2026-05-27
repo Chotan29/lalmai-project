@@ -1665,8 +1665,8 @@ Route::group(['prefix' => 'print-out/',                                 'as' => 
     Route::post('exam/admit-card',                      ['as' => 'exam.admit-card',                         'middleware' => ['ability:super-admin,exam-print-admitcard'],                     'uses' => 'ExamPrintController@admitCard']);
     Route::post('exam/routine',                         ['as' => 'exam.routine',                            'middleware' => ['ability:super-admin,exam-print-routine'],                       'uses' => 'ExamPrintController@examRoutine']);
     Route::match(['GET','POST'], 'exam/mark-sheet/',    ['as' => 'exam.mark-sheet',                         'middleware' => ['ability:super-admin,exam-print-mark-sheet'],                    'uses' => 'ExamPrintController@examMarkSheet']);
-    Route::match(['GET','POST'], 'exam/grade-sheet/',   ['as' => 'exam.grade-sheet',                         'middleware' => ['ability:super-admin,exam-print-mark-sheet'],                    'uses' => 'ExamPrintController@examGradeSheet']);
-    Route::match(['GET','POST'], 'exam/mark-ledger/',   ['as' => 'exam.mark-ledger',                         'middleware' => ['ability:super-admin,exam-print-mark-ledger'],                    'uses' => 'ExamPrintController@examMarkLedger']);
+    Route::post('exam/grade-sheet/',                     ['as' => 'exam.grade-sheet',                         'middleware' => ['ability:super-admin,exam-print-mark-sheet'],                    'uses' => 'ExamPrintController@examGradeSheet']);
+    Route::post('exam/mark-ledger/',                     ['as' => 'exam.mark-ledger',                         'middleware' => ['ability:super-admin,exam-print-mark-ledger'],                    'uses' => 'ExamPrintController@examMarkLedger']);
 
     //certificates
     Route::post('general-certificate',                                   ['as' => 'general-certificate',                         'middleware' => ['ability:super-admin,general-certificate-print'],      'uses' => 'CertificatePrintController@generalCertificate']);
