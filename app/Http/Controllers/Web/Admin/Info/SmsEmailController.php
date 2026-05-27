@@ -428,6 +428,11 @@ class SmsEmailController extends AdminBaseController
                 $contactNumbers= str_replace(' ','',$contactNumbers);
                 $smssuccess = $this->sendSMS($contactNumbers,$message);
 
+                if ($smssuccess === false) {
+                    $request->session()->flash($this->message_warning, 'SMS send failed. Please check active gateway config, token, SID, and number format.');
+                    return back();
+                }
+
                 /*store*/
                 $request->request->add(['group' => 'Individual']);
                 $request->request->add(['ref' => $contactNumbers]);

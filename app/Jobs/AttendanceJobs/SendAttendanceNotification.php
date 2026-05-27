@@ -3,8 +3,10 @@
 namespace App\Jobs\AttendanceJobs;
 
 use App\Models\Attendance;
+use App\Models\AttendanceStatus;
 use App\Models\Student;
 use App\Models\GuardianDetail;
+use App\Models\ParentDetail;
 use App\Models\AlertSetting;
 use App\Jobs\AllEmail;
 use App\Traits\SmsEmailScope;
@@ -49,7 +51,9 @@ class SendAttendanceNotification implements ShouldQueue
             $student = $att->attendable instanceof Student ? $att->attendable : null;
             if (!$student) { $this->markAs('failed', ['error'=>'student_not_loaded_or_deleted']); return; }
 
-            $statusLabel = $att->status ? ($att->status->label ?: $att->status->code) : null;
+            // Use direct lookup to avoid shadowing by the 'status' tinyint column on attendances table
+            $statusModel = $att->attendance_status_id ? AttendanceStatus::find($att->attendance_status_id) : null;
+            $statusLabel = $statusModel ? ($statusModel->label ?: $statusModel->code) : null;
             if (!$statusLabel) { $statusLabel = 'Marked'; }
 
             // idempotency: if we already marked sent for the same status, do nothing
@@ -181,21 +185,35 @@ class SendAttendanceNotification implements ShouldQueue
             ->pluck('guardians_id')
             ->all();
 
-        if (empty($guardianIds)) return [[],[]];
-
-        $guards = GuardianDetail::query()
-            ->whereIn('id', $guardianIds)
-            ->get(['guardian_mobile_1','guardian_mobile_2','guardian_email']);
-
         $phones = [];
         $emails = [];
-        foreach ($guards as $g) {
-            $m1 = isset($g->guardian_mobile_1) ? trim((string)$g->guardian_mobile_1) : '';
-            $m2 = isset($g->guardian_mobile_2) ? trim((string)$g->guardian_mobile_2) : '';
-            $em = isset($g->guardian_email)    ? trim((string)$g->guardian_email)    : '';
-            if ($m1 !== '') $phones[] = $m1;
-            if ($m2 !== '') $phones[] = $m2;
-            if ($em !== '') $emails[] = $em;
+
+        if (!empty($guardianIds)) {
+            $guards = GuardianDetail::query()
+                ->whereIn('id', $guardianIds)
+                ->get(['guardian_mobile_1','guardian_mobile_2','guardian_email']);
+
+            foreach ($guards as $g) {
+                $m1 = isset($g->guardian_mobile_1) ? trim((string)$g->guardian_mobile_1) : '';
+                $m2 = isset($g->guardian_mobile_2) ? trim((string)$g->guardian_mobile_2) : '';
+                $em = isset($g->guardian_email)    ? trim((string)$g->guardian_email)    : '';
+                if ($m1 !== '') $phones[] = $m1;
+                if ($m2 !== '') $phones[] = $m2;
+                if ($em !== '') $emails[] = $em;
+            }
+        }
+
+        $parent = ParentDetail::query()
+            ->where('students_id', $studentId)
+            ->first(['father_mobile_1', 'father_mobile_2', 'father_email']);
+
+        if ($parent) {
+            $f1 = isset($parent->father_mobile_1) ? trim((string)$parent->father_mobile_1) : '';
+            $f2 = isset($parent->father_mobile_2) ? trim((string)$parent->father_mobile_2) : '';
+            $fe = isset($parent->father_email)    ? trim((string)$parent->father_email)    : '';
+            if ($f1 !== '') $phones[] = $f1;
+            if ($f2 !== '') $phones[] = $f2;
+            if ($fe !== '') $emails[] = $fe;
         }
 
         $phones = array_values(array_unique(array_filter($phones)));

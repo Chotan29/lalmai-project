@@ -27,7 +27,8 @@ class AttendanceObserver
         $today = Carbon::today()->toDateString();
         if ($att->date->toDateString() !== $today) return;
 
-        $status = $att->status;
+        // Use getRelation() to avoid shadowing by the 'status' tinyint column on attendances table
+        $status = $att->relationLoaded('status') ? $att->getRelation('status') : AttendanceStatus::find($att->attendance_status_id);
         if (!$status || strtoupper($status->code) !== 'P') return;
 
         $student = $att->attendable;

@@ -93,8 +93,8 @@ trait SmsEmailScope{
         if($contactNumbers == "")
             return back()->with($this->message_warning, "No Any Contact Found. So Message Not Send In This Time. Please Try Again.");
 
-        /*get Setting*/
-        $smsSetting     = SmsSetting::where('status',1)->first();
+        /*get Setting – load-balance across all active gateways (random pick)*/
+        $smsSetting     = SmsSetting::where('status',1)->inRandomOrder()->first();
 
         if($smsSetting == null)
             return back()->with($this->message_warning, "SMS Setting Not Detected. Please Setting Your SMS Detail.");
@@ -104,133 +104,104 @@ trait SmsEmailScope{
         /*Switch Target SMS Service Provider*/
         switch ($activeProvider){
             case "Sparrow":
-                $this->sparrowSMS($contactNumbers, $message);
-                break;
+                return $this->sparrowSMS($contactNumbers, $message);
 
             case "InitiativeNepal":
-                $this->aayoSMS($contactNumbers, $message);
-                break;
+                return $this->aayoSMS($contactNumbers, $message);
 
             case "Msg91":
-                $this->msg91SMS($contactNumbers, $message);
-                break;
+                return $this->msg91SMS($contactNumbers, $message);
 
             case "Msg94":
-                $this->msg94SMS($contactNumbers, $message);
-                break;
+                return $this->msg94SMS($contactNumbers, $message);
 
             case "KeswaTech":
-                $this->keswaSMS($contactNumbers, $message);
-                break;
+                return $this->keswaSMS($contactNumbers, $message);
 
             case "Twilio":
-                $this->twilioSMS($contactNumbers, $message);
-                break;
+                return $this->twilioSMS($contactNumbers, $message);
 
             case "MessageBird":
-                $this->messageBird($contactNumbers, $message);
-                break;
+                return $this->messageBird($contactNumbers, $message);
 
             case "smsAPI":
-                $this->smsAPI($contactNumbers, $message);
-                break;
+                return $this->smsAPI($contactNumbers, $message);
 
             case "Clickatell":
-                $this->clickatelSMS($contactNumbers, $message);
-                break;
+                return $this->clickatelSMS($contactNumbers, $message);
 
             case "BudgetSmsNet":
-                $this->BudgetSMS($contactNumbers, $message);
-                break;
+                return $this->BudgetSMS($contactNumbers, $message);
 
             case "Nexmo":
-                $this->nexmoSMS($contactNumbers, $message);
-                break;
+                return $this->nexmoSMS($contactNumbers, $message);
 
             //todo::
             case "CallFire":
-                $this->callFireSMS($contactNumbers, $message);
-                break;
+                return $this->callFireSMS($contactNumbers, $message);
 
             case "MsgClub":
-                $this->MsgClubSMS($contactNumbers, $message);
-                break;
+                return $this->MsgClubSMS($contactNumbers, $message);
 
             case "Digimiles":
-                $this->digimilesSMS($contactNumbers, $message);
-                break;
+                return $this->digimilesSMS($contactNumbers, $message);
 
             case "Textlocal":
-                $this->textLocalSMS($contactNumbers, $message);
-                break;
+                return $this->textLocalSMS($contactNumbers, $message);
 
             case "SmartSMS":
-                $this->SmartSolutionSMS($contactNumbers, $message);
-                break;
+                return $this->SmartSolutionSMS($contactNumbers, $message);
 
             case "SendPK":
-                $this->SendPkSMS($contactNumbers, $message);
-                break;
+                return $this->SendPkSMS($contactNumbers, $message);
 
             case "LifetimeSMS":
-                $this->LifeTimeSMS($contactNumbers, $message);
-                break;
+                return $this->LifeTimeSMS($contactNumbers, $message);
 
             case "SmsCluster":
-                $this->SmsClusterSMS($contactNumbers, $message);
-                break;
+                return $this->SmsClusterSMS($contactNumbers, $message);
 
             case "marketsmsPK":
-                $this->MarketSmsPK($contactNumbers, $message);
-                break;
+                return $this->MarketSmsPK($contactNumbers, $message);
 
             case "springEdge":
-                $this->SpringEdge($contactNumbers, $message);
-                break;
+                return $this->SpringEdge($contactNumbers, $message);
 
             case "africastalking":
-                $this->africastalkingSMS($contactNumbers, $message);
-                break;
+                return $this->africastalkingSMS($contactNumbers, $message);
 
             case "TheSMSCentral":
-                $this->thesmscentralSMS($contactNumbers, $message);
-                break;
+                return $this->thesmscentralSMS($contactNumbers, $message);
 
             case "AakashNepal":
-                $this->aakashSMS($contactNumbers, $message);
-                break;
+                return $this->aakashSMS($contactNumbers, $message);
 
             case "FullTimeBulk":
-                $this->fullTimeBulkSms($contactNumbers, $message);
-                break;
+                return $this->fullTimeBulkSms($contactNumbers, $message);
 
             case "AmetechSolution":
-                $this->AmetechSolutionSMS($contactNumbers, $message);
-                break;
+                return $this->AmetechSolutionSMS($contactNumbers, $message);
 
             case "SmsToSMS":
-                $this->SmsToSMS($contactNumbers, $message);
-                break;
+                return $this->SmsToSMS($contactNumbers, $message);
 
             case "mySmsDeal":
-                $this->mySmsDeal($contactNumbers, $message);
-                break;
+                return $this->mySmsDeal($contactNumbers, $message);
 
             case "AlphaSMS":
-                $this->alphaSMS($contactNumbers, $message);
-                break;
+                return $this->alphaSMS($contactNumbers, $message);
 
             case "GreenAPI":
-                $this->WhatsAppGreenAPISMS($contactNumbers, $message);
-                break;
+                return $this->WhatsAppGreenAPISMS($contactNumbers, $message);
 
             case "AdaReach":
-                $this->adaReachSMS($contactNumbers, $message);
-                break;
+                return $this->adaReachSMS($contactNumbers, $message);
 
             case "SslWireless":
-                $this->sslWirelessSMS($contactNumbers, $message);
-                break;
+                return $this->sslWirelessSMS($contactNumbers, $message);
+
+            case "GenNet":
+                return $this->sslWirelessSMS($contactNumbers, $message, 'GenNet');
 
             default:
                 return back()->with($this->message_warning, "No Any SMS Service Provider Active. Please, Active First.");

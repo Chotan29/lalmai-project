@@ -19,6 +19,7 @@ use App\Http\Controllers\CollegeBaseController;
 use App\Models\EmailSetting;
 use App\Models\SmsSetting;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\File;
 
 class SmsSettingController extends CollegeBaseController
 {
@@ -33,9 +34,81 @@ class SmsSettingController extends CollegeBaseController
 
     public function index()
     {
+        $this->syncGatewayCatalog();
+        $this->cleanupDuplicateGateways();
         $data['smsSetting'] = SmsSetting::orderBy('identity')->get();
         //dd($data['smsSetting']);
         return view(parent::loadDataToView($this->view_path.'.index'), compact('data'));
+    }
+
+    private function syncGatewayCatalog()
+    {
+        $jsonPath = base_path('database/data/sms-gateway.json');
+        if (!File::exists($jsonPath)) {
+            return;
+        }
+
+        $gatewayList = json_decode(File::get($jsonPath), true);
+        if (!is_array($gatewayList)) {
+            return;
+        }
+
+        foreach ($gatewayList as $gateway) {
+            if (!isset($gateway['identity'])) {
+                continue;
+            }
+
+            // sms_settings.identity is varchar(15), so normalize to DB-safe key
+            $identity = mb_substr((string) $gateway['identity'], 0, 15);
+
+            SmsSetting::firstOrCreate(
+                ['identity' => $identity],
+                [
+                    'logo' => isset($gateway['logo']) ? $gateway['logo'] : '',
+                    'link' => isset($gateway['link']) ? $gateway['link'] : '',
+                    'config' => json_encode(isset($gateway['config']) ? $gateway['config'] : []),
+                    'status' => isset($gateway['status']) ? $gateway['status'] : 0,
+                ]
+            );
+        }
+    }
+
+    private function cleanupDuplicateGateways()
+    {
+        $duplicateIdentities = SmsSetting::select('identity')
+            ->groupBy('identity')
+            ->havingRaw('COUNT(*) > 1')
+            ->pluck('identity');
+
+        foreach ($duplicateIdentities as $identity) {
+            $rows = SmsSetting::where('identity', $identity)
+                ->orderBy('updated_at', 'desc')
+                ->orderBy('id', 'desc')
+                ->get();
+
+            if ($rows->count() < 2) {
+                continue;
+            }
+
+            // Keep most recently updated row to honor latest user action.
+            $keeper = $rows->first();
+
+            if (!$keeper->config || $keeper->config === '[]' || $keeper->config === '{}') {
+                $configSource = $rows->first(function ($row) {
+                    return !empty($row->config) && $row->config !== '[]' && $row->config !== '{}';
+                });
+
+                if ($configSource) {
+                    $keeper->config = $configSource->config;
+                }
+            }
+
+            $keeper->save();
+
+            SmsSetting::where('identity', $identity)
+                ->where('id', '!=', $keeper->id)
+                ->delete();
+        }
     }
 
     /**
@@ -132,7 +205,8 @@ class SmsSettingController extends CollegeBaseController
 
         $request->request->add(['status' => 'in-active']);
 
-        $row->update($request->all());
+        // Deactivate all duplicate rows with same identity to avoid ghost active rows.
+        SmsSetting::where('identity', $row->identity)->update(['status' => 0]);
 
         $request->session()->flash($this->message_success, $row->reg_no.' '.$this->panel.' In-Active Successfully.');
         return redirect()->route($this->base_route);

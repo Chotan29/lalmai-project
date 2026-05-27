@@ -21,9 +21,22 @@
             <div class="form-group">
                 {!! Form::label('message', 'Message', ['class' => 'col-sm-2 control-label']) !!}
                 <div class="col-sm-10">
-                    {!! Form::textarea('message', null, ["class" => "form-control border-form","id"=>"smsmessage", "rows"=>"10"]) !!}
+                    <div class="sms-composer-panel">
+                        <div class="sms-composer-toolbar">
+                            <button type="button" class="btn btn-xs btn-default sms-token-btn" data-sms-token="{name}">Name</button>
+                            <button type="button" class="btn btn-xs btn-default sms-token-btn" data-sms-token="{number}">Number</button>
+                            <button type="button" class="btn btn-xs btn-default sms-token-btn" data-sms-token="{date}">Date</button>
+                            <button type="button" class="btn btn-xs btn-default sms-token-btn" data-sms-token="{time}">Time</button>
+                            <button type="button" class="btn btn-xs btn-warning" id="sms-clear-message">Clear</button>
+                        </div>
+                        {!! Form::textarea('message', null, ["class" => "form-control border-form sms-composer-input","id"=>"smsmessage", "rows"=>"10", "placeholder" => "Write your SMS here..."]) !!}
+                        <div class="sms-composer-footer">
+                            <span class="sms-counter" id="count">0 characters</span>
+                            <span class="sms-counter" id="smsSegments">1 SMS</span>
+                            <span class="sms-hint">Plain text is sent as SMS. Use tokens to personalize fast.</span>
+                        </div>
+                    </div>
                     @include('includes.form_fields_validation_message', ['name' => 'message'])
-                    <span class="black" id="count"></span>
                 </div>
             </div>
         </div>

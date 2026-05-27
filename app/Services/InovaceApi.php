@@ -87,7 +87,11 @@ class InovaceApi
     public function devices()
     {
         try {
-            $res = $this->client->get('devices');
+            $res = $this->client->get('devices', [
+                'query' => [
+                    'api_token' => $this->token,
+                ],
+            ]);
             return json_decode((string) $res->getBody(), true);
         } catch (\Throwable $e) {
             return ['success'=>false,'message'=>$this->errorMessage($e)];
@@ -179,6 +183,28 @@ class InovaceApi
 
         $mp = fn(array $data, $img) => $this->buildMultipart($data, $img);
 
+        // Proven vendor-compatible update path:
+        // POST /people/{identifier} with _method=PUT and multipart payload.
+        // This path accepts image updates for existing people.
+        try {
+            $overridePayload = array_merge(['_method' => 'PUT'], $payload);
+            $resOverride = $this->client->request('POST', 'people/'.$identifier, [
+                'query'        => ['api_token' => $this->token],
+                'multipart'   => $mp($overridePayload, $imagePath),
+                'synchronous' => true,
+            ]);
+            return ['ok'=>true,'data'=>json_decode((string)$resOverride->getBody(), true)];
+        } catch (RequestException $eOverride) {
+            $st = $eOverride->getResponse() ? $eOverride->getResponse()->getStatusCode() : 0;
+            // If not found, continue to create flow below.
+            // For other errors, continue to legacy fallbacks.
+            if ($st !== 404) {
+                // fall through to legacy branches
+            }
+        } catch (\Throwable $eOverrideOther) {
+            // Keep legacy path as fallback for maximum compatibility.
+        }
+
         $parseErr = function($e) {
             $resp = method_exists($e, 'getResponse') ? $e->getResponse() : null;
             $raw  = $resp ? (string)$resp->getBody() : '';
@@ -199,6 +225,7 @@ class InovaceApi
         try {
             // PUT update
             $res = $this->client->request('PUT', 'people/'.$identifier, [
+                'query'        => ['api_token' => $this->token],
                 'multipart'   => $mp($payload, $imagePath),
                 'synchronous' => true,
             ]);
@@ -211,6 +238,7 @@ class InovaceApi
             if ($status === 404) {
                 try {
                     $res = $this->client->request('POST', 'people', [
+                        'query'        => ['api_token' => $this->token],
                         'multipart'   => $mp($payload, $imagePath),
                         'synchronous' => true,
                     ]);
@@ -223,6 +251,7 @@ class InovaceApi
                         $no = $payload; unset($no['rfid']);
                         try {
                             $res2 = $this->client->request('POST', 'people', [
+                                'query'        => ['api_token' => $this->token],
                                 'multipart'   => $mp($no, $imagePath),
                                 'synchronous' => true,
                             ]);
@@ -235,6 +264,7 @@ class InovaceApi
                     if ($status2 === 422 && stripos($raw2, 'identifier') !== false) {
                         try {
                             $res3 = $this->client->request('POST', 'people', [
+                                'query'        => ['api_token' => $this->token],
                                 'form_params' => array_merge(['api_token'=>$this->token], array_filter($payload, fn($v)=>$v!==null)),
                                 'synchronous' => true,
                             ]);
@@ -253,6 +283,7 @@ class InovaceApi
                 $no = $payload; unset($no['rfid']);
                 try {
                     $res = $this->client->request('PUT', 'people/'.$identifier, [
+                        'query'        => ['api_token' => $this->token],
                         'multipart'   => $mp($no, $imagePath),
                         'synchronous' => true,
                     ]);
@@ -266,6 +297,7 @@ class InovaceApi
             if ($status === 422 && stripos($raw, 'identifier') !== false) {
                 try {
                     $res = $this->client->request('POST', 'people', [
+                        'query'        => ['api_token' => $this->token],
                         'multipart'   => $mp($payload, $imagePath),
                         'synchronous' => true,
                     ]);
@@ -273,6 +305,7 @@ class InovaceApi
                 } catch (\Throwable $e2again) {
                     try {
                         $res3 = $this->client->request('POST', 'people', [
+                            'query'        => ['api_token' => $this->token],
                             'form_params' => array_merge(['api_token'=>$this->token], array_filter($payload, fn($v)=>$v!==null)),
                             'synchronous' => true,
                         ]);
@@ -283,7 +316,11 @@ class InovaceApi
                 }
             }
 
-            return ['ok'=>false,'message'=>$parseErr($e)];
+            $errMsg = $parseErr($e);
+            if ($status >= 500) {
+                $errMsg .= ' (remote /people create endpoint returned server error)';
+            }
+            return ['ok'=>false,'message'=>$errMsg];
         } catch (\Throwable $e) {
             return ['ok'=>false,'message'=>$this->errorMessage($e)];
         }
@@ -296,6 +333,7 @@ class InovaceApi
         // 1) form-encoded
         try {
             $r1 = $this->client->post("devices/{$device}/allocations", [
+                'query' => ['api_token' => $this->token],
                 'form_params' => [
                     'api_token'         => $this->token,
                     'person_identifier' => $personIdentifier,
@@ -309,6 +347,7 @@ class InovaceApi
         // 2) JSON
         try {
             $r2 = $this->client->post("devices/{$device}/allocations", [
+                'query' => ['api_token' => $this->token],
                 'json' => [
                     'api_token'         => $this->token,
                     'person_identifier' => $personIdentifier,
@@ -323,6 +362,7 @@ class InovaceApi
         if (preg_match('/^\d+$/', (string) $device)) {
             try {
                 $r3 = $this->client->post('devices/batch-allocations', [
+                    'query' => ['api_token' => $this->token],
                     'json' => [
                         'api_token'          => $this->token,
                         'action'             => $action,
@@ -338,6 +378,7 @@ class InovaceApi
         // 4) batch with device_identifiers
         try {
             $r4 = $this->client->post('devices/batch-allocations', [
+                'query' => ['api_token' => $this->token],
                 'json' => [
                     'api_token'          => $this->token,
                     'action'             => $action,
@@ -358,6 +399,7 @@ class InovaceApi
     {
         try {
             $r = $this->client->post('devices/batch-allocations', [
+                'query' => ['api_token' => $this->token],
                 'json' => [
                     'api_token'          => $this->token,
                     'action'             => $action,
@@ -369,6 +411,7 @@ class InovaceApi
         } catch (\Throwable $e) {
             try {
                 $r2 = $this->client->post('devices/batch-allocations', [
+                    'query' => ['api_token' => $this->token],
                     'json' => [
                         'api_token'          => $this->token,
                         'action'             => $action,
@@ -396,6 +439,7 @@ class InovaceApi
         } catch (\Throwable $e) {
             try {
                 $r2 = $this->client->post("people/{$identifier}/revoke-all", [
+                    'query' => ['api_token' => $this->token],
                     'json' => ['api_token' => $this->token],
                 ]);
                 $j2 = json_decode((string) $r2->getBody(), true);
@@ -429,6 +473,7 @@ class InovaceApi
             }
             try {
                 $r2 = $this->client->post("people/{$identifier}/revoke-all", [
+                    'query' => ['api_token' => $this->token],
                     'json' => ['api_token' => $this->token],
                 ]);
                 $j2 = json_decode((string) $r2->getBody(), true);

@@ -531,7 +531,7 @@
   }
   function guardOr(fn){
     if (!state.subj_id) { Swal.fire({ title:'Select Subject', text:'Please pick a scheduled subject first.', icon:'info' }); return; }
-    if (!state.within_schedule) { lockedAlert(); return; }
+    // Schedule window is advisory only – teachers can mark attendance anytime
     fn();
   }
 

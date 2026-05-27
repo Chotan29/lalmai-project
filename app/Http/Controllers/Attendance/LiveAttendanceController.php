@@ -462,15 +462,13 @@ class LiveAttendanceController extends CollegeBaseController
         $attType = $type === 'student' ? Student::class : Staff::class;
         $defaultStatusId = $this->ensureStatusId('P');
 
-        // Enforce subject + window for students
+        // Enforce subject for students (schedule window is advisory)
         if ($type === 'student') {
             if (!$subjectId) {
                 return response()->json(['message'=>'Select a scheduled subject before taking attendance.'], 422);
             }
             $student = Student::find($pid);
             if (!$student) return response()->json(['message'=>'Student not found.'], 404);
-            [$ok, $msg] = $this->validateScheduleWindowForStudent($student, (int)$subjectId, $today);
-            if (!$ok) return response()->json(['message'=>$msg], 422);
         }
 
         $row = null;
@@ -516,6 +514,11 @@ class LiveAttendanceController extends CollegeBaseController
                 }
             }
         });
+
+        // Trigger guardian SMS notification
+        if ($row) {
+            \App\Models\Attendance::queueGuardianNotificationIfNeededById((int)$row->id);
+        }
 
         return response()->json(['success'=>true]);
     }
@@ -595,15 +598,9 @@ class LiveAttendanceController extends CollegeBaseController
         $statusId  = $this->statusIdByCode($code);
         if (!$statusId) return response()->json(['message'=>'Unknown status code'], 422);
 
-        // Students require subject & active window
+        // Students require a subject to be selected
         if ($attendance->attendable_type === Student::class) {
             if (!$subjectId) return response()->json(['message'=>'Select a scheduled subject before taking attendance.'], 422);
-            $student = Student::find($attendance->attendable_id);
-            if ($student) {
-                $today = $attendance->date ? Carbon::parse($attendance->date) : Carbon::today();
-                [$ok, $msg] = $this->validateScheduleWindowForStudent($student, (int)$subjectId, $today);
-                if (!$ok) return response()->json(['message'=>$msg], 422);
-            }
         }
 
         Model::withoutEvents(function() use ($attendance, $statusId, $subjectId) {
@@ -628,6 +625,9 @@ class LiveAttendanceController extends CollegeBaseController
                 }
             }
         });
+
+        // Trigger guardian SMS notification (outside withoutEvents so model events fire)
+        \App\Models\Attendance::queueGuardianNotificationIfNeededById((int)$attendance->id);
 
         return response()->json(['success'=>true]);
     }

@@ -2,18 +2,26 @@
 namespace App\Traits\SmsGateway;
 
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Http;
 
 trait SslWirelessSMS
 {
     /* SSL Wireless SMS */
-    public function sslWirelessSMS($contactNumbers, $message)
+    public function sslWirelessSMS($contactNumbers, $message, $providerKey = 'SslWireless')
     {
         /* Get Setting */
         $smsSetting = $this->getSmsSetting();
-        $sms = json_decode($smsSetting['SslWireless'], true);
+        if (!isset($smsSetting[$providerKey])) {
+            return false;
+        }
+
+        $sms = json_decode($smsSetting[$providerKey], true);
+        if (!is_array($sms)) {
+            return false;
+        }
+
         $apiToken = $sms['ApiToken'];
         $sid = $sms['Sid'];
+        $baseUrl = $this->normalizeBaseUrl(isset($sms['BaseUrl']) ? $sms['BaseUrl'] : null);
         
       
         
@@ -23,9 +31,9 @@ trait SslWirelessSMS
         try {
             // Determine which API to use based on number of recipients
             if (count($numbers) === 1) {
-                return $this->sendSslSingleSMS($apiToken, $sid, $numbers[0], $message);
+                return $this->sendSslSingleSMS($baseUrl, $apiToken, $sid, $numbers[0], $message);
             } else {
-                return $this->sendSslBulkSMS($apiToken, $sid, $numbers, $message);
+                return $this->sendSslBulkSMS($baseUrl, $apiToken, $sid, $numbers, $message);
             }
             
         } catch (\Exception $e) {
@@ -33,14 +41,21 @@ trait SslWirelessSMS
             return false;
         }
     }
+
+    private function normalizeBaseUrl($baseUrl)
+    {
+        $baseUrl = !empty($baseUrl) ? rtrim($baseUrl, '/') : 'https://smsplus.sslwireless.com';
+
+        return preg_replace('#/api/v3/send-sms(?:/bulk)?$#', '', $baseUrl);
+    }
     
-    private function sendSslSingleSMS($apiToken, $sid, $msisdn, $message)
+    private function sendSslSingleSMS($baseUrl, $apiToken, $sid, $msisdn, $message)
     {
         $client = new \GuzzleHttp\Client();
     
         
         try {
-            $response = $client->post('https://smsplus.sslwireless.com/api/v3/send-sms', [
+            $response = $client->post($baseUrl . '/api/v3/send-sms', [
                 'headers' => [
                     'Content-Type' => 'application/json',
                     'Accept' => 'application/json'
@@ -66,28 +81,37 @@ trait SslWirelessSMS
         }
     }
     
-    private function sendSslBulkSMS($apiToken, $sid, $numbers, $message)
+    private function sendSslBulkSMS($baseUrl, $apiToken, $sid, $numbers, $message)
     {
         // Format all numbers to 880 format
         $formattedNumbers = array_map([$this, 'formatNumber'], $numbers);
-        
-        // Generate unique batch CSMS ID
-        //$batchCsmsId = uniqid('batch_', true);
+
         $batchCsmsId = uniqid();
-       
-       
-        
-        $response = Http::withHeaders([
-            'Content-Type' => 'application/json'
-        ])->post('https://smsplus.sslwireless.com/api/v3/send-sms/bulk', [
-            'api_token' => $apiToken,
-            'sid' => $sid,
-            'msisdn' => $formattedNumbers,
-            'sms' => $message,
-            'batch_csms_id' => $batchCsmsId
-        ]);
-        
-        return $this->handleSslResponse($response);
+
+        $client = new \GuzzleHttp\Client();
+
+        try {
+            $response = $client->post($baseUrl . '/api/v3/send-sms/bulk', [
+                'headers' => [
+                    'Content-Type' => 'application/json',
+                    'Accept'       => 'application/json',
+                ],
+                'json' => [
+                    'api_token'      => $apiToken,
+                    'sid'            => $sid,
+                    'msisdn'         => $formattedNumbers,
+                    'sms'            => $message,
+                    'batch_csms_id'  => $batchCsmsId,
+                ],
+                'http_errors' => false,
+            ]);
+
+            return $this->handleSslResponse($response);
+
+        } catch (\Exception $e) {
+            Log::error('SSL Wireless Bulk SMS Exception: ' . $e->getMessage());
+            return false;
+        }
     }
     
     private function formatNumber($number)
@@ -110,8 +134,12 @@ trait SslWirelessSMS
         
     private function handleSslResponse($response)
     {
-        // Get the response body as string
-        $responseBody = $response->getBody()->getContents();
+        $responseBody = $this->extractResponseBody($response);
+
+        if ($responseBody === null) {
+            Log::error('Unable to read response body from SSL Wireless response object');
+            return false;
+        }
         
         
         // Decode the JSON response
@@ -152,5 +180,20 @@ trait SslWirelessSMS
             'message' => $data['error_message'] ?? 'No error message'
         ]);
         return false;
+    }
+
+    private function extractResponseBody($response)
+    {
+        if (is_object($response)) {
+            if (method_exists($response, 'body')) {
+                return $response->body();
+            }
+
+            if (method_exists($response, 'getBody')) {
+                return (string) $response->getBody();
+            }
+        }
+
+        return null;
     }
 }
