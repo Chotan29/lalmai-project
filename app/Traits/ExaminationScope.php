@@ -304,7 +304,7 @@ trait ExaminationScope{
             $value->total_mark_practical = $obtainedMarkPr;
             $value->total_obtain = $obtainedMark;
             /*caculate percentage*/
-            $value->percentage = ($obtainedMark*100)/ $totalMark;
+            $value->percentage = $totalMark != 0 ? ($obtainedMark*100)/ $totalMark : 0;
 
             //$value->rank = "1";
             $remark = $value->subjects->pluck('remark')->toArray();
@@ -509,7 +509,7 @@ trait ExaminationScope{
             $value->total_mark_practical = $obtainedMarkPr;
             $value->total_obtain = $obtainedMark;
             /*caculate percentage*/
-            $value->percentage = ($obtainedMark*100)/ $totalMark;
+            $value->percentage = $totalMark != 0 ? ($obtainedMark*100)/ $totalMark : 0;
 
             //$value->rank = "1";
             $remark = $value->subjects->pluck('remark')->toArray();
@@ -844,7 +844,7 @@ trait ExaminationScope{
                     //Final Grade
                     $subject->totalMark = $totalMark = $full_mark_theory + $full_mark_practical;
                     $subject->obtainedMark = $obtainedMark = $obtain_mark_theory + $obtain_mark_practical;
-                    $subject->percentage = $percentage = ($obtainedMark*100)/ $totalMark;
+                    $subject->percentage = $percentage = $totalMark != 0 ? ($obtainedMark*100)/ $totalMark : 0;
 
                     //verify both th & pr absent
                     if($absentBoth == false) {
@@ -945,7 +945,7 @@ trait ExaminationScope{
                 $value->total_mark_practical = $obtainedMarkPr;
                 $value->total_obtain = $obtainedMark;
                 //caculate percentage
-                $value->percentage = ($obtainedMark*100)/ $totalMark;
+                $value->percentage = $totalMark != 0 ? ($obtainedMark*100)/ $totalMark : 0;
 
 
                 //calculate grading Score
@@ -1109,7 +1109,7 @@ trait ExaminationScope{
                     //Final Grade
                     $subject->totalMark = $totalMark = $full_mark_theory + $full_mark_practical;
                     $subject->obtainedMark = $obtainedMark = $obtain_mark_theory + $obtain_mark_practical;
-                    $subject->percentage = $percentage = ($obtainedMark*100)/ $totalMark;
+                    $subject->percentage = $percentage = $totalMark != 0 ? ($obtainedMark*100)/ $totalMark : 0;
 
                     //verify both th & pr absent
                     if($absentBoth == false) {
@@ -1220,7 +1220,7 @@ trait ExaminationScope{
                 $value->total_mark_practical = $obtainedMarkPr;
                 $value->total_obtain = $obtainedMark;
                 //caculate percentage
-                $value->percentage = ($obtainedMark*100)/ $totalMark;
+                $value->percentage = $totalMark != 0 ? ($obtainedMark*100)/ $totalMark : 0;
 
 
                 //calculate grading Score
@@ -1386,7 +1386,7 @@ trait ExaminationScope{
                     //Final Grade
                     $subject->totalMark = $totalMark = $full_mark_theory + $full_mark_practical;
                     $subject->obtainedMark = $obtainedMark = $obtain_mark_theory + $obtain_mark_practical;
-                    $subject->percentage = $percentage = ($obtainedMark*100)/ $totalMark;
+                    $subject->percentage = $percentage = $totalMark != 0 ? ($obtainedMark*100)/ $totalMark : 0;
 
                     //verify both th & pr absent
                     if($absentBoth == false) {
@@ -1489,7 +1489,7 @@ trait ExaminationScope{
                 $value->total_mark_practical = $obtainedMarkPr;
                 $value->total_obtain = $obtainedMark;
                 /*caculate percentage*/
-                $value->percentage = ($obtainedMark*100)/ $totalMark;
+                $value->percentage = $totalMark != 0 ? ($obtainedMark*100)/ $totalMark : 0;
 
                 /*calculate grading Score*/
                 //verify both th & pr absent
@@ -1713,7 +1713,7 @@ trait ExaminationScope{
                     //Final Grade
                     $subject->totalMark = $totalMark = $full_mark_theory + $full_mark_practical;
                     $subject->obtainedMark = $obtainedMark = $obtain_mark_theory + $obtain_mark_practical;
-                    $subject->percentage = $percentage = ($obtainedMark*100)/ $totalMark;
+                    $subject->percentage = $percentage = $totalMark != 0 ? ($obtainedMark*100)/ $totalMark : 0;
 
                     //verify both th & pr absent
                     if($absentBoth == false) {
@@ -2006,7 +2006,7 @@ trait ExaminationScope{
                 //Final Grade
                 $subject->totalMark = $totalMark = $full_mark_theory + $full_mark_practical;
                 $subject->obtainedMark = $obtainedMark = $obtain_mark_theory + $obtain_mark_practical;
-                $subject->percentage = $percentage = ($obtainedMark*100)/ $totalMark;
+                $subject->percentage = $percentage = $totalMark != 0 ? ($obtainedMark*100)/ $totalMark : 0;
 
                 //verify both th & pr absent
                 if($absentBoth == false) {
