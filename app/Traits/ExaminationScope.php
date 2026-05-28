@@ -127,6 +127,92 @@ trait ExaminationScope{
         return $score;
     }
 
+    public function getHscGradeScale()
+    {
+        return collect([
+            (object)['percentage_from' => 80, 'percentage_to' => 100, 'name' => 'A+', 'description' => 'Highest', 'grade_point' => 5.00],
+            (object)['percentage_from' => 70, 'percentage_to' => 79.99, 'name' => 'A', 'description' => 'Very Good', 'grade_point' => 4.00],
+            (object)['percentage_from' => 60, 'percentage_to' => 69.99, 'name' => 'A-', 'description' => 'Good', 'grade_point' => 3.50],
+            (object)['percentage_from' => 50, 'percentage_to' => 59.99, 'name' => 'B', 'description' => 'Satisfactory', 'grade_point' => 3.00],
+            (object)['percentage_from' => 40, 'percentage_to' => 49.99, 'name' => 'C', 'description' => 'Pass', 'grade_point' => 2.00],
+            (object)['percentage_from' => 33, 'percentage_to' => 39.99, 'name' => 'D', 'description' => 'Minimum Pass', 'grade_point' => 1.00],
+            (object)['percentage_from' => 0, 'percentage_to' => 32.99, 'name' => 'F', 'description' => 'Fail', 'grade_point' => 0.00],
+        ]);
+    }
+
+    public function getHscGradeByPercentage($percentage)
+    {
+        foreach ($this->getHscGradeScale() as $grade) {
+            if ($percentage >= $grade->percentage_from && $percentage <= $grade->percentage_to) {
+                return $grade->name;
+            }
+        }
+
+        return 'F';
+    }
+
+    public function getHscPointByPercentage($percentage)
+    {
+        foreach ($this->getHscGradeScale() as $grade) {
+            if ($percentage >= $grade->percentage_from && $percentage <= $grade->percentage_to) {
+                return $grade->grade_point;
+            }
+        }
+
+        return 0;
+    }
+
+    public function getHscFinalGrade($gpa)
+    {
+        if ($gpa >= 5) {
+            return 'A+';
+        }
+
+        if ($gpa >= 4) {
+            return 'A';
+        }
+
+        if ($gpa >= 3.5) {
+            return 'A-';
+        }
+
+        if ($gpa >= 3) {
+            return 'B';
+        }
+
+        if ($gpa >= 2) {
+            return 'C';
+        }
+
+        if ($gpa >= 1) {
+            return 'D';
+        }
+
+        return 'F';
+    }
+
+    public function getHscMcqPassMark($mcqTotalMark, $configuredPassMark = null)
+    {
+        $mcqTotalMark = (float) $mcqTotalMark;
+        $configuredPassMark = $configuredPassMark !== null ? (float) $configuredPassMark : null;
+
+        // In this project, MCQ(T) stores MCQ full mark and MCQ(P) stores MCQ pass mark.
+        if ($configuredPassMark !== null && $configuredPassMark > 0) {
+            return $configuredPassMark;
+        }
+
+        // Fallback for legacy/empty data.
+        return $mcqTotalMark > 0 ? ($mcqTotalMark >= 25 ? 10 : round($mcqTotalMark * 0.40, 2)) : 0;
+    }
+
+    public function isHscEnglishSubject($title, $code = null)
+    {
+        $title = strtolower(trim((string) $title));
+        $code = strtolower(trim((string) $code));
+
+        return strpos($title, 'english') !== false || strpos($code, 'eng') !== false;
+    }
+
     public function getExamNameByScheduleId($id)
     {
         $examSchedule = ExamSchedule::find($id)->first();
@@ -758,6 +844,307 @@ trait ExaminationScope{
 
             $data['student'] = $filteredStudent;
 
+        } else {
+            $request->session()->flash($this->message_warning, 'Please, Check at least one Students row.');
+            return back();
+        }
+
+        $data['exam'] = $request->get('exams_id');
+        $data['year'] = $request->get('year_id');
+        $data['month'] = $request->get('month_id');
+        $data['faculty'] = $request->get('faculty_id');
+        $data['semester'] = $request->get('semester_id');
+
+        return $data;
+    }
+
+    public function hscGradingSystem(Request $request)
+    {
+        if ($request->has('chkIds')) {
+            $exam_schedule_id = explode(',', $request->get('exam_schedule_id'));
+            $student_id = $request->get('chkIds');
+
+            $students = Student::select('id', 'reg_no', 'first_name', 'middle_name', 'last_name', 'date_of_birth',
+                'faculty', 'semester')
+                ->whereIn('id', $student_id)
+                ->get();
+
+            $filteredStudent = $students->filter(function ($value) use ($exam_schedule_id) {
+                $subjectRows = $value->markLedger()
+                    ->select('exam_schedule_id', 'obtain_mark_theory', 'obtain_mark_practical', 'obtain_mark_mcq', 'absent_theory', 'absent_practical')
+                    ->whereIn('exam_schedule_id', $exam_schedule_id)
+                    ->get()
+                    ->unique('exam_schedule_id');
+
+                $filteredSubject = $subjectRows->filter(function ($subject) {
+                    $joinSub = $subject->examSchedule()
+                        ->select('subjects_id', 'full_mark_theory', 'pass_mark_theory', 'full_mark_practical', 'pass_mark_practical', 'sorting_order')
+                        ->first();
+
+                    if (!$joinSub) {
+                        return false;
+                    }
+
+                    $subjectDetail = Subject::select(
+                        'id',
+                        'title',
+                        'code',
+                        'sub_type',
+                        'class_type',
+                        'credit_hour',
+                        'full_mark_theory',
+                        'pass_mark_theory',
+                        'full_mark_practical',
+                        'pass_mark_practical',
+                        'mcq_number_theory',
+                        'mcq_number_practical'
+                    )
+                        ->find($joinSub->subjects_id);
+
+                    $masterFullTheory = (float) ($subjectDetail->full_mark_theory ?? 0);
+                    $masterPassTheory = (float) ($subjectDetail->pass_mark_theory ?? 0);
+                    $masterFullPractical = (float) ($subjectDetail->full_mark_practical ?? 0);
+                    $masterPassPractical = (float) ($subjectDetail->pass_mark_practical ?? 0);
+
+                    $subject->subjects_id = $joinSub->subjects_id;
+                    $subject->sorting_order = $joinSub->sorting_order;
+                    $subject->full_mark_theory = $masterFullTheory;
+                    $subject->pass_mark_theory = $masterPassTheory;
+                    $subject->full_mark_practical = $masterFullPractical;
+                    $subject->pass_mark_practical = $masterPassPractical;
+                    $subject->mcq_number_theory = (float) ($subjectDetail->mcq_number_theory ?? 0);
+                    $subject->mcq_number_practical = (float) ($subjectDetail->mcq_number_practical ?? 0);
+                    $subject->full_mark_mcq = $subject->mcq_number_theory;
+                    $subject->pass_mark_mcq = $this->getHscMcqPassMark($subject->full_mark_mcq, $subject->mcq_number_practical);
+                    $subject->title = $subjectDetail->title ?? '';
+                    $subject->code = $subjectDetail->code ?? '';
+                    $subject->sub_type = $subjectDetail->sub_type ?? 'Compulsory';
+                    $subject->credit_hour = $subjectDetail->credit_hour ?? 0;
+                    $subject->is_optional = strtolower(trim((string) $subject->sub_type)) === 'optional';
+                    $subject->is_english = $this->isHscEnglishSubject($subject->title, $subject->code);
+
+                    $theoryMark = is_numeric($subject->obtain_mark_theory) ? (float) $subject->obtain_mark_theory : 0;
+                    $practicalMark = is_numeric($subject->obtain_mark_practical) ? (float) $subject->obtain_mark_practical : 0;
+                    $mcqMark = is_numeric($subject->obtain_mark_mcq) ? (float) $subject->obtain_mark_mcq : 0;
+                    $theoryAbsent = (int) $subject->absent_theory === 1;
+                    $practicalAbsent = (int) $subject->absent_practical === 1;
+
+                    if ($subject->full_mark_theory > 0) {
+                        if ($theoryAbsent) {
+                            $subject->obtain_score_theory = '*AB';
+                            $subject->obtain_mark_theory = 'AB';
+                        } else {
+                            $theoryPercentage = ($theoryMark * 100) / $subject->full_mark_theory;
+                            $subject->obtain_score_theory = $theoryMark == 0 ? 'F' : $this->getHscGradeByPercentage($theoryPercentage);
+                            $subject->obtain_mark_theory = $theoryMark;
+                        }
+                    } else {
+                        $subject->obtain_score_theory = '-';
+                        $subject->obtain_mark_theory = '-';
+                    }
+
+                    if ($subject->full_mark_mcq > 0) {
+                        $mcqPercentage = ($mcqMark * 100) / $subject->full_mark_mcq;
+                        $subject->obtain_score_mcq = $mcqMark == 0 ? 'F' : $this->getHscGradeByPercentage($mcqPercentage);
+                        $subject->obtain_mark_mcq = $mcqMark;
+                    } else {
+                        $subject->obtain_score_mcq = '-';
+                        $subject->obtain_mark_mcq = '-';
+                    }
+
+                    if ($subject->full_mark_practical > 0) {
+                        if ($practicalAbsent) {
+                            $subject->obtain_score_practical = '*AB';
+                            $subject->obtain_mark_practical = 'AB';
+                        } else {
+                            $practicalPercentage = ($practicalMark * 100) / $subject->full_mark_practical;
+                            $subject->obtain_score_practical = $practicalMark == 0 ? 'F' : $this->getHscGradeByPercentage($practicalPercentage);
+                            $subject->obtain_mark_practical = $practicalMark;
+                        }
+                    } else {
+                        $subject->obtain_score_practical = '-';
+                        $subject->obtain_mark_practical = '-';
+                    }
+
+                    $subject->totalMark = $subject->full_mark_theory + $subject->full_mark_mcq + $subject->full_mark_practical;
+                    $subject->full_mark_total = $subject->totalMark;
+                    $subject->obtainedMark = $theoryMark + $mcqMark + $practicalMark;
+                    $subject->total_obtain_mark = $subject->obtainedMark;
+                    $subject->percentage = $subject->totalMark > 0 ? ($subject->obtainedMark * 100) / $subject->totalMark : 0;
+                    $subject->th_remark = '';
+                    $subject->mcq_remark = '';
+                    $subject->pr_remark = '';
+
+                    $invalidMark = false;
+                    $isPass = true;
+                    $theoryMarkForCalc = $theoryAbsent ? 0 : $theoryMark;
+                    $mcqMarkForCalc = $mcqMark;
+                    $practicalMarkForCalc = $practicalAbsent ? 0 : $practicalMark;
+
+                    if ($subject->full_mark_theory > 0 && !$theoryAbsent && $theoryMark > $subject->full_mark_theory) {
+                        $subject->th_remark = '*N';
+                        $invalidMark = true;
+                        $theoryMarkForCalc = $subject->full_mark_theory;
+                        $subject->obtain_mark_theory = $subject->full_mark_theory;
+                    }
+
+                    if ($subject->full_mark_mcq > 0 && $mcqMark > $subject->full_mark_mcq) {
+                        $subject->mcq_remark = '*N';
+                        $invalidMark = true;
+                        $mcqMarkForCalc = $subject->full_mark_mcq;
+                        $subject->obtain_mark_mcq = $subject->full_mark_mcq;
+                    }
+
+                    if ($subject->full_mark_practical > 0 && !$practicalAbsent && $practicalMark > $subject->full_mark_practical) {
+                        $subject->pr_remark = '*N';
+                        $invalidMark = true;
+                        $practicalMarkForCalc = $subject->full_mark_practical;
+                        $subject->obtain_mark_practical = $subject->full_mark_practical;
+                    }
+
+                    // Keep report totals bounded by component full marks even if legacy rows contain invalid values.
+                    $subject->obtainedMark = $theoryMarkForCalc + $mcqMarkForCalc + $practicalMarkForCalc;
+                    $subject->total_obtain_mark = $subject->obtainedMark;
+                    $subject->percentage = $subject->totalMark > 0 ? ($subject->obtainedMark * 100) / $subject->totalMark : 0;
+
+                    if ($subject->is_english) {
+                        $subject->hsc_rule_label = 'English Combined';
+                        if ($subject->obtainedMark < 33) {
+                            $isPass = false;
+                        }
+                    } else {
+                        $subject->hsc_rule_label = $subject->full_mark_practical > 0 ? 'Separate Pass (T/MCQ/P)' : 'Separate Pass (T/MCQ)';
+
+                        if ($subject->full_mark_theory > 0 && ($theoryAbsent || $theoryMark < $subject->pass_mark_theory)) {
+                            $subject->th_remark = $subject->th_remark ?: '*';
+                            $isPass = false;
+                        }
+
+                        if ($subject->full_mark_mcq > 0 && $mcqMarkForCalc < $subject->pass_mark_mcq) {
+                            $subject->mcq_remark = $subject->mcq_remark ?: '*';
+                            $isPass = false;
+                        }
+
+                        if ($subject->full_mark_practical > 0 && ($practicalAbsent || $practicalMark < $subject->pass_mark_practical)) {
+                            $subject->pr_remark = $subject->pr_remark ?: '*';
+                            $isPass = false;
+                        }
+                    }
+
+                    if ($invalidMark) {
+                        $isPass = false;
+                    }
+
+                    if ($isPass) {
+                        $subject->final_grade = $this->getHscGradeByPercentage($subject->percentage);
+                        $subject->grade_point = number_format((float) $this->getHscPointByPercentage($subject->percentage), 2);
+                        $subject->remark = '';
+                        $subject->subject_result = 'Pass';
+                    } else {
+                        $subject->final_grade = 'F';
+                        $subject->grade_point = number_format(0, 2);
+                        $subject->remark = '*';
+                        $subject->subject_result = 'Fail';
+                    }
+
+                    return $subject;
+                });
+
+                $value->subjects = $filteredSubject->sortBy('sorting_order')->values();
+
+                $theoryMarks = array_pluck($value->subjects, 'obtain_mark_theory');
+                $filteredTheoryMarks = array_where($theoryMarks, function ($mark) {
+                    return is_numeric($mark);
+                });
+                $obtainedTheory = array_sum($filteredTheoryMarks);
+
+                $mcqMarks = array_pluck($value->subjects, 'obtain_mark_mcq');
+                $filteredMcqMarks = array_where($mcqMarks, function ($mark) {
+                    return is_numeric($mark);
+                });
+                $obtainedMcq = array_sum($filteredMcqMarks);
+
+                $practicalMarks = array_pluck($value->subjects, 'obtain_mark_practical');
+                $filteredPracticalMarks = array_where($practicalMarks, function ($mark) {
+                    return is_numeric($mark);
+                });
+                $obtainedPractical = array_sum($filteredPracticalMarks);
+
+                $value->total_mark_theory = $obtainedTheory;
+                $value->total_mark_mcq = $obtainedMcq;
+                $value->total_mark_practical = $obtainedPractical;
+                $value->total_obtain = $obtainedTheory + $obtainedMcq + $obtainedPractical;
+
+                $totalFullMark = $value->subjects->sum('full_mark_theory') + $value->subjects->sum('full_mark_mcq') + $value->subjects->sum('full_mark_practical');
+                $value->percentage = $totalFullMark > 0 ? ($value->total_obtain * 100) / $totalFullMark : 0;
+
+                $compulsorySubjects = $value->subjects->filter(function ($subject) {
+                    return !$subject->is_optional;
+                });
+
+                $optionalSubjects = $value->subjects->filter(function ($subject) {
+                    return $subject->is_optional;
+                });
+
+                $compulsoryFail = $compulsorySubjects->contains(function ($subject) {
+                    return $subject->subject_result === 'Fail';
+                });
+
+                $basePointTotal = $compulsorySubjects->sum(function ($subject) {
+                    return is_numeric($subject->grade_point) ? (float) $subject->grade_point : 0;
+                });
+
+                $baseGpa = round($basePointTotal / 6, 2);
+                $optionalGradePoint = $optionalSubjects->count() > 0 && is_numeric($optionalSubjects->first()->grade_point)
+                    ? (float) $optionalSubjects->first()->grade_point
+                    : 0;
+                $optionalBonus = $optionalGradePoint > 2 ? round(($optionalGradePoint - 2) / 6, 2) : 0;
+                $finalGpa = $compulsoryFail ? 0 : min(5, round($baseGpa + $optionalBonus, 2));
+
+                $value->gpa_base = number_format($baseGpa, 2);
+                $value->optional_bonus = number_format($optionalBonus, 2);
+                $value->gpa_average = number_format($finalGpa, 2);
+                $value->gpa_grade = $this->getHscFinalGrade($finalGpa);
+                $value->gpa_remark = $compulsoryFail ? 'Fail' : 'Pass';
+                $value->remark = $value->gpa_remark;
+
+                return $value;
+            });
+
+            $rank = 0;
+            $score = -1;
+            $filteredStudent = $filteredStudent
+                ->sortByDesc('total_obtain')
+                ->map(function ($record) use (&$rank, &$score) {
+                    if ($score != $record->getAttribute('total_obtain')) {
+                        $score = $record->getAttribute('total_obtain');
+                        $rank++;
+                    }
+
+                    $record->position = $rank;
+                    return $record;
+                });
+
+            $rank = 0;
+            $score = -1;
+            $filteredStudent->filter(function ($record) use (&$rank, &$score) {
+                if ($record->remark == 'Pass') {
+                    if ($score != $record->getAttribute('total_obtain')) {
+                        $score = $record->getAttribute('total_obtain');
+                        $rank++;
+                    }
+
+                    $record->rank = $rank;
+                    return $record;
+                }
+
+                $record->rank = 'X';
+                return $record;
+            });
+
+            $data['student'] = $filteredStudent;
+            $data['grade-scale-range'] = $this->getHscGradeScale();
+            $data['grading_system'] = 'hsc';
         } else {
             $request->session()->flash($this->message_warning, 'Please, Check at least one Students row.');
             return back();

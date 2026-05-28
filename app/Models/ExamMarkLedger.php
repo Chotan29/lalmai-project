@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 class ExamMarkLedger extends BaseModel
 {
     protected $fillable = ['created_by', 'last_updated_by', 'exam_schedule_id','students_id', 'obtain_mark_theory',
-        'absent_theory','obtain_mark_practical','absent_practical', 'sorting_order', 'status'];
+        'absent_theory','obtain_mark_practical','obtain_mark_mcq','absent_practical', 'sorting_order', 'status'];
 
     public function students()
     {

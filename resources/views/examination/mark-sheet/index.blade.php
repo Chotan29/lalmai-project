@@ -48,11 +48,12 @@
                 /*console.log('ok');
                 return false;*/
                 $grading = $('#typeGrading').is(':checked');
+                $hscGrading = $('#typeHscGrading').is(':checked');
                 $universityGrading = $('#typeUniversityGrading').is(':checked');
                 $percentage = $('#typePercentage').is(':checked');
                 $ledger = $('#typeLedger').is(':checked');
                 //return false;
-                if($grading || $universityGrading || $percentage || $ledger){
+                if($grading || $hscGrading || $universityGrading || $percentage || $ledger){
                     $chkIds = document.getElementsByName('chkIds[]');
                     var $chkCount = 0;
                     $length = $chkIds.length;
@@ -71,7 +72,7 @@
                     $('#print-student-marksheet').submit();
 
                 }else{
-                    toastr.info("Please, Select Result Your Target Result Type - Grading or Percentage.","Info:");
+                    toastr.info("Please, Select Result Type - Grading, HSC Grading, University Grading, Percentage or Ledger.","Info:");
                     return false;
                 }
 

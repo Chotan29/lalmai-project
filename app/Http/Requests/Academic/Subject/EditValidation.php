@@ -34,6 +34,8 @@ class EditValidation extends FormRequest
         return [
             'title'         => 'required | max:100',
             'code'          => 'required | unique:subjects,code,'.decrypt($this->request->get('id')),
+            'mcq_number_theory' => 'nullable|integer|min:0',
+            'mcq_number_practical' => 'nullable|integer|min:0',
             'description'   => 'max:100'
         ];
     }

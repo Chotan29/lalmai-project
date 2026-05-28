@@ -544,6 +544,10 @@ class ExamPrintController extends CollegeBaseController
                 $data = $this->gradingSystem($request);
                 return view(parent::loadDataToView($this->view_path.'.grading-sheet'), compact('data'));
             }
+            elseif($request->get('result-type')=='hsc-grading'){
+                $data = $this->hscGradingSystem($request);
+                return view(parent::loadDataToView($this->view_path.'.hsc-grading-sheet'), compact('data'));
+            }
             elseif($request->get('result-type')=='university-grading'){
                 $data = $this->universityGradingSystem($request);
                 return view(parent::loadDataToView($this->view_path.'.university-grading-sheet'), compact('data'));

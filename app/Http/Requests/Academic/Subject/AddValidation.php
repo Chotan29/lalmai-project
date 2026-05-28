@@ -34,6 +34,8 @@ class AddValidation extends FormRequest
         return [
             'title'             => 'required | max:100',
             'code'              => 'required | max:50 | unique:subjects,code',
+            'mcq_number_theory' => 'nullable|integer|min:0',
+            'mcq_number_practical' => 'nullable|integer|min:0',
             'description'       => 'max:100',
         ];
     }

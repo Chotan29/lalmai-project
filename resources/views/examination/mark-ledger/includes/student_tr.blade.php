@@ -18,13 +18,16 @@
             {!! Form::checkbox('absent_theory[]', $student->id, false, ['class' => 'form-control']) !!}
         </td>
         <td>
-            {!! Form::number('obtain_mark_theory[]', null, ["class" => "form-control border-form","min"=>"0",'step'=>'any']) !!}
+            {!! Form::number('obtain_mark_theory[]', null, ["class" => "form-control border-form","min"=>"0",'step'=>'any','max' => (float)($markLimits['theory'] ?? 0)]) !!}
+        </td>
+        <td>
+            {!! Form::number('obtain_mark_mcq[]', null, ["class" => "form-control border-form","min"=>"0",'step'=>'any','max' => (float)($markLimits['mcq'] ?? 0)]) !!}
         </td>
         <td>
             {!! Form::checkbox('absent_practical[]', $student->id, false, ['class' => 'form-control']) !!}
         </td>
         <td>
-            {!! Form::number('obtain_mark_practical[]', null, ["class" => "form-control border-form","min"=>"0",'step'=>'any']) !!}
+            {!! Form::number('obtain_mark_practical[]', null, ["class" => "form-control border-form","min"=>"0",'step'=>'any','max' => (float)($markLimits['practical'] ?? 0)]) !!}
         </td>
 
         <td>

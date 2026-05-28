@@ -8,7 +8,7 @@ use Illuminate\Support\Facades\DB;
 class Subject extends Model
 {
     protected $fillable = ['created_by', 'last_updated_by', 'title', 'code','course_fee', 'full_mark_theory', 'pass_mark_theory',
-        'full_mark_practical', 'pass_mark_practical', 'credit_hour', 'sub_type', 'class_type', 'staff_id',
+        'full_mark_practical', 'pass_mark_practical', 'mcq_number_theory', 'mcq_number_practical', 'credit_hour', 'sub_type', 'class_type', 'staff_id',
         'description', 'status'];
 
     public function semester()

@@ -54,6 +54,51 @@
 
     <script>
         $(document).ready(function () {
+            var selectedFaculty = $('select[name="faculty"]').val();
+            var selectedSemester = $('select[name="semester_select"]').data('selected');
+            var selectedSubject = $('select[name="schedule_subject"]').data('selected');
+
+            if (selectedFaculty && String(selectedFaculty) !== '0') {
+                $.ajax({
+                    type: 'GET',
+                    url: '{{ route('get-semesters') }}',
+                    data: { faculty_id: selectedFaculty },
+                    success: function (semData) {
+                        $('.semester_select').html('').append('<option value="0">Select Sem./Sec.</option>');
+                        $.each(semData, function(id, name){
+                            var selected = String(id) === String(selectedSemester) ? ' selected' : '';
+                            $('.semester_select').append('<option value="'+id+'"'+selected+'>'+name+'</option>');
+                        });
+
+                        if (selectedSemester && String(selectedSemester) !== '0') {
+                            $.ajax({
+                                type: 'POST',
+                                url: '{{ route('exam.mark-ledger.find-subject') }}',
+                                data: {
+                                    _token: '{{ csrf_token() }}',
+                                    years_id: $('select[name="years_id"]').val(),
+                                    months_id: $('select[name="months_id"]').val(),
+                                    exams_id: $('select[name="exams_id"]').val(),
+                                    faculty_id: selectedFaculty,
+                                    semester_id: selectedSemester
+                                },
+                                success: function (response) {
+                                    var data = $.parseJSON(response);
+                                    $('.schedule_subject').html('').append('<option value="0">Select Subject</option>');
+
+                                    if (!data.error && data.subjects) {
+                                        $.each(data.subjects, function (key, valueObj) {
+                                            var selected = String(valueObj.id) === String(selectedSubject) ? ' selected' : '';
+                                            $('.schedule_subject').append('<option value="' + valueObj.id + '"'+selected+'>' + valueObj.title + '</option>');
+                                        });
+                                    }
+                                }
+                            });
+                        }
+                    }
+                });
+            }
+
             $('#filter-btn').click(function () {
                 var url = '{{ $data['url'] }}';
                 var year = $('select[name="years_id"]').val();

@@ -67,7 +67,7 @@ class ExamMarkLedgerController extends CollegeBaseController
             $examScheduleId = array_pluck($examScheduleId, 'id');
 
             $data['ledger_exist'] = ExamMarkLedger::select('exam_mark_ledgers.exam_schedule_id', 'exam_mark_ledgers.students_id',
-                'exam_mark_ledgers.obtain_mark_theory', 'exam_mark_ledgers.obtain_mark_practical', 'exam_mark_ledgers.absent_theory','exam_mark_ledgers.absent_practical',
+                'exam_mark_ledgers.obtain_mark_theory', 'exam_mark_ledgers.obtain_mark_practical', 'exam_mark_ledgers.obtain_mark_mcq', 'exam_mark_ledgers.absent_theory','exam_mark_ledgers.absent_practical',
                 'exam_mark_ledgers.status', 's.id as student_id', 's.reg_no', 's.first_name', 's.middle_name', 's.last_name',
                 's.last_name')
                 ->whereIn('exam_mark_ledgers.exam_schedule_id', $examScheduleId)
@@ -125,6 +125,27 @@ class ExamMarkLedgerController extends CollegeBaseController
         /*Find Exam Schedule Id*/
         $examScheduleId = ExamSchedule::select('id')->where($examScheduleCondition)->first();
 
+        if (!$examScheduleId) {
+            $request->session()->flash($this->message_warning, 'Exam schedule not found for the selected filter.');
+            return back()->withInput();
+        }
+
+        $examSchedule = ExamSchedule::select('id', 'subjects_id', 'full_mark_theory', 'full_mark_practical')
+            ->find($examScheduleId->id);
+
+        $subject = Subject::select('id', 'full_mark_theory', 'full_mark_practical', 'mcq_number_theory')->find($examSchedule->subjects_id);
+
+        $scheduleTheoryMax = (float) ($examSchedule->full_mark_theory ?? 0);
+        $schedulePracticalMax = (float) ($examSchedule->full_mark_practical ?? 0);
+        $masterTheoryMax = (float) ($subject->full_mark_theory ?? 0);
+        $masterPracticalMax = (float) ($subject->full_mark_practical ?? 0);
+
+        $theoryMax = $scheduleTheoryMax > 0 ? $scheduleTheoryMax : $masterTheoryMax;
+        $practicalMax = $schedulePracticalMax > 0 ? $schedulePracticalMax : $masterPracticalMax;
+        $mcqMax = (float) ($subject->mcq_number_theory ?? 0);
+
+        $students = Student::select('id', 'reg_no')->whereIn('id', (array) $request->get('students_id'))->get()->keyBy('id');
+
         if($request->has('students_id')) {
             foreach ($request->get('students_id') as $key => $student) {
 
@@ -140,6 +161,36 @@ class ExamMarkLedgerController extends CollegeBaseController
                     $prAbsentStudent = 0;
                 }
 
+                $thMark = (float) ($request->get('obtain_mark_theory')[$key] ? $request->get('obtain_mark_theory')[$key] : 0);
+                $mcqMark = (float) ($request->get('obtain_mark_mcq')[$key] ? $request->get('obtain_mark_mcq')[$key] : 0);
+                $prMark = (float) ($request->get('obtain_mark_practical')[$key] ? $request->get('obtain_mark_practical')[$key] : 0);
+
+                // Absent components must always remain zero.
+                if ($trAbsentStudent == 1) {
+                    $thMark = 0;
+                }
+
+                if ($prAbsentStudent == 1) {
+                    $prMark = 0;
+                }
+
+                $regNo = isset($students[$student]) ? $students[$student]->reg_no : ('Student ID '.$student);
+
+                if ($theoryMax > 0 && $thMark > $theoryMax) {
+                    $request->session()->flash($this->message_warning, 'Theory mark cannot exceed full mark ('.$theoryMax.') for '.$regNo.'.');
+                    return back()->withInput();
+                }
+
+                if ($mcqMax > 0 && $mcqMark > $mcqMax) {
+                    $request->session()->flash($this->message_warning, 'MCQ mark cannot exceed full mark ('.$mcqMax.') for '.$regNo.'.');
+                    return back()->withInput();
+                }
+
+                if ($practicalMax > 0 && $prMark > $practicalMax) {
+                    $request->session()->flash($this->message_warning, 'Practical mark cannot exceed full mark ('.$practicalMax.') for '.$regNo.'.');
+                    return back()->withInput();
+                }
+
                 /*Ledger Already Exist*/
                 $ledgerWhere = [
                     ['exam_schedule_id','=',$examScheduleId->id],
@@ -152,8 +203,9 @@ class ExamMarkLedgerController extends CollegeBaseController
                     $ledgerUpdate = [
                         'exam_schedule_id' => $examScheduleId->id,
                         'students_id' => $student,
-                        'obtain_mark_theory' => $request->get('obtain_mark_theory')[$key]?$request->get('obtain_mark_theory')[$key]:0,
-                        'obtain_mark_practical' => $request->get('obtain_mark_practical')[$key]?$request->get('obtain_mark_practical')[$key]:0,
+                        'obtain_mark_theory' => $thMark,
+                        'obtain_mark_practical' => $prMark,
+                        'obtain_mark_mcq' => $mcqMark,
                         'absent_theory' => $trAbsentStudent,
                         'absent_practical' => $prAbsentStudent,
                         'sorting_order' => $key+1,
@@ -167,8 +219,9 @@ class ExamMarkLedgerController extends CollegeBaseController
                     ExamMarkLedger::create([
                         'exam_schedule_id' => $examScheduleId->id,
                         'students_id' => $student,
-                        'obtain_mark_theory' => $request->get('obtain_mark_theory')[$key]?$request->get('obtain_mark_theory')[$key]:0,
-                        'obtain_mark_practical' => $request->get('obtain_mark_practical')[$key]?$request->get('obtain_mark_practical')[$key]:0,
+                        'obtain_mark_theory' => $thMark,
+                        'obtain_mark_practical' => $prMark,
+                        'obtain_mark_mcq' => $mcqMark,
                         'absent_theory' => $trAbsentStudent,
                         'absent_practical' => $prAbsentStudent,
                         'sorting_order' => $key+1,
@@ -296,16 +349,32 @@ class ExamMarkLedgerController extends CollegeBaseController
         ];
 
         /*Find Exam Schedule Id*/
-        $examScheduleId = ExamSchedule::select('id')
+        $examSchedule = ExamSchedule::select('id', 'subjects_id', 'full_mark_theory', 'full_mark_practical')
                 ->where($examScheduleCondition)
-                ->get();
-        $examScheduleId  = array_pluck($examScheduleId, 'id');
+                ->first();
+
+        $examScheduleId = [];
+        if ($examSchedule) {
+            $examScheduleId[] = $examSchedule->id;
+        }
+
+        $subjectDetail = $examSchedule ? Subject::select('id', 'full_mark_theory', 'full_mark_practical', 'mcq_number_theory')->find($examSchedule->subjects_id) : null;
+        $scheduleTheoryLimit = (float) ($examSchedule->full_mark_theory ?? 0);
+        $schedulePracticalLimit = (float) ($examSchedule->full_mark_practical ?? 0);
+        $masterTheoryLimit = (float) ($subjectDetail->full_mark_theory ?? 0);
+        $masterPracticalLimit = (float) ($subjectDetail->full_mark_practical ?? 0);
+        $markLimits = [
+            'theory' => $scheduleTheoryLimit > 0 ? $scheduleTheoryLimit : $masterTheoryLimit,
+            'mcq' => (float) ($subjectDetail->mcq_number_theory ?? 0),
+            'practical' => $schedulePracticalLimit > 0 ? $schedulePracticalLimit : $masterPracticalLimit,
+        ];
 
         if($examScheduleId){
             $ledgerExist = ExamMarkLedger::select('exam_mark_ledgers.exam_schedule_id',
                 'exam_mark_ledgers.students_id',
                 'exam_mark_ledgers.obtain_mark_theory',
                 'exam_mark_ledgers.obtain_mark_practical',
+                'exam_mark_ledgers.obtain_mark_mcq',
                 'exam_mark_ledgers.absent_theory',
                 'exam_mark_ledgers.absent_practical',
                 's.id as student_id','s.reg_no','s.first_name','s.middle_name','s.last_name')
@@ -351,11 +420,13 @@ class ExamMarkLedgerController extends CollegeBaseController
                     $response['exist'] = view($this->view_path.'.includes.student_tr_rows', [
                         'exist' => $ledgerExist,
                         'absent_theory' => $trAbsentStudent,
-                        'absent_practical' => $prAbsentStudent
+                        'absent_practical' => $prAbsentStudent,
+                        'markLimits' => $markLimits,
                     ])->render();
 
                     $response['students'] = view($this->view_path.'.includes.student_tr', [
-                        'students' => $activeStudent
+                        'students' => $activeStudent,
+                        'markLimits' => $markLimits,
                     ])->render();
 
                     $response['message'] = 'Active Students Found. Please, Manage Mark.';
@@ -363,7 +434,8 @@ class ExamMarkLedgerController extends CollegeBaseController
                     $response['error'] = false;
 
                     $response['students'] = view($this->view_path.'.includes.student_tr', [
-                        'students' => $activeStudent
+                        'students' => $activeStudent,
+                        'markLimits' => $markLimits,
                     ])->render();
 
                     $response['message'] = 'Active Students Found. Please, Manage Mark.';

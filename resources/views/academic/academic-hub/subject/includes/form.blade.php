@@ -42,6 +42,19 @@
 </div>
 
 <div class="form-group">
+    {!! Form::label('mcq_number_theory', 'MCQ (T)', ['class' => 'col-sm-3 control-label']) !!}
+    <div class="col-sm-3">
+        {!! Form::number('mcq_number_theory', null, ["class" => "form-control border-form",'min'=>'0','step'=>'1']) !!}
+        @include('includes.form_fields_validation_message', ['name' => 'mcq_number_theory'])
+    </div>
+    {!! Form::label('mcq_number_practical', 'MCQ (P)', ['class' => 'col-sm-3 control-label']) !!}
+    <div class="col-sm-3">
+        {!! Form::number('mcq_number_practical', null, ["class" => "form-control border-form",'min'=>'0','step'=>'1']) !!}
+        @include('includes.form_fields_validation_message', ['name' => 'mcq_number_practical'])
+    </div>
+</div>
+
+<div class="form-group">
     {!! Form::label('course_fee', 'Course Fee', ['class' => 'col-sm-3 control-label']) !!}
     <div class="col-sm-3">
         {!! Form::number('course_fee', null, ["class" => "form-control border-form",'min'=>'0','step'=>'any']) !!}

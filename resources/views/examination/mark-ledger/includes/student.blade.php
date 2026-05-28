@@ -7,6 +7,7 @@
                 <th>{{__('form_fields.student.fields.name_of_student')}}</th>
                 <th>Absent (Theory)</th>
                 <th>Obtain Mark (Theory)</th>
+                <th>Obtain Mark (MCQ)</th>
                 <th>Absent (Practical)</th>
                 <th>Obtain Mark (Practical)</th>
                 <th></th>

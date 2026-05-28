@@ -7,6 +7,10 @@
             <span class="lbl"></span> Grading
         </label>
         <label class="pos-rel">
+            <input type="radio" name="result-type" value="hsc-grading" id="typeHscGrading" class="ace" />
+            <span class="lbl"></span> HSC Grading
+        </label>
+        <label class="pos-rel">
             <input type="radio" name="result-type" value="university-grading" id="typeUniversityGrading" class="ace" />
             <span class="lbl"></span> UniversityGrading
         </label>

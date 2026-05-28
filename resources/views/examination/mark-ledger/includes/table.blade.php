@@ -14,6 +14,7 @@
                     <th>Reg.Number</th>
                     <th>{{__('form_fields.student.fields.name_of_student')}}</th>
                     <th>Obtain Mark (Theory)</th>
+                    <th>Obtain Mark (MCQ)</th>
                     <th>Obtain Mark (Practical)</th>
                     <th>Absent</th>
                     <th></th>
@@ -30,6 +31,15 @@
                             <td>
                                 @if($student->absent_theory=='0')
                                     {{ $student->obtain_mark_theory }}
+                                @else
+                                    <span class="label label-danger">
+                                        A
+                                    </span>
+                                @endif
+                            </td>
+                            <td>
+                                @if($student->absent_theory=='0')
+                                    {{ $student->obtain_mark_mcq }}
                                 @else
                                     <span class="label label-danger">
                                         A
@@ -79,7 +89,7 @@
                     @endforeach
                 @else
                     <tr>
-                        <td colspan="8">No {{ $panel }} data found. Please Filter {{ $panel }} to show. </td>
+                        <td colspan="9">No {{ $panel }} data found. Please Filter {{ $panel }} to show. </td>
                     </tr>
                 @endif
             </tbody>
