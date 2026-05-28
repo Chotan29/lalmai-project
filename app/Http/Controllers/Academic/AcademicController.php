@@ -63,6 +63,44 @@ class AcademicController extends CollegeBaseController
             })
             ->pluck('semester', 'id');
 
+        // Live fallback: some faculties may miss faculty_semester mapping,
+        // but schedules/students already contain valid semester links.
+        if ($semesters->isEmpty()) {
+            $scheduleSemesterIds = \DB::table('exam_schedules')
+                ->where('faculty_id', (int) $request->faculty_id)
+                ->distinct()
+                ->pluck('semesters_id')
+                ->filter();
+
+            if ($scheduleSemesterIds->isNotEmpty()) {
+                $semesters = Semester::whereIn('id', $scheduleSemesterIds)
+                    ->when(schema_has_column('semesters','title'), function($q){
+                        $q->whereNotIn('title', ['PASSED','CONTINUE']);
+                    }, function($q){
+                        $q->whereNotIn('semester', ['PASSED','CONTINUE']);
+                    })
+                    ->pluck('semester', 'id');
+            }
+        }
+
+        if ($semesters->isEmpty()) {
+            $studentSemesterIds = \DB::table('students')
+                ->where('faculty', (int) $request->faculty_id)
+                ->distinct()
+                ->pluck('semester')
+                ->filter();
+
+            if ($studentSemesterIds->isNotEmpty()) {
+                $semesters = Semester::whereIn('id', $studentSemesterIds)
+                    ->when(schema_has_column('semesters','title'), function($q){
+                        $q->whereNotIn('title', ['PASSED','CONTINUE']);
+                    }, function($q){
+                        $q->whereNotIn('semester', ['PASSED','CONTINUE']);
+                    })
+                    ->pluck('semester', 'id');
+            }
+        }
+
         return response()->json($semesters);
     }
 
