@@ -16,8 +16,10 @@
                         aria-hidden="true"></i>&nbsp{{ __('common.in_active_button') }}</a>
                 <a class="btn-danger btn-sm bulk-action-btn" attr-action-type="delete"><i class="fa fa-trash"
                         aria-hidden="true"></i>&nbsp;{{ __('common.delete_button') }}</a> |
-                <a class="btn-danger btn-sm bulk-action-btn" attr-action-type="delete-all"><i class="fa fa-trash-o"
+                @if(auth()->check() && auth()->user()->hasRole('super-admin'))
+                    <a class="btn-danger btn-sm bulk-action-btn" attr-action-type="delete-all"><i class="fa fa-trash-o"
                     aria-hidden="true"></i>&nbsp;Delete All Students</a> |
+                @endif
                 <a class="btn-primary btn-sm bulk-action-btn" attr-action-type="create-reset-login"><i
                         class="fa fa-user" aria-hidden="true"></i>&nbsp;Create/Reset Login</a>
                 <a class="btn-primary btn-sm bulk-action-btn" attr-action-type="create-reset-library-member"><i

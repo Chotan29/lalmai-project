@@ -63,6 +63,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\App;
 use Illuminate\Support\Facades\Config;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
@@ -1811,11 +1812,13 @@ class StudentController extends CollegeBaseController
             }
         }
 
-        //subjects
-        $subjects = $row->studentSubjects()->get();
-        if(isset($subjects) && $subjects->count() > 0){
-            foreach ($subjects as $subject){
-                $subject->delete();
+        //subjects: detach only student mapping, do not delete master subjects
+        $row->studentSubjects()->detach();
+
+        $majorSubjects = $row->majorSubject()->get();
+        if(isset($majorSubjects) && $majorSubjects->count() > 0){
+            foreach ($majorSubjects as $majorSubject){
+                $majorSubject->delete();
             }
         }
 
@@ -2605,6 +2608,11 @@ class StudentController extends CollegeBaseController
             }
 
             if ($request->get('bulk_action') == 'delete-all') {
+                if (!Auth::check() || !Auth::user()->hasRole('super-admin')) {
+                    return redirect()->route($this->base_route)
+                        ->with($this->message_warning, 'Only super-admin can delete all students.');
+                }
+
                 @set_time_limit(0);
                 @ini_set('max_execution_time', '0');
 
