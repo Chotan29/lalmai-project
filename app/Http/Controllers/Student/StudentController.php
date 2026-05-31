@@ -2096,7 +2096,7 @@ class StudentController extends CollegeBaseController
         } else {
             $response['message'] = 'Invalid request!!';
         }
-        return response()->json(json_encode($response));
+        return response()->json($response);
     }
 
     public function transfer(Request $request)

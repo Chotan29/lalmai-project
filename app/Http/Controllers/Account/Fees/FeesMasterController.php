@@ -11,12 +11,14 @@
 namespace App\Http\Controllers\Account\Fees;
 
 use App\Http\Controllers\CollegeBaseController;
+use App\Models\BillingRun;
 use App\Models\Faculty;
 use App\Models\FeeHead;
 use App\Models\FeeMaster;
 use App\Models\Student;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Validator;
 use URL;
 use ViewHelper;
@@ -304,14 +306,23 @@ class FeesMasterController extends CollegeBaseController
     {
         $id = decrypt($id);
         if (!$row = FeeMaster::find($id)) return parent::invalidRequest();
-        //check if fee receive, first delete all received detail.
-        $feeCollection = $row->feeCollect()->get();
-        if($feeCollection->count() > 0 ){
-            $request->session()->flash($this->message_warning, 'First you need to delete Fee Collection Record.');
+
+        // Block deletion if confirmed payments (status=1) exist
+        $paidCount = $row->feeCollect()->count();
+        if ($paidCount > 0) {
+            $request->session()->flash(
+                $this->message_warning,
+                'Cannot delete: this fee has ' . $paidCount . ' confirmed payment record(s). '
+                . 'Delete each payment entry first, then delete the fee.'
+            );
             return redirect()->back();
         }
+
+        // Remove any unpaid/cancelled collection records before deleting the master
+        $row->collections()->where('status', '!=', 1)->delete();
         $row->delete();
-        $request->session()->flash($this->message_success, $this->panel.' Deleted Successfully.');
+
+        $request->session()->flash($this->message_success, $this->panel . ' Deleted Successfully.');
         return redirect()->back();
     }
 
@@ -394,6 +405,163 @@ class FeesMasterController extends CollegeBaseController
 
         $response['html'] = view($this->view_path.'.includes.fee_tr', ['fee_heads' => $feeHead, "fee_head_attributes" => $fee_head_attributes, 'randId' => $randomId])->render();
         return response()->json(json_encode($response));
+    }
+
+    // -------------------------------------------------------
+    // CLEAR FEES: Preview + bulk delete with payment protection
+    // -------------------------------------------------------
+
+    public function clearFees(Request $request)
+    {
+        $data['faculties']       = $this->activeFaculties();
+        $data['batch']           = $this->activeBatch();
+        $data['academic_status'] = $this->activeStudentAcademicStatus();
+        $data['fee_heads']       = $this->activeFeeHead();
+        $data['billing_runs']    = BillingRun::orderByDesc('run_date')
+                                    ->whereIn('status', ['completed', 'partial', 'approved'])
+                                    ->get(['id', 'period_label', 'period_key', 'run_date', 'status']);
+
+        $data['preview']         = null;
+        $data['filter_query']    = [];
+
+        if ($request->isMethod('post') && $request->input('action') === 'preview') {
+            $result = $this->_buildClearQuery($request);
+            $query  = $result['query'];
+
+            $fees = $query->with('collections')->get();
+
+            $clearable  = [];
+            $protected  = [];
+            foreach ($fees as $fm) {
+                $paid = $fm->collections()->where('status', 1)->sum('paid_amount');
+                if ($paid > 0) {
+                    $protected[] = $fm;
+                } else {
+                    $clearable[] = $fm;
+                }
+            }
+
+            $data['preview'] = [
+                'clearable_count'  => count($clearable),
+                'protected_count'  => count($protected),
+                'clearable_amount' => array_sum(array_column($clearable, 'fee_amount')),
+            ];
+            $data['filter_query'] = $result['filters'];
+        }
+
+        if ($request->isMethod('post') && $request->input('action') === 'execute') {
+            $result = $this->_buildClearQuery($request);
+            $query  = $result['query'];
+
+            $fees = $query->with('collections')->get();
+
+            $deleted   = 0;
+            $protected = 0;
+            $errors    = 0;
+
+            DB::beginTransaction();
+            try {
+                foreach ($fees as $fm) {
+                    $paid = $fm->collections()->where('status', 1)->sum('paid_amount');
+                    if ($paid > 0) {
+                        $protected++;
+                        continue;
+                    }
+                    // Delete unpaid collections first, then master
+                    $fm->collections()->where('status', '!=', 1)->delete();
+                    $fm->delete();
+                    $deleted++;
+                }
+                DB::commit();
+            } catch (\Throwable $e) {
+                DB::rollBack();
+                $errors++;
+                $request->session()->flash($this->message_warning, 'Error during deletion: ' . $e->getMessage());
+                return redirect()->back()->withInput();
+            }
+
+            $msg = "{$deleted} fee(s) deleted successfully.";
+            if ($protected > 0) $msg .= " {$protected} fee(s) were protected (have existing payments).";
+            $request->session()->flash($this->message_success, $msg);
+            return redirect()->route('account.fees.master.clear');
+        }
+
+        return view(parent::loadDataToView('account.fees.master.clear'), $data);
+    }
+
+    private function _buildClearQuery(Request $request)
+    {
+        $filters = [];
+
+        $query = FeeMaster::join('students', 'students.id', '=', 'fee_masters.students_id')
+                    ->select('fee_masters.*');
+
+        // Student-level filter
+        if ($request->filled('student_id')) {
+            $sid = (int) $request->input('student_id');
+            $query->where('fee_masters.students_id', $sid);
+            $filters['student_id'] = $sid;
+        }
+
+        if ($request->filled('reg_no')) {
+            $query->where('students.reg_no', 'like', '%' . $request->input('reg_no') . '%');
+            $filters['reg_no'] = $request->input('reg_no');
+        }
+
+        // Class-level filters
+        if ($request->filled('faculty') && $request->input('faculty') > 0) {
+            $query->where('students.faculty', $request->input('faculty'));
+            $filters['faculty'] = $request->input('faculty');
+        }
+
+        if ($request->filled('semester_select') && $request->input('semester_select') > 0) {
+            $query->where('students.semester', $request->input('semester_select'));
+            $filters['semester_select'] = $request->input('semester_select');
+        }
+
+        if ($request->filled('batch') && $request->input('batch') > 0) {
+            $query->where('students.batch', $request->input('batch'));
+            $filters['batch'] = $request->input('batch');
+        }
+
+        // Fee-specific filters
+        if ($request->filled('fee_heads') && $request->input('fee_heads') > 0) {
+            $query->where('fee_masters.fee_head', $request->input('fee_heads'));
+            $filters['fee_heads'] = $request->input('fee_heads');
+        }
+
+        if ($request->filled('billing_run_id')) {
+            $query->where('fee_masters.billing_run_id', $request->input('billing_run_id'));
+            $filters['billing_run_id'] = $request->input('billing_run_id');
+        }
+
+        if ($request->filled('billing_period_key')) {
+            $query->where('fee_masters.billing_period_key', 'like', '%' . $request->input('billing_period_key') . '%');
+            $filters['billing_period_key'] = $request->input('billing_period_key');
+        }
+
+        if ($request->filled('fee_due_date_start')) {
+            $query->where('fee_masters.fee_due_date', '>=', $request->input('fee_due_date_start'));
+            $filters['fee_due_date_start'] = $request->input('fee_due_date_start');
+        }
+
+        if ($request->filled('fee_due_date_end')) {
+            $query->where('fee_masters.fee_due_date', '<=', $request->input('fee_due_date_end'));
+            $filters['fee_due_date_end'] = $request->input('fee_due_date_end');
+        }
+
+        // Status filter — default to unpaid only
+        $statusFilter = $request->input('fee_status', 'unpaid');
+        if ($statusFilter === 'unpaid') {
+            $query->where('fee_masters.status', 'active');
+            $filters['fee_status'] = 'unpaid';
+        } elseif ($statusFilter === 'inactive') {
+            $query->where('fee_masters.status', 'in-active');
+            $filters['fee_status'] = 'inactive';
+        }
+        // 'all' = no status filter
+
+        return ['query' => $query, 'filters' => $filters];
     }
 
 }

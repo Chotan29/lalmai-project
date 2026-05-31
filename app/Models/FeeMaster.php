@@ -19,7 +19,11 @@ class FeeMaster extends Model
         'fee_due_date2',
         'fee_due_date3',
         'fee_amount',
-        'status'
+        'status',
+        // Recurring billing columns (added 2026-05-31)
+        'billing_run_id',
+        'billing_period_key',
+        'source_type',
     ];
 
     const INSTALLMENT_PERCENTAGES = [
@@ -34,6 +38,11 @@ class FeeMaster extends Model
     public function student()
     {
         return $this->belongsTo(Student::class, 'students_id');
+    }
+
+    public function billingRun()
+    {
+        return $this->belongsTo(BillingRun::class, 'billing_run_id');
     }
 
     public function collections()

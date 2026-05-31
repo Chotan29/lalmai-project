@@ -44,6 +44,10 @@ class ExamPrintController extends CollegeBaseController
 
     public function admitCard(Request $request)
     {
+        if ($request->isMethod('GET')) {
+            return back()->with($this->message_warning, 'Please select students from the exam admit card page and click Print.');
+        }
+
         $data = [];
         $data['year'] = $request->get('years_id');
         $data['month'] = $request->get('months_id');

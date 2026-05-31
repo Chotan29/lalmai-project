@@ -201,8 +201,28 @@ trait ExaminationScope{
             return $configuredPassMark;
         }
 
-        // Fallback for legacy/empty data.
-        return $mcqTotalMark > 0 ? ($mcqTotalMark >= 25 ? 10 : round($mcqTotalMark * 0.40, 2)) : 0;
+        // Bangladesh HSC board standard MCQ pass marks
+        if ($mcqTotalMark == 30) return 10;
+        if ($mcqTotalMark == 25) return 8;
+
+        // Fallback: 33% for other values
+        return $mcqTotalMark > 0 ? round($mcqTotalMark * 0.33, 2) : 0;
+    }
+
+    public function getHscPracticalPassMark($practicalFullMark, $configuredPassMark = null)
+    {
+        $practicalFullMark = (float) $practicalFullMark;
+        $configuredPassMark = $configuredPassMark !== null ? (float) $configuredPassMark : null;
+
+        if ($configuredPassMark !== null && $configuredPassMark > 0) {
+            return $configuredPassMark;
+        }
+
+        // Bangladesh HSC board standard practical pass marks
+        if ($practicalFullMark == 25) return 8;
+
+        // Fallback: 40% for other values
+        return $practicalFullMark > 0 ? round($practicalFullMark * 0.40, 2) : 0;
     }
 
     public function isHscEnglishSubject($title, $code = null)
@@ -911,7 +931,7 @@ trait ExaminationScope{
                     $subject->full_mark_theory = $masterFullTheory;
                     $subject->pass_mark_theory = $masterPassTheory;
                     $subject->full_mark_practical = $masterFullPractical;
-                    $subject->pass_mark_practical = $masterPassPractical;
+                    $subject->pass_mark_practical = $this->getHscPracticalPassMark($masterFullPractical, $masterPassPractical);
                     $subject->mcq_number_theory = (float) ($subjectDetail->mcq_number_theory ?? 0);
                     $subject->mcq_number_practical = (float) ($subjectDetail->mcq_number_practical ?? 0);
                     $subject->full_mark_mcq = $subject->mcq_number_theory;

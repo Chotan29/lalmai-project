@@ -81,27 +81,9 @@
         });
 
         function loadSemesters($this) {
-            var year = $('select[name="years_id"]').val();
-            var month = $('select[name="months_id"]').val();
-            var exam = $('select[name="exams_id"]').val();
             var faculty = $('select[name="faculty"]').val();
 
-            if (year == 0) {
-                toastr.info("Please, Select Year", "Info:");
-                return false;
-            }
-
-            if (month == 0) {
-                toastr.info("Please, Select Month", "Info:");
-                return false;
-            }
-
-            if (exam == 0) {
-                toastr.info("Please, Select Exam Type", "Info:");
-                return false;
-            }
-
-            if (faculty == 0) {
+            if (!faculty || faculty == 0) {
                 toastr.info("Please, Select Faculty/Program/Class", "Info:");
                 return false;
             }
@@ -109,20 +91,20 @@
             $.ajax({
                 type: 'POST',
                 url: '{{ route('student.find-semester') }}',
+                dataType: 'json',
                 data: {
                     _token: '{{ csrf_token() }}',
                     faculty_id: $this.value
                 },
-                success: function (response) {
-                    var data = $.parseJSON(response);
+                success: function (data) {
                     if (data.error) {
-                        toastr.warning(data.error, "Warning");
+                        toastr.warning(data.message, "Warning");
                     } else {
                         $('.semester_select').html('').append('<option value="0">Select Sem./Sec.</option>');
                         $.each(data.semester, function(key,valueObj){
                             $('.semester_select').append('<option value="'+valueObj.id+'">'+valueObj.semester+'</option>');
                         });
-                        toastr.success(data.success, "Success:");
+                        toastr.success(data.message, "Success:");
                     }
                 }
             });

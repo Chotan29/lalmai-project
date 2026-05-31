@@ -15,7 +15,8 @@ class Kernel extends ConsoleKernel
         Commands\DatabaseBackUp::class,
         Commands\AttendanceDispatchMissing::class,
         Commands\InovaceSyncPunches::class,      // used by pipeline
-        Commands\AttendanceMinutePipeline::class // <-- add this
+        Commands\AttendanceMinutePipeline::class, // <-- add this
+        Commands\GenerateRecurringBills::class,   // recurring billing auto-generator
     ];
 
     protected function schedule(Schedule $schedule)
@@ -66,6 +67,23 @@ class Kernel extends ConsoleKernel
             ->dailyAt('03:30')
             ->timezone($tz)
             ->withoutOverlapping();
+
+        // Recurring billing auto-generator — time configurable via Billing Settings
+        try {
+            $billSetting = \App\Models\BillingSetting::first();
+            $bHour    = $billSetting ? str_pad((int) $billSetting->scheduler_hour,   2, '0', STR_PAD_LEFT) : '06';
+            $bMinute  = $billSetting ? str_pad((int) $billSetting->scheduler_minute, 2, '0', STR_PAD_LEFT) : '30';
+            $bEnabled = $billSetting ? (bool) $billSetting->scheduler_enabled : true;
+        } catch (\Throwable $e) {
+            $bHour = '06'; $bMinute = '30'; $bEnabled = true;
+        }
+        if ($bEnabled) {
+            $schedule->command('bill:generate-recurring')
+                ->dailyAt("{$bHour}:{$bMinute}")
+                ->timezone($tz)
+                ->withoutOverlapping()
+                ->runInBackground();
+        }
 
         // Backups
         $schedule->command('database:backup')->daily();

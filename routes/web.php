@@ -669,6 +669,8 @@ Route::group(['prefix' => 'account/',                                   'as' => 
     Route::get('fees/master',                    ['as' => 'fees.master',                  'middleware' => ['ability:super-admin,fees-master-index'],            'uses' => 'Fees\FeesMasterController@index']);
     Route::get('fees/master/add',                ['as' => 'fees.master.add',              'middleware' => ['ability:super-admin,fees-master-add'],              'uses' => 'Fees\FeesMasterController@add']);
     Route::post('fees/master/store',             ['as' => 'fees.master.store',            'middleware' => ['ability:super-admin,fees-master-add'],              'uses' => 'Fees\FeesMasterController@store']);
+    Route::get('fees/master/clear',              ['as' => 'fees.master.clear',            'middleware' => ['ability:super-admin,fees-master-clear'],            'uses' => 'Fees\FeesMasterController@clearFees']);
+    Route::post('fees/master/clear',             ['as' => 'fees.master.clear.post',       'middleware' => ['ability:super-admin,fees-master-clear'],            'uses' => 'Fees\FeesMasterController@clearFees']);
     Route::get('fees/master/{id}/edit',          ['as' => 'fees.master.edit',             'middleware' => ['ability:super-admin,fees-master-edit'],             'uses' => 'Fees\FeesMasterController@edit']);
     Route::post('fees/master/{id}/update',       ['as' => 'fees.master.update',           'middleware' => ['ability:super-admin,fees-master-edit'],             'uses' => 'Fees\FeesMasterController@update']);
     Route::get('fees/master/{id}/delete',        ['as' => 'fees.master.delete',           'middleware' => ['ability:super-admin,fees-master-delete'],           'uses' => 'Fees\FeesMasterController@delete']);
@@ -676,6 +678,39 @@ Route::group(['prefix' => 'account/',                                   'as' => 
     Route::get('fees/master/{id}/active',        ['as' => 'fees.master.active',           'middleware' => ['ability:super-admin,fees-master-active'],           'uses' => 'Fees\FeesMasterController@Active']);
     Route::get('fees/master/{id}/in-active',     ['as' => 'fees.master.in-active',        'middleware' => ['ability:super-admin,fees-master-in-active'],        'uses' => 'Fees\FeesMasterController@inActive']);
     Route::post('fees/master/fee-html',          ['as' => 'fees.master.fee-html',                                                                               'uses' => 'Fees\FeesMasterController@feeHtmlRow']);
+
+    /*------------------------------------------------------------------
+     * BILLING PROFILES — Recurring auto-billing configuration
+     *-----------------------------------------------------------------*/
+    Route::get('fees/billing-profile',                      ['as' => 'fees.billing-profile',                    'middleware' => ['ability:super-admin,fees-billing-profile-index'],    'uses' => 'Fees\BillingProfileController@index']);
+    Route::get('fees/billing-profile/create',               ['as' => 'fees.billing-profile.create',             'middleware' => ['ability:super-admin,fees-billing-profile-add'],      'uses' => 'Fees\BillingProfileController@create']);
+    Route::post('fees/billing-profile/store',               ['as' => 'fees.billing-profile.store',              'middleware' => ['ability:super-admin,fees-billing-profile-add'],      'uses' => 'Fees\BillingProfileController@store']);
+    Route::get('fees/billing-profile/{id}/edit',            ['as' => 'fees.billing-profile.edit',               'middleware' => ['ability:super-admin,fees-billing-profile-edit'],     'uses' => 'Fees\BillingProfileController@edit']);
+    Route::post('fees/billing-profile/{id}/update',         ['as' => 'fees.billing-profile.update',             'middleware' => ['ability:super-admin,fees-billing-profile-edit'],     'uses' => 'Fees\BillingProfileController@update']);
+    Route::get('fees/billing-profile/{id}/active',          ['as' => 'fees.billing-profile.active',             'middleware' => ['ability:super-admin,fees-billing-profile-edit'],     'uses' => 'Fees\BillingProfileController@active']);
+    Route::get('fees/billing-profile/{id}/in-active',       ['as' => 'fees.billing-profile.in-active',          'middleware' => ['ability:super-admin,fees-billing-profile-edit'],     'uses' => 'Fees\BillingProfileController@inActive']);
+    Route::get('fees/billing-profile/{id}/delete',          ['as' => 'fees.billing-profile.delete',             'middleware' => ['ability:super-admin,fees-billing-profile-delete'],   'uses' => 'Fees\BillingProfileController@delete']);
+    Route::get('fees/billing-profile/fee-head-amount',      ['as' => 'fees.billing-profile.fee-head-amount',                                                                           'uses' => 'Fees\BillingProfileController@getFeeHeadAmount']);
+
+    /*------------------------------------------------------------------
+     * BILLING RUNS — Audit log, drill-down, manual trigger
+     *-----------------------------------------------------------------*/
+    Route::get('fees/billing-run',                                    ['as' => 'fees.billing-run',                          'middleware' => ['ability:super-admin,fees-billing-run-index'],          'uses' => 'Fees\BillingRunController@index']);
+    Route::get('fees/billing-run/{id}/detail',                        ['as' => 'fees.billing-run.detail',                   'middleware' => ['ability:super-admin,fees-billing-run-index'],          'uses' => 'Fees\BillingRunController@detail']);
+    Route::post('fees/billing-profile/{id}/trigger',                  ['as' => 'fees.billing-profile.trigger',              'middleware' => ['ability:super-admin,fees-billing-profile-add'],        'uses' => 'Fees\BillingRunController@trigger']);
+    Route::post('fees/billing-run/{id}/resend-sms',                   ['as' => 'fees.billing-run.resend-sms',               'middleware' => ['ability:super-admin,fees-billing-run-index'],          'uses' => 'Fees\BillingRunController@resendSms']);
+    Route::post('fees/billing-run/{id}/approve',                      ['as' => 'fees.billing-run.approve',                  'middleware' => ['ability:super-admin,fees-billing-run-approve'],        'uses' => 'Fees\BillingRunController@approveRun']);
+    Route::post('fees/billing-run/{id}/cancel',                       ['as' => 'fees.billing-run.cancel',                   'middleware' => ['ability:super-admin,fees-billing-run-cancel'],         'uses' => 'Fees\BillingRunController@cancelRun']);
+    Route::post('fees/billing-run/{id}/delete',                       ['as' => 'fees.billing-run.delete',                   'middleware' => ['ability:super-admin,fees-billing-run-delete'],         'uses' => 'Fees\BillingRunController@deleteRun']);
+    Route::post('fees/billing-run/{id}/bulk-action',                  ['as' => 'fees.billing-run.bulk-action',              'middleware' => ['ability:super-admin,fees-billing-run-cancel'],         'uses' => 'Fees\BillingRunController@bulkAction']);
+    Route::post('fees/billing-run/detail/{detailId}/cancel',          ['as' => 'fees.billing-run.detail.cancel',            'middleware' => ['ability:super-admin,fees-billing-run-cancel'],         'uses' => 'Fees\BillingRunController@cancelDetail']);
+    Route::post('fees/billing-run/detail/{detailId}/restore',         ['as' => 'fees.billing-run.detail.restore',           'middleware' => ['ability:super-admin,fees-billing-run-cancel'],         'uses' => 'Fees\BillingRunController@restoreDetail']);
+
+    /*------------------------------------------------------------------
+     * BILLING SETTINGS — Scheduler time config
+     *-----------------------------------------------------------------*/
+    Route::get('fees/billing-settings',                               ['as' => 'fees.billing-settings',                     'middleware' => ['ability:super-admin,fees-billing-settings'],           'uses' => 'Fees\BillingSettingController@index']);
+    Route::post('fees/billing-settings/update',                       ['as' => 'fees.billing-settings.update',              'middleware' => ['ability:super-admin,fees-billing-settings'],           'uses' => 'Fees\BillingSettingController@update']);
 
     /*Quick Fee Receive */
     Route::get('fees/quick-receive',                    ['as' => 'fees.quick-receive',                  'middleware' => ['ability:super-admin,fees-quick-receive-add'],            'uses' => 'Fees\FeesCollectionController@quickReceive']);
@@ -1662,7 +1697,7 @@ Route::group(['prefix' => 'print-out/',                                 'as' => 
     Route::get('payroll/staff-ledger/{id}',              ['as' => 'payroll.staff-ledger',                     'middleware' => ['ability:super-admin,payroll-print-staff-ledger'],           'uses' => 'PayrollPrintController@staffLedger']);
 
     //exam print
-    Route::post('exam/admit-card',                      ['as' => 'exam.admit-card',                         'middleware' => ['ability:super-admin,exam-print-admitcard'],                     'uses' => 'ExamPrintController@admitCard']);
+    Route::match(['GET','POST'], 'exam/admit-card',     ['as' => 'exam.admit-card',                         'middleware' => ['ability:super-admin,exam-print-admitcard'],                     'uses' => 'ExamPrintController@admitCard']);
     Route::post('exam/routine',                         ['as' => 'exam.routine',                            'middleware' => ['ability:super-admin,exam-print-routine'],                       'uses' => 'ExamPrintController@examRoutine']);
     Route::match(['GET','POST'], 'exam/mark-sheet/',    ['as' => 'exam.mark-sheet',                         'middleware' => ['ability:super-admin,exam-print-mark-sheet'],                    'uses' => 'ExamPrintController@examMarkSheet']);
     Route::post('exam/grade-sheet/',                     ['as' => 'exam.grade-sheet',                         'middleware' => ['ability:super-admin,exam-print-mark-sheet'],                    'uses' => 'ExamPrintController@examGradeSheet']);

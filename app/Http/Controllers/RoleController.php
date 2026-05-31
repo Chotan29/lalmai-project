@@ -44,9 +44,15 @@ class RoleController extends CollegeBaseController
     public function create()
     {
         $data = [];
-       $permissions = Permission::all();
+        $billingGroupOrder = [
+            'Account Fees Billing Profile' => 347.1,
+            'Account Fees Billing Run'     => 347.2,
+            'Account Fees Master'          => 347.3,
+        ];
+        $permissions = Permission::all()->sortBy(function($p) use ($billingGroupOrder) {
+            return isset($billingGroupOrder[$p->group]) ? $billingGroupOrder[$p->group] : $p->id;
+        });
        $data['permission'] = $permissions->groupBy('group');
-       //dd($data['permission']->groupBy('group'));
         return view(parent::loadDataToView($this->view_path.'.add'), compact('data'));
     }
 
@@ -89,7 +95,14 @@ class RoleController extends CollegeBaseController
     {
         $id = decrypt($id);
         if (!$data['row'] = Role::find($id)) return parent::invalidRequest();
-        $permissions = Permission::all();
+        $billingGroupOrder = [
+            'Account Fees Billing Profile' => 347.1,
+            'Account Fees Billing Run'     => 347.2,
+            'Account Fees Master'          => 347.3,
+        ];
+        $permissions = Permission::all()->sortBy(function($p) use ($billingGroupOrder) {
+            return isset($billingGroupOrder[$p->group]) ? $billingGroupOrder[$p->group] : $p->id;
+        });
         $data['permission'] = $permissions->groupBy('group');
         $data['role_permission'] = $data['row']->perms()->pluck('id','id')->toArray();
         return view(parent::loadDataToView($this->view_path.'.edit'), compact('data'));
