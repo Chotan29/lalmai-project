@@ -307,7 +307,7 @@
                         <span class="info-value">{{ ViewHelper::getFacultyTitle($student->faculty) ?: 'N/A' }}</span>
                     </div>
                     <div class="admit-info-cell">
-                        <span class="info-label">Reg. No:</span>
+                        <span class="info-label">Roll No:</span>
                         <span class="info-value">{{ $student->reg_no ?: 'N/A' }}</span>
                     </div>
                 </div>
@@ -317,7 +317,7 @@
                         <span class="info-value caps">{{ $fullName }}</span>
                     </div>
                     <div class="admit-info-cell">
-                        <span class="info-label">Board Roll:</span>
+                        <span class="info-label">Board Reg:</span>
                         <span class="info-value">{{ $student->university_reg ?: 'N/A' }}</span>
                     </div>
                 </div>
@@ -375,9 +375,6 @@
             <div class="admit-sig-row">
                 <div class="sig-box">
                     <div class="sig-line">Examinee's Signature</div>
-                </div>
-                <div class="sig-box">
-                    <div class="sig-line">Controller of Examinations</div>
                 </div>
                 <div class="sig-box">
                     <div class="sig-line">Principal</div>
