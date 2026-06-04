@@ -362,7 +362,7 @@
                 @if($optionalSubjects->count() > 0)
                     @php
                         $optNames = $optionalSubjects->map(function ($s) {
-                            return strtoupper($s->title);
+                            return trim(preg_replace('/\(optional\)/i', '', strtoupper($s->title)));
                         })->implode(', ');
                     @endphp
                     <div class="optional-bar">
