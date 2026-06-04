@@ -285,7 +285,7 @@
                     <div><span class="ahl-admit">ADMIT CARD</span></div>
                     <div class="ahl-exam">
                         HSC Examination-2026
-                        <span class="ahl-exam-sub">(Class Test / Practical / Half Yearly / Year Final)</span>
+                        <span class="ahl-exam-sub">({{ $data['exam_name'] ?? '' }})</span>
                     </div>
                 </div>
 

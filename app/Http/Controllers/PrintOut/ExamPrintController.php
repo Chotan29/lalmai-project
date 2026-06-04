@@ -52,6 +52,7 @@ class ExamPrintController extends CollegeBaseController
         $data['year'] = $request->get('years_id');
         $data['month'] = $request->get('months_id');
         $data['exam'] = $request->get('exams_id');
+        $data['exam_name'] = optional(Exam::find($request->get('exams_id')))->title;
         $data['faculty'] = $request->get('target_faculty');
         $data['semester'] = $request->get('semester_select');
         $whereCondition = [
