@@ -84,12 +84,12 @@
         <div class="form-group">
             {!! Form::label('password', 'Password', ['class' => 'col-sm-2 control-label']) !!}
             <div class="col-sm-4">
-                {!! Form::password('password',  ["placeholder" => "", "class" => "form-control border-form", "id" => "guardian_password","required"]) !!}
+                {!! Form::password('password',  ["placeholder" => "", "class" => "form-control border-form", "id" => "guardian_password", "autocomplete" => "new-password", "required"]) !!}
             </div>
 
             {!! Form::label('confirmPassword', 'Confirm Password', ['class' => 'col-sm-2 control-label']) !!}
             <div class="col-sm-4">
-                {!! Form::password('confirmPassword',  ["placeholder" => "", "class" => "form-control border-form"/*,"onkeyup"=>"passCheck()"*/,"id" => "guardian_password_confirmation", "required"]) !!}
+                {!! Form::password('confirmPassword',  ["placeholder" => "", "class" => "form-control border-form"/*,"onkeyup"=>"passCheck()"*/,"id" => "guardian_password_confirmation", "autocomplete" => "new-password", "required"]) !!}
             </div>
         </div>
         <div class="col-sm-4">

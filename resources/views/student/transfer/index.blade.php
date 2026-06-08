@@ -99,8 +99,7 @@
                     _token: '{{ csrf_token() }}',
                     faculty_id: $this.value
                 },
-                success: function (response) {
-                    var data = $.parseJSON(response);
+                success: function (data) {
                     if (data.error) {
                         $.notify(data.message, "warning");
                     } else {

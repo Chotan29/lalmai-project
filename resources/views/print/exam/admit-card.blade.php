@@ -13,7 +13,7 @@
 
 .admit-page-wrap {
     width: 210mm;
-    min-height: 297mm;
+    height: 297mm;
     margin: 0 auto 20px;
     background: #fff;
     font-family: 'Poppins', sans-serif;
@@ -21,28 +21,30 @@
     position: relative;
     border: 2px solid #0f3e6a;
     padding: 3px;
+    display: flex;
+    flex-direction: column;
 }
 .admit-page-inner {
     width: 100%;
-    min-height: calc(297mm - 10px);
+    flex: 1;
     border: 1px solid #3a6a9b;
-    padding: 0 0 14mm;
+    padding: 0;
     position: relative;
     overflow: hidden;
+    display: flex;
+    flex-direction: column;
 }
-.admit-page-inner::before {
-    content: '';
+.admit-page-inner > * { position: relative; z-index: 1; flex-shrink: 0; }
+.admit-wm {
     position: absolute;
-    inset: 0;
-    background-image: var(--wm-url);
-    background-repeat: no-repeat;
-    background-size: 55%;
-    background-position: center 42%;
-    opacity: 0.055;
+    top: 55%; left: 50%;
+    transform: translate(-50%, -50%);
+    width: 45%;
+    opacity: 0.08;
     pointer-events: none;
     z-index: 0;
+    display: block;
 }
-.admit-page-inner > * { position: relative; z-index: 1; }
 
 .admit-top-strip { background: #0f3e6a; height: 7px; }
 
@@ -70,7 +72,7 @@
     grid-template-columns: 26mm 1fr 30mm;
     gap: 8px;
     align-items: center;
-    padding: 10px 14mm;
+    padding: 12px 14mm;
     border-bottom: 1.5px solid #d0dcea;
 }
 .admit-logo-wrap { display: flex; align-items: center; justify-content: center; }
@@ -116,7 +118,7 @@
     display: grid;
     grid-template-columns: 110px 1fr;
     align-items: center;
-    padding: 5px 10px;
+    padding: 7px 10px;
     gap: 4px;
 }
 .admit-info-cell:first-child { border-right: 1px solid #e0eaf5; }
@@ -162,29 +164,39 @@
 
 .admit-sig-row {
     display: flex; justify-content: space-between; align-items: flex-end;
-    padding: 0 14mm; margin-top: 18px;
+    padding: 0 14mm; margin-top: 20px; margin-bottom: 4px;
 }
 .sig-box { text-align: center; min-width: 130px; }
 .sig-line {
-    border-top: 1px solid #1a3550; padding-top: 4px; margin-top: 28px;
+    border-top: 1px solid #1a3550; padding-top: 5px; margin-top: 32px;
     font-size: 11px; font-weight: 700; color: #0f3e6a; letter-spacing: .5px;
+}
+.sig-barcode { text-align: center; }
+.sig-barcode canvas, .sig-barcode img { display: block; margin: 0 auto; width: 68px !important; height: 68px !important; }
+.sig-barcode-label {
+    font-size: 9px; font-weight: 700; color: #1a2b3c;
+    letter-spacing: 1px; margin-top: 3px;
 }
 
 .niyom-wrap {
-    margin: 12px 14mm 0;
+    margin: 10px 14mm 8mm;
     border: 1.5px solid #1a4f7a; border-radius: 4px; overflow: hidden;
     font-family: 'SolaimanLipi','Kalpurush','Hind Siliguri','Noto Sans Bengali',Arial,sans-serif;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
 }
 .niyom-head {
     background: #0f3e6a; color: #fff;
     text-align: center; font-size: 13px; font-weight: 700;
-    padding: 6px 12px; letter-spacing: .3px;
+    padding: 7px 12px; letter-spacing: .3px;
+    flex-shrink: 0;
 }
-.niyom-body { padding: 8px 12px; }
+.niyom-body { padding: 10px 14px; flex: 1; }
 .niyom-list { list-style: none; margin: 0; padding: 0; }
 .niyom-list li {
-    font-size: 11px; line-height: 1.65;
-    color: #1a2b3c; margin-bottom: 2px;
+    font-size: 11.5px; line-height: 1.75;
+    color: #1a2b3c; margin-bottom: 1px;
     display: flex; gap: 5px;
 }
 .niyom-num { font-weight: 800; min-width: 26px; color: #0f3e6a; flex-shrink: 0; }
@@ -194,10 +206,14 @@
     height: 5px; background: #0f3e6a;
 }
 
-@media print {
-    body { background: #fff !important; margin: 0; padding: 0; }
+@page {
+    size: A4;
+    margin: 0;
+}
 
-    /* Hide ACE admin navigation, sidebar, and UI chrome */
+@media print {
+    body { margin: 0; padding: 0; }
+
     .navbar-fixed-top, .navbar-fixed-bottom,
     .main-sidebar, .sidebar, .nav-list,
     .breadcrumbs, .page-header,
@@ -205,26 +221,64 @@
     .ace-settings-container, .btn-scroll-up,
     footer.main-footer { display: none !important; }
 
-    /* Reset layout containers — do NOT hide them */
     .main-container, .main-content, .main-content-inner, .page-content {
-        margin: 0 !important;
-        padding: 0 !important;
-        border: 0 !important;
-        width: 100% !important;
-        min-height: auto !important;
-        float: none !important;
-        background: #fff !important;
+        margin: 0 !important; padding: 0 !important;
+        border: 0 !important; width: 100% !important;
+        min-height: auto !important; float: none !important;
+        background: transparent !important;
     }
 
-    /* Admit card sizing */
     .admit-page-wrap {
-        width: 100%;
-        min-height: auto;
-        margin: 0 auto;
-        border: 2px solid #0f3e6a;
+        width: 100%; height: 297mm;
+        margin: 0; border: 2px solid #0f3e6a;
         page-break-after: always;
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
     }
-    .admit-page-inner { min-height: auto; }
+    .admit-page-inner {
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+    }
+    .admit-top-strip,
+    .admit-bottom-strip {
+        background: #0f3e6a !important;
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+    }
+    .ahl-admit {
+        background: #0f3e6a !important;
+        color: #fff !important;
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+    }
+    .subject-head-bar {
+        background: #0f3e6a !important;
+        color: #fff !important;
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+    }
+    .niyom-head {
+        background: #0f3e6a !important;
+        color: #fff !important;
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+    }
+    .admit-info-row:nth-child(odd) .admit-info-cell {
+        background: #f8fbff !important;
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+    }
+    .subj-item:nth-child(odd) {
+        background: #f8fbff !important;
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+    }
+    .admit-photo-box {
+        background: #f4f8fc !important;
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+    }
+    .admit-wm { display: block !important; opacity: 0.08 !important; z-index: 0 !important; }
     .niyom-wrap { page-break-inside: avoid; }
 }
 </style>
@@ -259,16 +313,15 @@
         $dob      = $student->date_of_birth ? \Carbon\Carbon::parse($student->date_of_birth)->format('d M Y') : 'N/A';
     @endphp
 
-    <div class="admit-page-wrap" @if($hasLogo) style="--wm-url: url('{{ $logoPath }}')" @endif>
+    <div class="admit-page-wrap">
+        @if($hasLogo)
+        <img class="admit-wm" src="{{ $logoPath }}" alt="">
+        @endif
         <div class="admit-page-inner">
 
             <div class="admit-top-strip"></div>
 
-            <div class="admit-title-band">
-                <span class="atb-left">গণপ্রজাতন্ত্রী বাংলাদেশ সরকার</span>
-                <span class="atb-center">প্রবেশপত্র / ADMIT CARD</span>
-                <span class="atb-right">The People's Republic of Bangladesh</span>
-            </div>
+
 
             <div class="admit-header">
 
@@ -279,13 +332,12 @@
                 </div>
 
                 <div class="admit-headline">
-                    <div class="ahl-republic">Government College of Bangladesh Education Board</div>
+                    <div class="ahl-republic">The People's Republic of Bangladesh</div>
                     <div class="ahl-college">Lalmai Government College, Cumilla</div>
                     <div class="ahl-web">Web: https://lalmaigc.edu.bd</div>
                     <div><span class="ahl-admit">ADMIT CARD</span></div>
                     <div class="ahl-exam">
-                        HSC Examination-2026
-                        <span class="ahl-exam-sub">({{ $data['exam_name'] ?? '' }})</span>
+                        HSC Examination ({{ $data['exam_name'] ?? 'Eleventh Final Exam' }}) -2026
                     </div>
                 </div>
 
@@ -295,7 +347,6 @@
                             <img src="{{ $photoSrc }}" alt="Photo">
                         @endif
                     </div>
-                    <span class="admit-photo-label">Photo</span>
                 </div>
 
             </div>
@@ -360,14 +411,13 @@
                 @endif
 
                 @if($optionalSubjects->count() > 0)
-                    @php
-                        $optNames = $optionalSubjects->map(function ($s) {
-                            return trim(preg_replace('/\(optional\)/i', '', strtoupper($s->title)));
-                        })->implode(', ');
-                    @endphp
-                    <div class="optional-bar">
-                        <span class="opt-label">Optional:</span>
-                        <span class="opt-value">{{ $optNames }}</span>
+                    <div class="subject-grid">
+                        @foreach($optionalSubjects as $subj)
+                            <div class="subj-item">
+                                <span class="subj-code">{{ preg_replace('/^O-/i', '', $subj->code ?: '-') }}</span>
+                                <span class="subj-name">{{ trim(preg_replace('/\(optional\)/i', '', $subj->title)) }} (Optional)</span>
+                            </div>
+                        @endforeach
                     </div>
                 @endif
             </div>
@@ -375,6 +425,9 @@
             <div class="admit-sig-row">
                 <div class="sig-box">
                     <div class="sig-line">Examinee's Signature</div>
+                </div>
+                <div class="sig-barcode">
+                    <div class="admit-qr" data-roll="Roll: {{ $student->reg_no }}&#10;Name: {{ $fullName }}&#10;Session: {{ ViewHelper::getStudentBatchById($student->batch) ?: 'N/A' }}&#10;College: Lalmai Govt. College, Cumilla"></div>
                 </div>
                 <div class="sig-box">
                     <div class="sig-line">Principal</div>
@@ -385,18 +438,18 @@
                 <div class="niyom-head">পরীক্ষার্থীর অবশ্যই পালনীয় নিয়মাবলী</div>
                 <div class="niyom-body">
                     <ul class="niyom-list">
-                        <li><span class="niyom-num">০১।</span> পরীক্ষা শিক্ষা বোর্ড কর্তৃক পূর্ব ঘোষিত সকল নিয়ম অনুযায়ী নির্দিষ্ট তারিখ ও সময়ে পরীক্ষার হলে যথাযথভাবে উপস্থিত হতে হবে।</li>
-                        <li><span class="niyom-num">০২।</span> পরীক্ষার দিন পরীক্ষাকেন্দ্রে পরীক্ষা শুরু হওয়ার কমপক্ষে ৩০ (ত্রিশ) মিনিট পূর্বে পরীক্ষার্থীকে নিজ আসন গ্রহণ করতে হবে।</li>
-                        <li><span class="niyom-num">০৩।</span> পরীক্ষা শুরু হওয়ার ৩০ (ত্রিশ) মিনিট পরে কোনো পরীক্ষার্থীকে পরীক্ষাকক্ষে প্রবেশ করতে দেওয়া হবে না এবং পরীক্ষার কমপক্ষে ১ (এক) ঘণ্টা পূর্বে কোনো পরীক্ষার্থী পরীক্ষাকক্ষ ত্যাগ করতে পারবে না।</li>
-                        <li><span class="niyom-num">০৪।</span> পরীক্ষার হলে প্রবেশের সময় কোনো প্রকার ইলেকট্রনিক ডিভাইস (মোবাইল ফোন, ক্যালকুলেটর ইত্যাদি) সঙ্গে আনা সম্পূর্ণ নিষিদ্ধ।</li>
-                        <li><span class="niyom-num">০৫।</span> পরীক্ষার হলে কোনো বই, নোট বা অননুমোদিত কোনো কাগজপত্র সঙ্গে আনা সম্পূর্ণ নিষিদ্ধ।</li>
-                        <li><span class="niyom-num">০৬।</span> পরীক্ষার্থীরা অন্য কোনো পরীক্ষার্থীর সাথে কথা বলতে পারবে না। কোনো বই বা ইলেকট্রনিক ডিভাইস ব্যবহার করলে পরীক্ষা বাতিল বলে গণ্য হবে।</li>
-                        <li><span class="niyom-num">০৭।</span> পরীক্ষার্থীকে উত্তরপত্র পাওয়ার সাথে সাথে রোল নম্বর, রেজিস্ট্রেশন নম্বরসহ সকল তথ্য সঠিকভাবে পূরণ করতে হবে।</li>
-                        <li><span class="niyom-num">০৮।</span> উত্তরপত্রে উত্তর লেখার পর কোনো অংশ কাটাকাটি বা ঘষামাজা করা যাবে না।</li>
-                        <li><span class="niyom-num">০৯।</span> উত্তরপত্র সম্পূর্ণ লেখার পর পরীক্ষার হল ত্যাগের পূর্বে অবশ্যই পরীক্ষকের নিকট জমা দিতে হবে।</li>
-                        <li><span class="niyom-num">১০।</span> এই প্রবেশপত্র ছাড়া কোনো পরীক্ষার্থীকে পরীক্ষার হলে প্রবেশ করতে দেওয়া হবে না।</li>
-                        <li><span class="niyom-num">১১।</span> উত্তরপত্রের যেকোনো জায়গায় পরীক্ষার্থীর নাম, ঠিকানা বা যেকোনো অপ্রাসঙ্গিক তথ্য লেখা যাবে না।</li>
-                        <li><span class="niyom-num">১২।</span> পরীক্ষার হলে অসদাচরণ করলে বোর্ডের বিধি অনুযায়ী শাস্তিমূলক ব্যবস্থা গ্রহণ করা হবে।</li>
+                        <li><span class="niyom-num">০১।</span> কলেজ প্রদত্ত পরীক্ষার রুটিন অনুযায়ী নির্ধারিত তারিখ ও সময়ে পরীক্ষার হলে যথাযথভাবে উপস্থিত হতে হবে ;</li>
+                        <li><span class="niyom-num">০২।</span> পরীক্ষার দিন পরীক্ষাকেন্দ্রে পরীক্ষা শুরু হওয়ার কমপক্ষে ৩০ (ত্রিশ) মিনিট পূর্বে পরীক্ষার্থীকে নিজ আসন গ্রহণ করতে হবে ;</li>
+                        <li><span class="niyom-num">০৩।</span> পরীক্ষা শুরু হওয়ার ৩০ (ত্রিশ) মিনিট পরে কোনো পরীক্ষার্থীকে পরীক্ষাকক্ষে প্রবেশ করতে দেওয়া হবে না এবং পরীক্ষার কমপক্ষে ১ (এক) ঘণ্টা পূর্বে কোনো পরীক্ষার্থী পরীক্ষাকক্ষ ত্যাগ করতে পারবে না ;</li>
+                        <li><span class="niyom-num">০৪।</span> পরীক্ষার হলে প্রবেশের সময় কোনো প্রকার <strong>ইলেকট্রনিক ডিভাইস (মোবাইল ফোন ও অন্যান্য ডিভাইস)</strong> সঙ্গে আনা সম্পূর্ণ নিষিদ্ধ ;</li>
+                        <li><span class="niyom-num">০৫।</span> পরীক্ষার হলে কোনো ব্যাগ, বই, নোট বা অননুমোদিত কোনো কাগজপত্র সঙ্গে আনা সম্পূর্ণ নিষিদ্ধ ;</li>
+                        <li><span class="niyom-num">০৬।</span> পরীক্ষার্থীরা অন্য কোনো পরীক্ষার্থীর সাথে কথা বলতে পারবে না। কোনো বই বা ইলেকট্রনিক ডিভাইস ব্যবহার করলে পরীক্ষা বাতিল বলে গণ্য হবে ;</li>
+                        <li><span class="niyom-num">০৭।</span> পরীক্ষার্থীকে উত্তরপত্র পাওয়ার সাথে সাথে রোল নম্বর, রেজিস্ট্রেশন নম্বরসহ সকল তথ্য সঠিকভাবে পূরণ করতে হবে ;</li>
+                        <li><span class="niyom-num">০৮।</span> উত্তরপত্রে উত্তর লেখার পর কোনো অংশ কাটাকাটি বা ঘষামাজা করা যাবে না ;</li>
+                        <li><span class="niyom-num">০৯।</span> উত্তরপত্র সম্পূর্ণ লেখার পর পরীক্ষার হল ত্যাগের পূর্বে অবশ্যই পরীক্ষকের নিকট জমা দিতে হবে ;</li>
+                        <li><span class="niyom-num">১০।</span> <strong>প্রবেশপত্র ও কলেজের নির্ধারিত ইউনিফর্ম</strong> ছাড়া কোনো পরীক্ষার্থীকে পরীক্ষার হলে প্রবেশ করতে দেওয়া হবে না ;</li>
+                        <li><span class="niyom-num">১১।</span> উত্তরপত্রের যেকোনো জায়গায় পরীক্ষার্থীর নাম, ঠিকানা বা যেকোনো অপ্রাসঙ্গিক তথ্য লেখা যাবে না ;</li>
+                        <li><span class="niyom-num">১২।</span> পরীক্ষার হলে অসদাচরণ করলে কলেজের শৃঙ্খলা বিধি অনুযায়ী শাস্তিমূলক ব্যবস্থা গ্রহণ করা হবে।</li>
                     </ul>
                 </div>
             </div>
@@ -413,4 +466,22 @@
 
 @section('js')
 @include('includes.scripts.print_script')
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    document.querySelectorAll('.admit-qr').forEach(function (el) {
+        var val = el.getAttribute('data-roll');
+        if (val) {
+            new QRCode(el, {
+                text: val,
+                width: 68,
+                height: 68,
+                colorDark: '#0f3e6a',
+                colorLight: '#ffffff',
+                correctLevel: QRCode.CorrectLevel.H
+            });
+        }
+    });
+});
+</script>
 @endsection

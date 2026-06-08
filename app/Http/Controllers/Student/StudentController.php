@@ -1185,7 +1185,7 @@ class StudentController extends CollegeBaseController
 
             if ($request->hasFile('guardian_main_image')) {
                 // remove old image from folder
-                if (file_exists($parential_image_path . $guardian->guardian_image))
+                if ($guardian && $guardian->guardian_image && file_exists($parential_image_path . $guardian->guardian_image))
                     @unlink($parential_image_path . $guardian->guardian_image);
 
                 $guardian_image = $request->file('guardian_main_image');
@@ -1195,7 +1195,7 @@ class StudentController extends CollegeBaseController
 
             $father_image_name = isset($father_image_name) ? $father_image_name : $parent->father_image;
             $mother_image_name = isset($mother_image_name) ? $mother_image_name : $parent->mother_image;
-            $guardian_image_name = isset($guardian_image_name) ? $guardian_image_name : $guardian->guardian_image;
+            $guardian_image_name = isset($guardian_image_name) ? $guardian_image_name : ($guardian ? $guardian->guardian_image : null);
 
             $row->parents()->update([
                 'grandfather_first_name' => $request->grandfather_first_name,
@@ -1247,7 +1247,9 @@ class StudentController extends CollegeBaseController
                     'guardian_address' => $request->guardian_address,
                     'guardian_image' => $guardian_image_name
                 ];
-                GuardianDetail::where('id', $sgd->guardians_id)->update($guardiansInfo);
+                if ($sgd) {
+                    GuardianDetail::where('id', $sgd->guardians_id)->update($guardiansInfo);
+                }
             } else {
                 $studentGuardian = StudentGuardian::where('students_id', $row->id)->update([
                     'students_id' => $row->id,
@@ -2742,8 +2744,8 @@ class StudentController extends CollegeBaseController
                 ->whereIn('students.id',$studIds)
                 ->join('parent_details as pd', 'pd.students_id', '=', 'students.id')
                 ->join('addressinfos as ai', 'ai.students_id', '=', 'students.id')
-                ->join('student_guardians as sg', 'sg.students_id','=','students.id')
-                ->join('guardian_details as gd', 'gd.id', '=', 'sg.guardians_id')
+                ->leftJoin('student_guardians as sg', 'sg.students_id','=','students.id')
+                ->leftJoin('guardian_details as gd', 'gd.id', '=', 'sg.guardians_id')
                 ->get();
 
             if ($students->count()>0){

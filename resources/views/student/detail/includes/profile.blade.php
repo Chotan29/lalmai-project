@@ -1,6 +1,23 @@
 <div class="row">
     <div class="col-sm-12 align-right hidden-print">
         <div class="btn-group">
+            @if($data['student']->status == 1)
+                <a href="javascript:void(0)"
+                   class="btn btn-success btn-sm"
+                   data-url="{{ route($base_route.'.in-active', ['id' => encrypt($data['student']->id)]) }}"
+                   data-action="in-active"
+                   onclick="studentStatusConfirm(this)">
+                    <i class="ace-icon fa fa-toggle-on"></i> Active
+                </a>
+            @else
+                <a href="javascript:void(0)"
+                   class="btn btn-danger btn-sm"
+                   data-url="{{ route($base_route.'.active', ['id' => encrypt($data['student']->id)]) }}"
+                   data-action="active"
+                   onclick="studentStatusConfirm(this)">
+                    <i class="ace-icon fa fa-toggle-off"></i> Inactive
+                </a>
+            @endif
             <a href="{{ route($base_route.'.edit', ['id' => encrypt($data['student']->id)]) }}" class="btn btn-primary btn-sm">
                 <i class="ace-icon fa fa-pencil"></i> Edit Profile
             </a>
@@ -421,7 +438,7 @@
             <div class="caption">
                 <h5>Father</h5>
             </div>
-            @if($data['student']->father_image != '')
+            @if(isset($data['student']->father_image) && $data['student']->father_image != '')
                 <img src="{{ asset('images'.DIRECTORY_SEPARATOR.'parents'.DIRECTORY_SEPARATOR.$data['student']->father_image) }}" class="img-responsive">
             @else
                 <img src="{{ asset('assets/images/avatars/profile-pic.jpg') }}" class="img-responsive">
@@ -434,7 +451,7 @@
             <div class="caption">
                 <h5>Mother</h5>
             </div>
-            @if($data['student']->mother_image != '')
+            @if(isset($data['student']->mother_image) && $data['student']->mother_image != '')
                 <img src="{{ asset('images'.DIRECTORY_SEPARATOR.'parents'.DIRECTORY_SEPARATOR.$data['student']->mother_image) }}" class="img-responsive">
             @else
                 <img src="{{ asset('assets/images/avatars/profile-pic.jpg') }}" class="img-responsive">
@@ -447,7 +464,7 @@
             <div class="caption">
                 <h5>Guardian</h5>
             </div>
-            @if($data['student']->guardian_image != '')
+            @if(isset($data['student']->guardian_image) && $data['student']->guardian_image != '')
                 <img src="{{ asset('images'.DIRECTORY_SEPARATOR.'parents'.DIRECTORY_SEPARATOR.$data['student']->guardian_image) }}" class="img-responsive">
             @else
                 <img src="{{ asset('assets/images/avatars/profile-pic.jpg') }}" class="img-responsive">
@@ -616,4 +633,34 @@
         $(window).resize(adjustLayout);
         adjustLayout();
     });
+</script>
+<script>
+function studentStatusConfirm(el) {
+    var url    = el.getAttribute('data-url');
+    var action = el.getAttribute('data-action');
+    var isActive = action === 'active';
+
+    Swal.fire({
+        title: '<i class="fa ' + (isActive ? 'fa-check-circle' : 'fa-ban') + ' mr-2"></i>Confirm ' + (isActive ? 'Active' : 'In-Active'),
+        html: '<div class="swal-custom-alert alert-' + (isActive ? 'success' : 'warning') + '">' +
+              '<div class="d-flex align-items-center">' +
+              '<i class="fa ' + (isActive ? 'fa-check-circle' : 'fa-ban') + ' mr-2"></i>' +
+              '<div><strong>1 record</strong> selected' +
+              '<div class="small">' + (isActive ? 'Selected records will be activated.' : 'Selected records will be deactivated.') + '</div>' +
+              '</div></div></div>' +
+              '<div class="text-center text-muted small mt-2"><i class="fa fa-info-circle mr-1"></i>Are you sure you want to continue?</div>',
+        icon: isActive ? 'success' : 'warning',
+        showCancelButton: true,
+        confirmButtonText: '<i class="fa ' + (isActive ? 'fa-check-circle' : 'fa-ban') + ' mr-1"></i> Confirm',
+        cancelButtonText: '<i class="fa fa-times mr-1"></i> Cancel',
+        confirmButtonColor: isActive ? '#28a745' : '#ffc107',
+        cancelButtonColor: '#6c757d',
+        reverseButtons: true,
+        customClass: { popup: 'swal-custom-popup' }
+    }).then(function(result) {
+        if (result.isConfirmed) {
+            window.location.href = url;
+        }
+    });
+}
 </script>
