@@ -80,6 +80,7 @@ class ExamPrintController extends CollegeBaseController
             ->with(['studentSubjects' => function ($query) {
                 $query->select('subjects.id', 'subjects.code', 'subjects.title', 'subjects.sub_type');
             }])
+            ->orderBy('reg_no', 'asc')
             ->get();
 
         $scheduledBySubject = $data['subjects']->keyBy('subjects_id');
