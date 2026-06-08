@@ -1,7 +1,7 @@
 <div class="row">
     <div class="col-sm-12 align-right hidden-print">
         <div class="btn-group">
-            @if($data['student']->status == 1)
+            @if($data['student']->status == 'active')
                 <a href="javascript:void(0)"
                    class="btn btn-success btn-sm"
                    data-url="{{ route($base_route.'.in-active', ['id' => encrypt($data['student']->id)]) }}"
@@ -17,6 +17,23 @@
                    onclick="studentStatusConfirm(this)">
                     <i class="ace-icon fa fa-toggle-off"></i> Inactive
                 </a>
+            @endif
+            @php
+                $hasStudentPassword = \DB::table('users')
+                    ->where('role_id', 6)
+                    ->where('hook_id', $data['student']->id)
+                    ->whereNotNull('password')
+                    ->where('password', '!=', '')
+                    ->exists();
+            @endphp
+            @if($hasStudentPassword)
+                <span class="btn btn-success btn-sm" style="cursor:default;">
+                    <i class="fa fa-lock"></i> Password Set
+                </span>
+            @else
+                <span class="btn btn-danger btn-sm" style="cursor:default;">
+                    <i class="fa fa-unlock"></i> No Password
+                </span>
             @endif
             <a href="{{ route($base_route.'.edit', ['id' => encrypt($data['student']->id)]) }}" class="btn btn-primary btn-sm">
                 <i class="ace-icon fa fa-pencil"></i> Edit Profile

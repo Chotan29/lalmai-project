@@ -154,14 +154,14 @@
 </div>
 
 <!-- Family Photos -->
-@if ($data['student']->father_image || $data['student']->mother_image || $data['student']->guardian_image)
+@if ($data['student'] && ($data['student']->father_image || $data['student']->mother_image || $data['student']->guardian_image))
     <div class="row mt-4">
         <div class="col-md-12">
             <div class="info-card animate__animated animate__fadeIn">
                 <h5><i class="bi bi-images me-2"></i> Family Photos</h5>
                 <div class="row text-center">
                     @foreach(['father', 'mother', 'guardian'] as $role)
-                        @if ($data['student']->{$role . '_image'})
+                        @if ($data['student'] && $data['student']->{$role . '_image'})
                             <div class="col-md-4 mb-3">
                                 <div class="d-flex flex-column align-items-center">
                                     <img src="{{ asset('images/parents/' . $data['student']->{$role . '_image'}) }}"

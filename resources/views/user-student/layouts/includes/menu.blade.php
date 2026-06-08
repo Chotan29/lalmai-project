@@ -1,10 +1,10 @@
-{{-- <div id="sidebar" class="sidebar responsive ace-save-state navbar-collapse hidden-print"> --}}
+{{-- Student top nav --}}
 <style>
     #sidebar.student-top-nav {
-        background: linear-gradient(140deg, #ffffff 0%, #f7faff 100%);
-        border-top: 1px solid #d9e5f5;
-        border-bottom: 1px solid #d9e5f5;
-        box-shadow: 0 8px 18px rgba(16, 45, 84, 0.06);
+        background: #fff;
+        border-top: none;
+        border-bottom: 1px solid #e8eef6;
+        box-shadow: 0 2px 12px rgba(0,0,0,.07);
     }
 
     #sidebar.student-top-nav .nav-wrap {

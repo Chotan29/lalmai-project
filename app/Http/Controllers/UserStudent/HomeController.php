@@ -235,8 +235,8 @@ class HomeController extends CollegeBaseController
             ->where('students.id','=',$id)
             ->join('parent_details as pd', 'pd.students_id', '=', 'students.id')
             ->join('addressinfos as ai', 'ai.students_id', '=', 'students.id')
-            ->join('student_guardians as sg', 'sg.students_id','=','students.id')
-            ->join('guardian_details as gd', 'gd.id', '=', 'sg.guardians_id')
+            ->leftJoin('student_guardians as sg', 'sg.students_id','=','students.id')
+            ->leftJoin('guardian_details as gd', 'gd.id', '=', 'sg.guardians_id')
             ->first();
 
         if (!$data['row'])
@@ -328,7 +328,7 @@ class HomeController extends CollegeBaseController
 
         if ($request->hasFile('guardian_main_image')){
             // remove old image from folder
-            if (file_exists($parential_image_path.$guardian->guardian_image))
+            if ($guardian && $guardian->guardian_image && file_exists($parential_image_path.$guardian->guardian_image))
                 @unlink($parential_image_path.$guardian->guardian_image);
 
             $guardian_image = $request->file('guardian_main_image');
@@ -339,7 +339,7 @@ class HomeController extends CollegeBaseController
 
         $father_image_name = isset($father_image_name)?$father_image_name:$parent->father_image;
         $mother_image_name = isset($mother_image_name)?$mother_image_name:$parent->mother_image;
-        $guardian_image_name = isset($guardian_image_name)?$guardian_image_name:$guardian->guardian_image;
+        $guardian_image_name = isset($guardian_image_name)?$guardian_image_name:($guardian ? $guardian->guardian_image : null);
 
 
         $row->parents()->update([

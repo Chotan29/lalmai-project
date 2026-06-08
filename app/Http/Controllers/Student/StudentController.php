@@ -2035,6 +2035,7 @@ class StudentController extends CollegeBaseController
 
     public function active(request $request, $id)
     {
+        $encId = $id;
         $id = decrypt($id);
         if (!$row = Student::find($id)) return parent::invalidRequest();
 
@@ -2043,11 +2044,12 @@ class StudentController extends CollegeBaseController
         $row->update($request->all());
 
         $request->session()->flash($this->message_success, $row->reg_no.' '.$this->panel.' Active Successfully.');
-        return redirect()->route($this->base_route);
+        return redirect()->route($this->base_route.'.view', ['id' => $encId]);
     }
 
     public function inActive(request $request, $id)
     {
+        $encId = $id;
         $id = decrypt($id);
         if (!$row = Student::find($id)) return parent::invalidRequest();
 
@@ -2070,7 +2072,7 @@ class StudentController extends CollegeBaseController
         }
 
         $request->session()->flash($this->message_success, $row->reg_no.' '.$this->panel.' In-Active Successfully.');
-        return redirect()->route($this->base_route);
+        return redirect()->route($this->base_route.'.view', ['id' => $encId]);
     }
 
     public function findSemester(Request $request)

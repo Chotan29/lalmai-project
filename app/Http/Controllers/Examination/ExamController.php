@@ -166,6 +166,7 @@ class ExamController extends CollegeBaseController
                 ->where(function ($query) use ($request) {
                     $this->commonStudentFilterCondition($query, $request);
                 })
+                ->orderBy('reg_no', 'asc')
                 ->get();
         }
 
