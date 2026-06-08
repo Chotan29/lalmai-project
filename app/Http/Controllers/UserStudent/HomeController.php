@@ -926,7 +926,6 @@ class HomeController extends CollegeBaseController
             //->where([['semesters_id',$semester->id],['years_id',$year->id]])
             ->where('semesters_id',$semester->id)
             ->where('status', 1)
-            ->where('publish_status', 1)
             ->groupBy('years_id', 'months_id', 'exams_id', 'faculty_id', 'semesters_id','publish_status', 'status')
             ->orderBy('years_id', 'desc')
             ->orderBy('months_id', 'asc')
