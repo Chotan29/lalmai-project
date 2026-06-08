@@ -16,7 +16,11 @@
             <button class="pull-right navbar-toggle navbar-toggle-img collapsed" type="button" data-toggle="collapse" data-target=".navbar-buttons,.navbar-menu">
                 <span class="sr-only">Toggle user menu</span>
 
-                <img src="{{ asset('assets/images/avatars/user.jpg') }}" alt="Jason's Photo" />
+                @if(isset($profileImageSrc) && $profileImageSrc !== null)
+                    <img src="{{ asset($profileImageSrc) }}" alt="" />
+                @else
+                    <img src="{{ asset('assets/images/avatars/user.jpg') }}" alt="" />
+                @endif
             </button>
 
             <button class="pull-right navbar-toggle collapsed" type="button" data-toggle="collapse" data-target="#sidebar">
