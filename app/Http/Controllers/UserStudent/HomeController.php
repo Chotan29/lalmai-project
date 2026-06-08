@@ -925,6 +925,8 @@ class HomeController extends CollegeBaseController
         $data['schedule_exams'] = ExamSchedule::select('years_id', 'months_id', 'exams_id', 'faculty_id', 'semesters_id', 'publish_status', 'status')
             //->where([['semesters_id',$semester->id],['years_id',$year->id]])
             ->where('semesters_id',$semester->id)
+            ->where('status', 1)
+            ->where('publish_status', 1)
             ->groupBy('years_id', 'months_id', 'exams_id', 'faculty_id', 'semesters_id','publish_status', 'status')
             ->orderBy('years_id', 'desc')
             ->orderBy('months_id', 'asc')
@@ -949,6 +951,10 @@ class HomeController extends CollegeBaseController
 
         $examSchedule = ExamSchedule::where($whereCondition)
             ->get();
+
+        if ($examSchedule->isEmpty() || (int) $examSchedule->first()->publish_status !== 1) {
+            return back()->with($this->message_warning, 'Exam schedule has not been published yet. Please be patient.');
+        }
 
         $exam_schedule_id = array_pluck($examSchedule,'id');
 
@@ -997,6 +1003,9 @@ class HomeController extends CollegeBaseController
 
         if($data['subjects']->count() == 0)
             return back()->with($this->message_warning, 'No any Subject Scheduled in your target exam.');
+
+        if ((int) $data['subjects']->first()->publish_status !== 1)
+            return back()->with($this->message_warning, 'Exam schedule has not been published yet. Please be patient.');
 
         $data['student'] = Student::select('id','reg_no','date_of_birth', 'first_name', 'middle_name', 'last_name','student_image','gender','blood_group' ,'faculty', 'semester','status')
             ->where('id',$id)
