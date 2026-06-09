@@ -161,7 +161,12 @@ class ExamController extends CollegeBaseController
     public function admitCard(Request $request)
     {
         $data = [];
-        $data['print_filter_date'] = $request->get('print_filter_date', date('Y-m-d'));
+        $dateFrom = $request->get('print_date_from');
+        $dateTo   = $request->get('print_date_to');
+        $data['print_date_from']  = $dateFrom;
+        $data['print_date_to']    = $dateTo;
+        $data['filter_by_date']   = ($dateFrom || $dateTo);
+        $filterDate = date('Y-m-d');
 
         if($request->all()) {
             $students = Student::select('id', 'reg_no', 'reg_date', 'first_name', 'middle_name', 'last_name',
@@ -184,13 +189,14 @@ class ExamController extends CollegeBaseController
                 try {
                     $printLogs = AdmitCardPrintLog::lastPrintDateForStudents(
                         $students->pluck('id')->toArray(),
-                        $examParams
+                        $examParams,
+                        $dateFrom,
+                        $dateTo
                     );
                 } catch (\Exception $e) {
                     $printLogs = [];
                 }
 
-                $filterDate = $data['print_filter_date'];
                 foreach ($students as $student) {
                     $student->last_print_date = $printLogs[$student->id] ?? null;
                     if ($student->last_print_date === null) {
@@ -200,6 +206,13 @@ class ExamController extends CollegeBaseController
                     } else {
                         $student->print_badge = 'before';
                     }
+                }
+
+                // date range filter active থাকলে শুধু range এর printed students দেখাবে
+                if ($data['filter_by_date']) {
+                    $students = $students->filter(function ($s) {
+                        return $s->last_print_date !== null;
+                    })->values();
                 }
 
                 $data['exam_params'] = $examParams;

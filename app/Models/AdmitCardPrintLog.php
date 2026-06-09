@@ -43,18 +43,26 @@ class AdmitCardPrintLog extends Model
         }
     }
 
-    public static function lastPrintDateForStudents(array $studentIds, array $examParams): array
+    public static function lastPrintDateForStudents(array $studentIds, array $examParams, string $dateFrom = null, string $dateTo = null): array
     {
-        return static::selectRaw('student_id, MAX(print_date) as last_print_date, MAX(printed_at) as last_printed_at')
-            ->where([
-                ['years_id',     $examParams['years_id']],
-                ['months_id',    $examParams['months_id']],
-                ['exams_id',     $examParams['exams_id']],
-                ['faculty_id',   $examParams['faculty_id']],
-                ['semesters_id', $examParams['semesters_id']],
-            ])
-            ->whereIn('student_id', $studentIds)
-            ->groupBy('student_id')
+        $query = static::selectRaw('student_id, MAX(print_date) as last_print_date')
+            ->whereIn('student_id', $studentIds);
+
+        if (!empty($examParams['years_id']))     $query->where('years_id',     $examParams['years_id']);
+        if (!empty($examParams['months_id']))    $query->where('months_id',    $examParams['months_id']);
+        if (!empty($examParams['exams_id']))     $query->where('exams_id',     $examParams['exams_id']);
+        if (!empty($examParams['faculty_id']))   $query->where('faculty_id',   $examParams['faculty_id']);
+        if (!empty($examParams['semesters_id'])) $query->where('semesters_id', $examParams['semesters_id']);
+
+        if ($dateFrom && $dateTo) {
+            $query->whereBetween('print_date', [$dateFrom, $dateTo]);
+        } elseif ($dateFrom) {
+            $query->where('print_date', '>=', $dateFrom);
+        } elseif ($dateTo) {
+            $query->where('print_date', '<=', $dateTo);
+        }
+
+        return $query->groupBy('student_id')
             ->pluck('last_print_date', 'student_id')
             ->toArray();
     }

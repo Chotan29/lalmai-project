@@ -63,39 +63,61 @@
                 <div class="hr hr-24"></div>
             </div>
 
-            {{-- Date filter + quick select --}}
-            @if(isset($data['student']) && $data['student']->count() > 0)
+            {{-- Date range filter + quick select --}}
+            @if(isset($data['filter_by_date']) && $data['filter_by_date'])
+            <div class="alert alert-info" style="margin-bottom:8px; padding:6px 12px; font-size:0.88rem;">
+                <i class="fa fa-filter"></i>
+                <strong>{{ $data['print_date_from'] ?: '...' }}</strong> থেকে
+                <strong>{{ $data['print_date_to'] ?: '...' }}</strong> পর্যন্ত print হওয়া students দেখাচ্ছে।
+                <?php
+                    $clearParams = request()->all();
+                    unset($clearParams['print_date_from'], $clearParams['print_date_to']);
+                    $clearUrl = strtok($_SERVER['REQUEST_URI'], '?') . ($clearParams ? '?' . http_build_query($clearParams) : '');
+                ?>
+                <a href="{{ $clearUrl }}" class="btn btn-xs btn-default" style="margin-left:8px;">
+                    <i class="fa fa-times"></i> Filter সরাও
+                </a>
+            </div>
+            @endif
+            @if(isset($data['student']))
             <div class="well well-sm" style="margin-bottom:10px; padding:8px 14px;">
-                <div class="row" style="display:flex; align-items:center; flex-wrap:wrap; gap:8px;">
-                    <div class="col-xs-12 col-sm-6" style="display:flex; align-items:center; gap:8px;">
-                        <label style="margin:0; white-space:nowrap;"><i class="fa fa-calendar"></i> Print Date Filter:</label>
-                        <input type="date" id="print_filter_date" class="form-control" style="width:160px; display:inline-block;"
-                               value="{{ $data['print_filter_date'] }}" />
-                        <button type="button" class="btn btn-default btn-sm" onclick="applyDateFilter()">
-                            <i class="fa fa-refresh"></i> Apply
-                        </button>
-                    </div>
-                    <div class="col-xs-12 col-sm-6" style="text-align:right;">
-                        <button type="button" class="btn btn-success btn-sm" onclick="selectByBadge('not-printed')">
-                            <i class="fa fa-check-square-o"></i> Select Not Printed
-                        </button>
-                        <button type="button" class="btn btn-warning btn-sm" onclick="selectByBadge('before')">
-                            <i class="fa fa-check-square-o"></i> Select Old
-                        </button>
-                        <button type="button" class="btn btn-default btn-sm" onclick="selectAll(false)">
-                            <i class="fa fa-square-o"></i> Deselect All
-                        </button>
-                    </div>
+                <div style="display:flex; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:8px;">
+                    <label style="margin:0; white-space:nowrap;"><i class="fa fa-calendar"></i> Print Date:</label>
+                    <input type="date" id="print_date_from" class="form-control" style="width:150px;"
+                           value="{{ $data['print_date_from'] }}" placeholder="From" />
+                    <span style="font-weight:bold;">—</span>
+                    <input type="date" id="print_date_to" class="form-control" style="width:150px;"
+                           value="{{ $data['print_date_to'] }}" placeholder="To" />
+                    <button type="button" class="btn btn-primary btn-sm" onclick="applyDateFilter()">
+                        <i class="fa fa-filter"></i> Filter
+                    </button>
+                    @if(isset($data['filter_by_date']) && $data['filter_by_date'])
+                    <a href="{{ $clearUrl ?? '#' }}" class="btn btn-default btn-sm">
+                        <i class="fa fa-times"></i> Clear
+                    </a>
+                    @endif
                 </div>
-                <div style="margin-top:6px; font-size:0.82rem;">
-                    <span class="badge-not-printed"><i class="fa fa-circle"></i> Not Printed</span>&nbsp;
-                    <span class="badge-today"><i class="fa fa-circle"></i> Printed on filter date</span>&nbsp;
-                    <span class="badge-before"><i class="fa fa-circle"></i> Printed on other date</span>
+                <div style="display:flex; flex-wrap:wrap; gap:6px; align-items:center;">
+                    <button type="button" class="btn btn-success btn-sm" onclick="selectByBadge('not-printed')">
+                        <i class="fa fa-check-square-o"></i> Select Not Printed
+                    </button>
+                    <button type="button" class="btn btn-warning btn-sm" onclick="selectByBadge('before')">
+                        <i class="fa fa-check-square-o"></i> Select Old
+                    </button>
+                    <button type="button" class="btn btn-default btn-sm" onclick="selectAll(false)">
+                        <i class="fa fa-square-o"></i> Deselect All
+                    </button>
+                    <span style="margin-left:8px; font-size:0.82rem;">
+                        <span class="badge-not-printed"><i class="fa fa-circle"></i> Not Printed</span>&nbsp;
+                        <span class="badge-today"><i class="fa fa-circle"></i> Today</span>&nbsp;
+                        <span class="badge-before"><i class="fa fa-circle"></i> Other date</span>
+                    </span>
                 </div>
             </div>
             @endif
 
             <hr class="hr-8">
+
             <span class="pull-right tableTools-container"></span>
         </div>
 
@@ -193,9 +215,14 @@ document.getElementById('select-all-chk').addEventListener('change', function() 
 });
 
 function applyDateFilter() {
-    var date = document.getElementById('print_filter_date').value;
-    var url  = new URL(window.location.href);
-    url.searchParams.set('print_filter_date', date);
+    var from = document.getElementById('print_date_from').value;
+    var to   = document.getElementById('print_date_to').value;
+    if (!from && !to) { alert('তারিখ দিন।'); return; }
+    var url = new URL(window.location.href);
+    url.searchParams.delete('print_date_from');
+    url.searchParams.delete('print_date_to');
+    if (from) url.searchParams.set('print_date_from', from);
+    if (to)   url.searchParams.set('print_date_to',   to);
     window.location.href = url.toString();
 }
 </script>
