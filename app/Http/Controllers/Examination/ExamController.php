@@ -181,10 +181,14 @@ class ExamController extends CollegeBaseController
                     'semesters_id' => $request->get('semester_select') ?? $request->get('semester'),
                 ];
 
-                $printLogs = AdmitCardPrintLog::lastPrintDateForStudents(
-                    $students->pluck('id')->toArray(),
-                    $examParams
-                );
+                try {
+                    $printLogs = AdmitCardPrintLog::lastPrintDateForStudents(
+                        $students->pluck('id')->toArray(),
+                        $examParams
+                    );
+                } catch (\Exception $e) {
+                    $printLogs = [];
+                }
 
                 $filterDate = $data['print_filter_date'];
                 foreach ($students as $student) {

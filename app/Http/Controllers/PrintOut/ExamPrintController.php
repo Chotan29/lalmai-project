@@ -132,17 +132,21 @@ class ExamPrintController extends CollegeBaseController
         $data['url'] = URL::current();
         $data['filter_query'] = $this->filter_query;
 
-        AdmitCardPrintLog::logPrint(
-            $data['student']->pluck('id')->toArray(),
-            [
-                'years_id'     => $request->get('years_id'),
-                'months_id'    => $request->get('months_id'),
-                'exams_id'     => $request->get('exams_id'),
-                'faculty_id'   => $request->get('target_faculty'),
-                'semesters_id' => $request->get('semester_select'),
-            ],
-            (int) $request->print_type
-        );
+        try {
+            AdmitCardPrintLog::logPrint(
+                $data['student']->pluck('id')->toArray(),
+                [
+                    'years_id'     => $request->get('years_id'),
+                    'months_id'    => $request->get('months_id'),
+                    'exams_id'     => $request->get('exams_id'),
+                    'faculty_id'   => $request->get('target_faculty'),
+                    'semesters_id' => $request->get('semester_select'),
+                ],
+                (int) $request->print_type
+            );
+        } catch (\Exception $e) {
+            // log table may not exist yet on this server
+        }
 
         if($request->print_type == 1){
             return view(parent::loadDataToView($this->view_path.'.admit-card'), compact('data'));
