@@ -18,6 +18,7 @@ namespace App\Http\Controllers\Examination;
 use App\Http\Controllers\CollegeBaseController;
 use App\Http\Requests\Examination\Exam\AddValidation;
 use App\Http\Requests\Examination\Exam\EditValidation;
+use App\Models\AdmitCardPrintLog;
 use App\Models\Exam;
 use App\Models\ExamMarkLedger;
 use App\Models\ExamSchedule;
@@ -160,14 +161,47 @@ class ExamController extends CollegeBaseController
     public function admitCard(Request $request)
     {
         $data = [];
+        $data['print_filter_date'] = $request->get('print_filter_date', date('Y-m-d'));
+
         if($request->all()) {
-            $data['student'] = Student::select('id', 'reg_no', 'reg_date', 'first_name', 'middle_name', 'last_name',
+            $students = Student::select('id', 'reg_no', 'reg_date', 'first_name', 'middle_name', 'last_name',
                 'faculty', 'semester','academic_status', 'status')
                 ->where(function ($query) use ($request) {
                     $this->commonStudentFilterCondition($query, $request);
                 })
                 ->orderBy('reg_no', 'asc')
                 ->get();
+
+            if ($students->isNotEmpty()) {
+                $examParams = [
+                    'years_id'     => $request->get('years_id') ?? $request->get('year'),
+                    'months_id'    => $request->get('months_id') ?? $request->get('month'),
+                    'exams_id'     => $request->get('exams_id') ?? $request->get('exam'),
+                    'faculty_id'   => $request->get('target_faculty') ?? $request->get('faculty'),
+                    'semesters_id' => $request->get('semester_select') ?? $request->get('semester'),
+                ];
+
+                $printLogs = AdmitCardPrintLog::lastPrintDateForStudents(
+                    $students->pluck('id')->toArray(),
+                    $examParams
+                );
+
+                $filterDate = $data['print_filter_date'];
+                foreach ($students as $student) {
+                    $student->last_print_date = $printLogs[$student->id] ?? null;
+                    if ($student->last_print_date === null) {
+                        $student->print_badge = 'not-printed';
+                    } elseif ($student->last_print_date === $filterDate) {
+                        $student->print_badge = 'today';
+                    } else {
+                        $student->print_badge = 'before';
+                    }
+                }
+
+                $data['exam_params'] = $examParams;
+            }
+
+            $data['student'] = $students;
         }
 
         $data['faculties'] = $this->activeFaculties();

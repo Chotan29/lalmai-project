@@ -11,6 +11,7 @@
 namespace App\Http\Controllers\PrintOut;
 
 use App\Http\Controllers\CollegeBaseController;
+use App\Models\AdmitCardPrintLog;
 use App\Models\CertificateTemplate;
 use App\Models\Exam;
 use App\Models\ExamMarkLedger;
@@ -130,6 +131,18 @@ class ExamPrintController extends CollegeBaseController
 
         $data['url'] = URL::current();
         $data['filter_query'] = $this->filter_query;
+
+        AdmitCardPrintLog::logPrint(
+            $data['student']->pluck('id')->toArray(),
+            [
+                'years_id'     => $request->get('years_id'),
+                'months_id'    => $request->get('months_id'),
+                'exams_id'     => $request->get('exams_id'),
+                'faculty_id'   => $request->get('target_faculty'),
+                'semesters_id' => $request->get('semester_select'),
+            ],
+            (int) $request->print_type
+        );
 
         if($request->print_type == 1){
             return view(parent::loadDataToView($this->view_path.'.admit-card'), compact('data'));
