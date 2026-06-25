@@ -1,0 +1,34 @@
+ M app/Http/Controllers/Academic/SubjectController.php
+ M app/Http/Controllers/HomeController.php
+ M app/Http/Controllers/Student/OnlineRegistrationController.php
+ M composer.phar
+ M resources/views/examination/admit-card/index.blade.php
+ M resources/views/examination/schedule/add.blade.php
+ M resources/views/examination/schedule/index.blade.php
+?? app/Console/Commands/CleanSemesterSubjectMappings.php
+?? bulk_upload_ftp.py
+?? check_semesters.php
+?? check_subjects_status.sql
+?? composer-setup.php
+?? delete_x1.py
+?? deploy_cache_clear.php
+?? deploy_script.py
+?? execute_remote.py
+?? ftp_check.py
+?? ftp_check_v2.py
+?? get_faculty.php
+?? get_subject.php
+?? perform_task.py
+?? perform_task_v2.py
+?? probe_exec_test.py
+?? probe_roots.py
+?? probe_roots_final.py
+?? probe_roots_html.py
+?? probe_roots_simple.py
+?? restore_points/
+?? tmp_sync_acc3.php
+?? tmp_verify_acc3.php
+?? upload_cache_script.py
+?? upload_verify.py
+?? upload_via_ftp.py
+?? upload_x1.py

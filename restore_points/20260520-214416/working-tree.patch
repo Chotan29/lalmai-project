@@ -1,0 +1,154 @@
+diff --git a/app/Http/Controllers/Academic/SubjectController.php b/app/Http/Controllers/Academic/SubjectController.php
+index 722c974..98b1a57 100644
+--- a/app/Http/Controllers/Academic/SubjectController.php
++++ b/app/Http/Controllers/Academic/SubjectController.php
+@@ -122,7 +122,7 @@ class SubjectController extends CollegeBaseController
+                             $row = Subject::find(decrypt($row_id));
+                             if ($row) {
+                                 if ($row->semester()->exists()) {
+-                                    continue;
++                                    continue 2;
+                                 }
+ 
+                                 $row->delete();
+diff --git a/app/Http/Controllers/HomeController.php b/app/Http/Controllers/HomeController.php
+index 75272da..76115a8 100644
+--- a/app/Http/Controllers/HomeController.php
++++ b/app/Http/Controllers/HomeController.php
+@@ -74,11 +74,7 @@ class HomeController extends CollegeBaseController
+             ->get();
+ 
+         // Indicators
+-        $data['studentIndicator'] = Student::where('students.status', 1)
+-            ->join('faculties as f', 'f.id', '=', 'students.faculty')
+-            ->join('semesters as s', 's.id', '=', 'students.semester')
+-            ->join('student_statuses as ss', 'ss.id', '=', 'students.academic_status')
+-            ->count('students.id');
++        $data['studentIndicator'] = Student::count();
+         $data['staffIndicator'] = Staff::count();
+         $data['onlineRegistrationIndicator'] = Student::where('students.status', 1)
+             ->where('students.registration_payment_status', 'completed')
+diff --git a/app/Http/Controllers/Student/OnlineRegistrationController.php b/app/Http/Controllers/Student/OnlineRegistrationController.php
+index 0b948d1..d0f4f38 100644
+--- a/app/Http/Controllers/Student/OnlineRegistrationController.php
++++ b/app/Http/Controllers/Student/OnlineRegistrationController.php
+@@ -916,7 +916,6 @@ class OnlineRegistrationController extends CollegeBaseController
+             $faculty = Faculty::find($request->get('faculty_id'));
+             if ($faculty) {
+                 $semesterList = $faculty->semesters()
+-                    ->whereHas('subjects')
+                     ->select('semesters.id', 'semesters.semester', 'semesters.slug')
+                     ->orderBy('semesters.semester')
+                     ->get();
+@@ -926,7 +925,7 @@ class OnlineRegistrationController extends CollegeBaseController
+                     $response['error'] = false;
+                     $response['message'] = 'Semester/Sec. Available For This Faculty/Program/Class.';
+                 } else {
+-                    $response['message'] = 'No semester with assigned subjects found for this faculty/program.';
++                    $response['message'] = 'No Any Semester Assign on This Faculty/Program/Class.';
+                 }
+             } else {
+                 $response['message'] = 'No Any Semester Assign on This Faculty/Program/Class.';
+diff --git a/composer.phar b/composer.phar
+index 3d1b983..212c0c3 100644
+Binary files a/composer.phar and b/composer.phar differ
+diff --git a/resources/views/examination/admit-card/index.blade.php b/resources/views/examination/admit-card/index.blade.php
+index 2b1a9c9..b0e349d 100644
+--- a/resources/views/examination/admit-card/index.blade.php
++++ b/resources/views/examination/admit-card/index.blade.php
+@@ -115,12 +115,13 @@
+             $.ajax({
+                 type: 'POST',
+                 url: '{{ route('student.find-semester') }}',
++                dataType: 'json',
+                 data: {
+                     _token: '{{ csrf_token() }}',
+                     faculty_id: $this.value
+                 },
+                 success: function (response) {
+-                    var data = $.parseJSON(response);
++                    var data = (typeof response === 'string' ? $.parseJSON(response) : response);
+                     if (data.error) {
+                         $.notify(data.message, "warning");
+                     } else {
+@@ -138,7 +139,7 @@
+             var year = $('select[name="years_id"]').val();
+             var month = $('select[name="months_id"]').val();
+             var exam = $('select[name="exams_id"]').val();
+-            var faculty = $('select[name="faculty"]').val();
++            var faculty = $('select[name="target_faculty"]').val();
+             var semester = $('select[name="semester_select"]').val();
+ 
+             if (year == 0) {
+@@ -172,6 +173,7 @@
+                 $.ajax({
+                     type: 'POST',
+                     url: '{{ route('exam.mark-ledger.find-subject') }}',
++                    dataType: 'json',
+                     data: {
+                         _token: '{{ csrf_token() }}',
+                         years_id: year,
+@@ -181,7 +183,7 @@
+                         semester_id: semester
+                     },
+                     success: function (response) {
+-                        var data = $.parseJSON(response);
++                        var data = (typeof response === 'string' ? $.parseJSON(response) : response);
+                         if (data.error) {
+                             $('.schedule_subject').html('')
+                             toastr.warning(data.error, "Warning:");
+diff --git a/resources/views/examination/schedule/add.blade.php b/resources/views/examination/schedule/add.blade.php
+index 594536a..80f32a2 100644
+--- a/resources/views/examination/schedule/add.blade.php
++++ b/resources/views/examination/schedule/add.blade.php
+@@ -84,12 +84,13 @@
+             $.ajax({
+                 type: 'POST',
+                 url: '{{ route('student.find-semester') }}',
++                dataType: 'json',
+                 data: {
+                     _token: '{{ csrf_token() }}',
+                     faculty_id: $this.value
+                 },
+                 success: function (response) {
+-                    var data = $.parseJSON(response);
++                    var data = (typeof response === 'string' ? $.parseJSON(response) : response);
+                     if (data.error) {
+                         $.notify(data.message, "warning");
+                     } else {
+@@ -143,6 +144,7 @@
+                 $.ajax({
+                     type: 'POST',
+                     url: '{{ route('exam.schedule.subject-html') }}',
++                    dataType: 'json',
+                     data: {
+                         _token: '{{ csrf_token() }}',
+                         years_id: year,
+@@ -152,7 +154,7 @@
+                         semester_id: semester_id
+                     },
+                     success: function (response) {
+-                        var data = $.parseJSON(response);
++                        var data = (typeof response === 'string' ? $.parseJSON(response) : response);
+                         if (data.error) {
+                             toastr.warning(data.message, "Warning:");
+                         } else {
+diff --git a/resources/views/examination/schedule/index.blade.php b/resources/views/examination/schedule/index.blade.php
+index e07ab05..fdf6d9e 100644
+--- a/resources/views/examination/schedule/index.blade.php
++++ b/resources/views/examination/schedule/index.blade.php
+@@ -120,12 +120,13 @@
+             $.ajax({
+                 type: 'POST',
+                 url: '{{ route('student.find-semester') }}',
++                dataType: 'json',
+                 data: {
+                     _token: '{{ csrf_token() }}',
+                     faculty_id: $this.value
+                 },
+                 success: function (response) {
+-                    var data = $.parseJSON(response);
++                    var data = (typeof response === 'string' ? $.parseJSON(response) : response);
+                     if (data.error) {
+                         $.notify(data.message, "warning");
+                     } else {

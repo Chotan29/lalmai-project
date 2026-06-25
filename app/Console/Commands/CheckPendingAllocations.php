@@ -8,7 +8,7 @@ namespace App\Console\Commands;
 
 use Illuminate\Console\Command;
 use App\Services\TipsoiAttendanceService;
-use App\Models\{Person, TipsoiDevice};
+use App\Models\{Person, TipsoiDevice, PersonDevice};
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
 
@@ -41,8 +41,7 @@ class CheckPendingAllocations extends Command
         }
 
         // Get pending allocations from person_device table
-        $query = DB::table('person_device')
-                    ->where('allocated_at', '>', Carbon::now()->subHours($hours))
+        $query = PersonDevice::where('allocated_at', '>', Carbon::now()->subHours($hours))
                     ->whereNull('revoked_at')
                     ->where(function($q) use ($retryFailed) {
                         $q->whereNull('synced_at');

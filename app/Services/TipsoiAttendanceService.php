@@ -206,8 +206,6 @@ class TipsoiAttendanceService
                 throw new \Exception("Invalid attendance logs response format");
             }
 
-            dd($data);
-
             return $data;
 
         } catch (\Exception $e) {

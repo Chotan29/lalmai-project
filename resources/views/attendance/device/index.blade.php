@@ -558,6 +558,7 @@
             var R_RUNS_SHOW = @json(route('attendance.tipsoi.runs.show', ['run' => ':id']));
             // Legacy kept:
             var R_LIVE_LIST = @json(route('attendance.live.list'));
+            var R_TIPSOI_SEARCH = @json(route('attendance.tipsoi.search'));
 
             $.ajaxSetup({
                 headers: {
@@ -728,7 +729,7 @@
                     page: 1,
                     date: @json($today)
                 };
-                $.get(R_LIVE_LIST, params).done(function(res) {
+                $.get(R_TIPSOI_SEARCH, params).done(function(res) {
                     var list = (res && res.data) ? res.data : [];
                     if (!list.length) {
                         $('#pp-results').html('<div class="empty">No matches.</div>');
@@ -738,7 +739,7 @@
                         '<table class="table"><thead><tr><th></th><th>Name</th><th>Reg/Code</th><th>Status</th></tr></thead><tbody>';
                     list.forEach(function(it) {
                         html += '<tr>' +
-                            '<td><button class="btn btn-sm btn-pick" data-id="' + it.pid +
+                            '<td><button class="btn btn-sm btn-pick" data-id="' + it.id +
                             '" data-name="' + (it.name || '') + '" data-code="' + (it.code || '') +
                             '">Pick</button></td>' +
                             '<td>' + (it.name || '-') + '</td>' +
