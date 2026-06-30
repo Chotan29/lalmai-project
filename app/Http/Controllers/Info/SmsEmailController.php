@@ -513,10 +513,24 @@ class SmsEmailController extends CollegeBaseController
         if($request->type){
             /*Now Send SMS On First Mobile Number*/
             if(in_array("sms",$request->type)){
-                $contactNumbers = explode(',',$contactNumbers);
+                $contactNumbers = preg_split('/[\s,]+/', (string)$contactNumbers, -1, PREG_SPLIT_NO_EMPTY);
+                $contactNumbers = array_map('trim', $contactNumbers);
+                $contactNumbers = array_filter($contactNumbers);
+
+                if (empty($contactNumbers)) {
+                    return back()->with($this->message_warning, "Please provide at least one valid contact number.");
+                }
+
                 $contactNumbers = $this->contactFilter($contactNumbers);
-                $contactNumbers= str_replace(' ','',$contactNumbers);
                 $smssuccess = $this->sendSMS($contactNumbers,$message);
+
+                if ($smssuccess instanceof \Illuminate\Http\RedirectResponse) {
+                    return $smssuccess;
+                }
+
+                if ($smssuccess !== true) {
+                    return back()->with($this->message_warning, "SMS could not be sent. Please check gateway configuration and number format.");
+                }
 
                 /*store*/
                 /*$request->request->add(['sms' => 1]);
