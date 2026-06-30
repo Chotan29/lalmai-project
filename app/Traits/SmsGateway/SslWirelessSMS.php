@@ -25,16 +25,35 @@ trait SslWirelessSMS
         
       
         
-        // Convert contact numbers to array if they're not already
+        // Convert contact numbers to a clean unique array.
         $numbers = is_array($contactNumbers) ? $contactNumbers : explode(',', $contactNumbers);
+        $numbers = array_values(array_unique(array_filter(array_map('trim', $numbers))));
+
+        if (empty($numbers)) {
+            return false;
+        }
         
         try {
-            // Determine which API to use based on number of recipients
+            // Single recipient -> single endpoint
             if (count($numbers) === 1) {
                 return $this->sendSslSingleSMS($baseUrl, $apiToken, $sid, $numbers[0], $message);
-            } else {
-                return $this->sendSslBulkSMS($baseUrl, $apiToken, $sid, $numbers, $message);
             }
+
+            // Multiple recipients -> try bulk first, then fallback to per-recipient.
+            $bulkResult = $this->sendSslBulkSMS($baseUrl, $apiToken, $sid, $numbers, $message);
+            if ($bulkResult === true) {
+                return true;
+            }
+
+            $sentAny = false;
+            foreach ($numbers as $number) {
+                $singleResult = $this->sendSslSingleSMS($baseUrl, $apiToken, $sid, $number, $message);
+                if ($singleResult === true) {
+                    $sentAny = true;
+                }
+            }
+
+            return $sentAny;
             
         } catch (\Exception $e) {
             Log::error('SSL Wireless SMS Exception: ' . $e->getMessage());
