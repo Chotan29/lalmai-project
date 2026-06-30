@@ -14,6 +14,7 @@ use App\Models\IntegrationCursor;
 use App\Models\IntegrationRun;
 use App\Models\Student;
 use App\Models\Staff;
+use App\Models\StudentBatch;
 use App\Models\Attendance;
 use App\Models\AttendanceStatus;
 use App\Jobs\AttendanceJobs\SyncLogsRunJob;
@@ -33,7 +34,11 @@ class TipsoiUnifiedController extends CollegeBaseController
 
     public function dashboard()
     {
-        $data = ['panel'=>$this->panel,'base_route'=>$this->base_route];
+        $data = [
+            'panel'=>$this->panel,
+            'base_route'=>$this->base_route,
+            'studentBatches'=>StudentBatch::orderBy('title')->get(['id','title']),
+        ];
         return view(parent::loadDataToView($this->view_path.'.index'), compact('data'));
     }
 

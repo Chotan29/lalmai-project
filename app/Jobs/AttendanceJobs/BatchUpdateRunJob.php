@@ -62,6 +62,7 @@ class BatchUpdateRunJob implements ShouldQueue
         $deviceIds   = array_values(array_filter((array)($payload['device_identifier'] ?? [])));
         $withPhotos  = filter_var($payload['with_photos'] ?? false, FILTER_VALIDATE_BOOLEAN);
         $useRfid     = filter_var($payload['use_rfid'] ?? false, FILTER_VALIDATE_BOOLEAN);
+        $batchId     = trim((string) ($payload['batch'] ?? ''));
 
         $result = [
             'counts'    => ['active' => 0, 'inactive' => 0],
@@ -80,6 +81,9 @@ class BatchUpdateRunJob implements ShouldQueue
                 $qb = Student::query();
                 if (Schema::hasColumn('students','reg_no')) {
                     $qb->whereNotNull('reg_no')->where('reg_no','!=','');
+                }
+                if ($batchId !== '' && Schema::hasColumn('students','batch')) {
+                    $qb->where('batch', $batchId);
                 }
                 $total += (int) $qb->count();
             } else { // staff
@@ -121,6 +125,9 @@ class BatchUpdateRunJob implements ShouldQueue
                         ->select($select)
                         ->when(Schema::hasColumn('students','reg_no'), function (Builder $q) {
                             $q->whereNotNull('reg_no')->where('reg_no','!=','');
+                        })
+                        ->when($batchId !== '' && Schema::hasColumn('students','batch'), function (Builder $q) use ($batchId) {
+                            $q->where('batch', $batchId);
                         })
                         ->orderBy('id')
                         ->chunkById(200, function ($rows) use ($t, $withPhotos, $useRfid, $api, &$activeIdentifiers, &$result, &$done, $saveProgress) {

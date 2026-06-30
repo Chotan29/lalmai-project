@@ -54,6 +54,16 @@ class Kernel extends ConsoleKernel
             ->runInBackground()
             ->withoutOverlapping(2);
 
+        // Dedicated background worker for the "attendance" queue (batch device push/sync runs).
+        // attendance:pipeline already drains this queue inline each minute, but large batch
+        // jobs (e.g. push-all-active-students) can outlast that foreground run on shared
+        // hosting; this background worker gives them a second, longer-lived chance to finish.
+        $schedule->command('queue:work --queue=attendance --timeout=600 --tries=2 --stop-when-empty')
+            ->everyMinute()
+            ->timezone($tz)
+            ->runInBackground()
+            ->withoutOverlapping(10);
+
         // Restart queues daily for stability
         $schedule->command('queue:restart')
             ->dailyAt('04:00')

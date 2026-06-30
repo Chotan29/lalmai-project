@@ -457,6 +457,14 @@
                             <label><input type="radio" name="bu-type" value="both"> Both</label>
                         </div>
 
+                        <div class="small" style="margin-top:8px"><b>Student Batch</b> <span class="small muted">(students only; ignored for staff)</span></div>
+                        <select id="bu-batch" class="input">
+                            <option value="">All Batches</option>
+                            @foreach($data['studentBatches'] as $sb)
+                                <option value="{{ $sb->id }}">{{ $sb->title }}</option>
+                            @endforeach
+                        </select>
+
                         <div class="small" style="margin-top:8px"><b>Options</b></div>
                         <div class="flex">
                             <label><input type="checkbox" id="bu-photos"> Include photos</label>
@@ -872,6 +880,7 @@
 
             $('#bu-run').on('click', function() {
                 var who = $('input[name="bu-type"]:checked').val(); // student|staff|both
+                var batch = $('#bu-batch').val();
                 var photos = $('#bu-photos').is(':checked') ? 1 : 0;
                 var rfid = $('#bu-rfid').is(':checked') ? 1 : 0;
                 var devs = [];
@@ -890,6 +899,7 @@
                 $.post(R_RUNS_STORE, {
                     run_type: 'batch_update',
                     who: who,
+                    batch: batch,
                     device_identifier: devs,
                     with_photos: photos,
                     use_rfid: rfid
