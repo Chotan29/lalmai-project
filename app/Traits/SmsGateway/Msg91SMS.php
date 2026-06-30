@@ -59,10 +59,14 @@ trait Msg91SMS{
     //Print error if any
         if(curl_errno($ch))
         {
-            echo 'error:' . curl_error($ch);
+            $error = curl_error($ch);
+            curl_close($ch);
+            return $error;
         }
 
         curl_close($ch);
+
+        return true;
     }
 
 }

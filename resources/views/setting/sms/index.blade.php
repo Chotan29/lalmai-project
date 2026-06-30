@@ -338,7 +338,7 @@
                     'route' => [$base_route.'.update', $Gateway->id], 
                     'method' => 'POST', 
                     'enctype' => 'multipart/form-data',
-                    'class' => 'gateway-card' . ($Gateway->status != 'active' ? ' disabled' : '')
+                    'class' => 'gateway-card' . ($Gateway->status != 1 ? ' disabled' : '')
                 ]) !!}
 
                 <div class="gateway-header" onclick="toggleConfig('{{ $Gateway->id }}')">
@@ -351,8 +351,8 @@
                         </h3>
                     </div>
                     <div class="header-actions">
-                        <span class="gateway-status {{ $Gateway->status == 'active' ? 'status-active' : 'status-inactive' }}">
-                            {{ ucfirst($Gateway->status) }}
+                        <span class="gateway-status {{ $Gateway->status == 1 ? 'status-active' : 'status-inactive' }}">
+                            {{ $Gateway->status == 1 ? 'Active' : 'Inactive' }}
                         </span>
                         <button type="button" class="toggle-config" id="toggle-{{ $Gateway->id }}">
                             <i class="fa fa-chevron-down"></i>
@@ -372,7 +372,7 @@
                                        name="{{ $key }}" 
                                        value="{{ $value }}" 
                                        class="form-control"
-                                       {{ $Gateway->status == 'active' ? '' : 'disabled' }}>
+                                       {{ $Gateway->status == 1 ? '' : 'disabled' }}>
                             </div>
                         @endforeach
                     @endif
@@ -386,7 +386,7 @@
                                 <i class="fa fa-times-circle"></i> Deactivate
                             </a>
                         </div>
-                        <button type="submit" class="btn btn-primary" {{ $Gateway->status != 'active' ? 'disabled' : '' }}>
+                        <button type="submit" class="btn btn-primary" {{ $Gateway->status != 1 ? 'disabled' : '' }}>
                             <i class="fa fa-save"></i> Save Changes
                         </button>
                     </div>

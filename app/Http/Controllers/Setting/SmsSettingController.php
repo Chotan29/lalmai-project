@@ -61,13 +61,19 @@ class SmsSettingController extends CollegeBaseController
             // sms_settings.identity is varchar(15), so normalize to DB-safe key
             $identity = mb_substr((string) $gateway['identity'], 0, 15);
 
+            $rawStatus = isset($gateway['status']) ? $gateway['status'] : 0;
+            $normalizedStatus = filter_var($rawStatus, FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE);
+            if ($normalizedStatus === null) {
+                $normalizedStatus = in_array(strtolower((string) $rawStatus), ['1', 'active', 'yes'], true);
+            }
+
             SmsSetting::firstOrCreate(
                 ['identity' => $identity],
                 [
                     'logo' => isset($gateway['logo']) ? $gateway['logo'] : '',
                     'link' => isset($gateway['link']) ? $gateway['link'] : '',
                     'config' => json_encode(isset($gateway['config']) ? $gateway['config'] : []),
-                    'status' => isset($gateway['status']) ? $gateway['status'] : 0,
+                    'status' => $normalizedStatus ? 1 : 0,
                 ]
             );
         }
@@ -190,9 +196,7 @@ class SmsSettingController extends CollegeBaseController
     {
         if (!$row = SmsSetting::find($id)) return parent::invalidRequest();
 
-        $request->request->add(['status' => 'active']);
-
-       $row->update($request->all());
+       $row->update(['status' => 1]);
        SmsSetting::whereNotIn('id',[$id])->update(['status' => 0]);
 
         $request->session()->flash($this->message_success, $row->reg_no.' '.$this->panel.' Active Successfully.');
@@ -202,8 +206,6 @@ class SmsSettingController extends CollegeBaseController
     public function inActive(request $request, $id)
     {
         if (!$row = SmsSetting::find($id)) return parent::invalidRequest();
-
-        $request->request->add(['status' => 'in-active']);
 
         // Deactivate all duplicate rows with same identity to avoid ghost active rows.
         SmsSetting::where('identity', $row->identity)->update(['status' => 0]);
