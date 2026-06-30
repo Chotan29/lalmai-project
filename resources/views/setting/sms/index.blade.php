@@ -318,7 +318,7 @@
     <div class="integration-note">
         <p>
             <i class="fa fa-info-circle"></i> Need a new SMS gateway integrated? 
-            Contact:: Email: <strong>freelancerumeshnepal@gmail.com</strong>,WhatsApp: <strong>+977-9868156047</strong> for assistance.
+            Contact:: Email: <strong>aititltd@gmail.com</strong>,WhatsApp: <strong>01842818174</strong> for assistance.
         </p>
     </div>
 

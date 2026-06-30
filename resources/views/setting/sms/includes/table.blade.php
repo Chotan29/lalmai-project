@@ -1,6 +1,6 @@
 <div class="row">
     <div class="col-xs-12">
-        <h4 class="header large lighter blue"><i class="fa fa-list" aria-hidden="true"></i>&nbsp;{{ $panel }} List <em>( If you have new SMS Company/API send API detail on freelancerumeshnepal@gmail.com for Integration.)</em></h4>
+        <h4 class="header large lighter blue"><i class="fa fa-list" aria-hidden="true"></i>&nbsp;{{ $panel }} List <em>( If you have new SMS Company/API send API detail on aititltd@gmail.com for Integration.)</em></h4>
         <div class="clearfix">
             <span class="pull-right tableTools-container"></span>
         </div>
