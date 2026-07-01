@@ -99,7 +99,8 @@ trait UserScope{
 
     public function updateUser(EditValidation $request, $id)
     {
-        $id = decrypt($id);
+        // $id may arrive as a plain numeric or encrypted string depending on the route
+        $id = is_numeric($id) ? (int)$id : (int)decrypt($id);
         if (!$row = User::find($id)) return parent::invalidRequest();
 
         if($request->password != $request->confirmPassword){
@@ -112,7 +113,13 @@ trait UserScope{
         }
 
         $request->request->add(['password' => isset($new_password)?$new_password:$row->password]);
-        $request->request->add(['hook_id' => decrypt($request->hook_id)]);
+
+        // hook_id may be plain int or encrypted — handle both
+        $rawHookId = $request->hook_id;
+        if (!is_null($rawHookId)) {
+            $hookId = is_numeric($rawHookId) ? (int)$rawHookId : (int)decrypt($rawHookId);
+            $request->request->add(['hook_id' => $hookId]);
+        }
 
         $row->update($request->all());
 

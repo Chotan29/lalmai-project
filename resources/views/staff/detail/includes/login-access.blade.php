@@ -72,7 +72,7 @@
                   'id' => 'validation-form', "enctype" => "multipart/form-data"]) !!}
         {!! Form::hidden('id', encrypt($data['staff_login']->id)) !!}
         {!! Form::hidden('role_id', 5) !!}
-        {!! Form::hidden('hook_id', $data['staff']->id) !!}
+        {!! Form::hidden('hook_id', encrypt($data['staff']->id)) !!}
 
         <div class="form-group">
             {!! Form::label('name', 'Name', ['class' => 'col-sm-2 control-label']) !!}
