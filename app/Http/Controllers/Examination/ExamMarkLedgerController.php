@@ -50,6 +50,13 @@ class ExamMarkLedgerController extends CollegeBaseController
         $semester = $request->get('semester');
         $subject = $request->get('subject');
 
+        // Staff may only view ledger for their own assigned subject
+        if (auth()->user()->role_id == 5 && $subject) {
+            if (!Subject::where('id', $subject)->where('staff_id', auth()->user()->hook_id)->exists()) {
+                $subject = null;
+            }
+        }
+
         if($year && $month && $exam && $faculty && $semester && $subject) {
             $examScheduleCondition = [
                 ['years_id', '=', $year],
@@ -111,6 +118,14 @@ class ExamMarkLedgerController extends CollegeBaseController
         $faculty = $request->get('faculty');
         $semester = $request->get('semester_select');
         $subject = $request->get('schedule_subject');
+
+        // Staff may only enter marks for their own assigned subject
+        if (auth()->user()->role_id == 5) {
+            if (!Subject::where('id', $subject)->where('staff_id', auth()->user()->hook_id)->exists()) {
+                $request->session()->flash($this->message_warning, 'You do not have permission to enter marks for this subject.');
+                return back();
+            }
+        }
 
         /*For Mark Schedule*/
         $examScheduleCondition = [
@@ -334,6 +349,14 @@ class ExamMarkLedgerController extends CollegeBaseController
         $faculty = $request->get('faculty_id');
         $semester = $request->get('semester_id');
         $subject = $request->get('subject_id');
+
+        // Staff may only load students for their own assigned subject
+        if (auth()->user()->role_id == 5) {
+            if (!Subject::where('id', $subject)->where('staff_id', auth()->user()->hook_id)->exists()) {
+                $response['error'] = 'You do not have permission to access this subject.';
+                return response()->json(json_encode($response));
+            }
+        }
 
         /*For Student List*/
         $studentCondition = [['faculty', '=' , $faculty], ['semester', '=' , $semester] ];
