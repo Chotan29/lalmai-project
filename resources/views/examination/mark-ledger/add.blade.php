@@ -227,6 +227,9 @@
                                 });
                                 toastr.success(data.success, "Success:");
                         }
+                    },
+                    error: function (xhr) {
+                        toastr.error('Subject load failed (HTTP ' + xhr.status + '). Please refresh and try again.', 'Error');
                     }
                 });
             }
