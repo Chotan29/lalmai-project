@@ -1,0 +1,1 @@
+@include('inventory.purchase.registration.includes.forms.generalinfo')

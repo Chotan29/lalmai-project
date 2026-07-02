@@ -1,0 +1,1 @@
+<div>{!! $data['datePageVisitorChart']->container() !!}</div>

@@ -1,0 +1,52 @@
+<?php
+
+ /*
+ * Mr. Umesh Kumar Yadav
+ * Business With Technology Pvt. Ltd.
+ * Rupani 1 (Province 2, Saptari), Nepal
+ * +977-9868156047
+ * freelancerumeshnepal@gmail.com
+ * https://codecanyon.net/item/unlimited-edu-firm-school-college-information-management-system/21850988
+ */
+namespace App\Http\Requests\Academic\Subject;
+
+use Illuminate\Foundation\Http\FormRequest;
+
+class AddValidation extends FormRequest
+{
+    /**
+     * Determine if the user is authorized to make this request.
+     *
+     * @return bool
+     */
+    public function authorize()
+    {
+        return true;
+    }
+
+    /**
+     * Get the validation rules that apply to the request.
+     *
+     * @return array
+     */
+    public function rules()
+    {
+        return [
+            'title'             => 'required | max:100',
+            'code'              => 'required | max:50 | unique:subjects,code',
+            'mcq_number_theory' => 'nullable|integer|min:0',
+            'mcq_number_practical' => 'nullable|integer|min:0',
+            'description'       => 'max:100',
+            'staff_ids'         => 'required|array|min:1',
+        ];
+    }
+
+    public function messages()
+    {
+        return [
+            'code.unique' => 'This Subject Code Already Register',
+            'staff_ids.required' => 'Please select at least one teacher.',
+            'staff_ids.min' => 'Please select at least one teacher.',
+        ];
+    }
+}
