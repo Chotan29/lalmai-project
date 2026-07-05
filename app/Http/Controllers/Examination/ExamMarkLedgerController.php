@@ -21,6 +21,7 @@ use App\Models\ExamMarkLedger;
 use App\Models\ExamSchedule;
 use App\Models\Faculty;
 use App\Models\Month;
+use App\Models\Semester;
 use App\Models\Student;
 use App\Models\Subject;
 use App\Models\Year;
@@ -37,6 +38,34 @@ class ExamMarkLedgerController extends CollegeBaseController
     public function __construct()
     {
 
+    }
+
+    /**
+     * Teacher detection based on the role_user pivot (Entrust roles).
+     * Admin / super-admin always get full (unlocked) access, even if their
+     * legacy users.role_id column is 5. Falls back to the legacy column
+     * only when the user has no matching pivot role.
+     */
+    private function isTeacherUser()
+    {
+        $user = auth()->user();
+
+        if (!$user) {
+            return false;
+        }
+
+        /*Pivot admin / super-admin => never treated as locked teacher*/
+        if ($user->hasRole(['super-admin', 'admin'])) {
+            return false;
+        }
+
+        /*Pivot teacher => locked to own entries*/
+        if ($user->hasRole('teacher')) {
+            return true;
+        }
+
+        /*Legacy fallback (old accounts without pivot role)*/
+        return $user->role_id == 5;
     }
 
     public function index(Request $request)
@@ -146,7 +175,7 @@ class ExamMarkLedgerController extends CollegeBaseController
 
         $students = Student::select('id', 'reg_no')->whereIn('id', (array) $request->get('students_id'))->get()->keyBy('id');
 
-        $isTeacher = auth()->user()->role_id == 5;
+        $isTeacher = $this->isTeacherUser();
         $userId = auth()->user()->id;
         $savedCount = 0;
         $skippedLocked = 0;
@@ -291,7 +320,7 @@ class ExamMarkLedgerController extends CollegeBaseController
         if (!$row) return parent::invalidRequest();
 
         /*Teacher can only delete own entries*/
-        if (auth()->user()->role_id == 5 && $row->created_by != auth()->user()->id) {
+        if ($this->isTeacherUser() && $row->created_by != auth()->user()->id) {
             $request->session()->flash($this->message_warning, 'This mark was entered by another teacher. You cannot delete it.');
             return redirect()->route($this->base_route);
         }
@@ -338,6 +367,76 @@ class ExamMarkLedgerController extends CollegeBaseController
         return redirect()->route($this->base_route);
     }
 
+    /**
+     * Printable mark list. Teachers get ONLY the rows they entered
+     * (created_by = own id); admin / super-admin get the full ledger.
+     */
+    public function printMyEntries(Request $request)
+    {
+        $examScheduleCondition = [
+            ['years_id', '=', $request->get('years_id')],
+            ['months_id', '=', $request->get('months_id')],
+            ['exams_id', '=', $request->get('exams_id')],
+            ['faculty_id', '=', $request->get('faculty_id')],
+            ['semesters_id', '=', $request->get('semester_id')],
+            ['subjects_id', '=', $request->get('subject_id')],
+        ];
+
+        $examSchedule = ExamSchedule::select('id', 'subjects_id', 'full_mark_theory', 'full_mark_practical')
+            ->where($examScheduleCondition)
+            ->first();
+
+        if (!$examSchedule) {
+            $request->session()->flash($this->message_warning, 'Exam schedule not found for the selected filter.');
+            return redirect()->route($this->base_route.'.add');
+        }
+
+        $isTeacher = $this->isTeacherUser();
+        $userId = auth()->user()->id;
+
+        $rowsQuery = ExamMarkLedger::select('exam_mark_ledgers.students_id',
+                'exam_mark_ledgers.obtain_mark_theory', 'exam_mark_ledgers.obtain_mark_mcq',
+                'exam_mark_ledgers.obtain_mark_practical', 'exam_mark_ledgers.absent_theory',
+                'exam_mark_ledgers.absent_practical', 'exam_mark_ledgers.created_by',
+                'exam_mark_ledgers.updated_at',
+                'u.name as entered_by_name',
+                's.reg_no', 's.first_name', 's.middle_name', 's.last_name')
+            ->where('exam_mark_ledgers.exam_schedule_id', $examSchedule->id)
+            ->join('students as s', 's.id', '=', 'exam_mark_ledgers.students_id')
+            ->leftJoin('users as u', 'u.id', '=', 'exam_mark_ledgers.created_by');
+
+        if ($isTeacher) {
+            $rowsQuery->where('exam_mark_ledgers.created_by', $userId);
+        }
+
+        $rows = $rowsQuery->orderBy('s.reg_no', 'asc')->get();
+
+        $subject = Subject::select('id', 'title', 'code', 'full_mark_theory', 'full_mark_practical', 'mcq_number_theory')
+            ->find($examSchedule->subjects_id);
+
+        $scheduleTheoryMax = (float) ($examSchedule->full_mark_theory ?? 0);
+        $schedulePracticalMax = (float) ($examSchedule->full_mark_practical ?? 0);
+
+        $data = [
+            'rows' => $rows,
+            'subject' => $subject,
+            'limits' => [
+                'theory' => $scheduleTheoryMax > 0 ? $scheduleTheoryMax : (float) ($subject->full_mark_theory ?? 0),
+                'mcq' => (float) ($subject->mcq_number_theory ?? 0),
+                'practical' => $schedulePracticalMax > 0 ? $schedulePracticalMax : (float) ($subject->full_mark_practical ?? 0),
+            ],
+            'year' => Year::find($request->get('years_id')),
+            'month' => Month::find($request->get('months_id')),
+            'exam' => Exam::find($request->get('exams_id')),
+            'faculty' => Faculty::find($request->get('faculty_id')),
+            'semester' => Semester::find($request->get('semester_id')),
+            'teacher_only' => $isTeacher,
+            'printed_by' => auth()->user()->name,
+        ];
+
+        return view($this->view_path.'.print', compact('data'));
+    }
+
     public function findSubject(Request $request)
     {
         $row = ExamSchedule::where([
@@ -353,7 +452,7 @@ class ExamMarkLedgerController extends CollegeBaseController
         $existSubject = array_pluck($row, 'subjects_id');
 
         /*Find Subject Title with associated Ids*/
-        if(auth()->user()->role_id == 5){
+        if($this->isTeacherUser()){
             $subjects = Subject::select('id','title')->whereIn('id',$existSubject)->forTeacher(auth()->user()->hook_id)->get();
         }else{
             $subjects = Subject::select('id','title')->whereIn('id',$existSubject)->get();
@@ -434,7 +533,7 @@ class ExamMarkLedgerController extends CollegeBaseController
                 ->get();
 
             /*Rows locked for the current teacher (entered by someone else)*/
-            $isTeacher = auth()->user()->role_id == 5;
+            $isTeacher = $this->isTeacherUser();
             $userId = auth()->user()->id;
             $lockedIds = [];
             $ownerNames = [];

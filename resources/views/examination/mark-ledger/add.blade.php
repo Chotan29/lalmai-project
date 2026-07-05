@@ -50,6 +50,11 @@
                                     <i class="fa fa-plus bigger-110"></i>
                                     Save And Add Another
                                 </button>
+
+                                <button class="btn btn-warning" type="button" id="ledger-print-btn">
+                                    <i class="fa fa-print bigger-110"></i>
+                                    Print My Entries
+                                </button>
                             </div>
                         </div>
 
@@ -327,6 +332,32 @@
                 var next = (e.key === 'ArrowUp') ? idx - 1 : idx + 1;
                 if (next >= 0 && next < inputs.length) inputs.eq(next).focus().select();
             }
+        });
+
+        /*Print own entries (teacher => only rows entered by him/her)*/
+        $('#ledger-print-btn').click(function () {
+            var year = $('select[name="years_id"]').val();
+            var month = $('select[name="months_id"]').val();
+            var exam = $('select[name="exams_id"]').val();
+            var faculty = $('select[name="faculty"]').val();
+            var semester = $('select[name="semester_select"]').val();
+            var subject = $('select[name="schedule_subject"]').val();
+
+            if (!year || year == 0 || !month || month == 0 || !exam || exam == 0 ||
+                !faculty || faculty == 0 || !semester || semester == 0 || !subject || subject == 0) {
+                toastr.info("Please, Select Year, Month, Exam, Class, Sem./Sec. & Subject First", "Info:");
+                return false;
+            }
+
+            var url = '{{ route('exam.mark-ledger.print') }}'
+                + '?years_id=' + year
+                + '&months_id=' + month
+                + '&exams_id=' + exam
+                + '&faculty_id=' + faculty
+                + '&semester_id=' + semester
+                + '&subject_id=' + subject;
+
+            window.open(url, '_blank');
         });
 
         /*Block double submission*/
