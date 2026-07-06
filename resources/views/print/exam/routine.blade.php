@@ -88,10 +88,16 @@
         .intro { font-size: 13px; line-height: 1.75; text-align: justify; color: #1f2937; }
         .intro b { color: var(--brand-dark); }
 
-        .sched-head { text-align: center; margin: 11px 0 7px; }
-        .sched-head .t1 { font-size: 15px; font-weight: 700; color: var(--brand-dark); letter-spacing: .5px; }
-        .sched-head .t2 { display: inline-block; margin-top: 3px; font-size: 12.5px; font-weight: 600; color: var(--ink);
-            background: #fffbea; border: 1px solid #fde68a; border-radius: 14px; padding: 1px 18px; }
+        .sched-head { text-align: center; margin: 12px 0 8px; }
+        .sched-head .t1 { display: flex; align-items: center; gap: 14px; margin: 0 auto; max-width: 150mm; }
+        .sched-head .t1 .rule { flex: 1; height: 2px;
+            background: linear-gradient(90deg, transparent, var(--brand)); border-radius: 2px; }
+        .sched-head .t1 .rule:last-child { background: linear-gradient(90deg, var(--brand), transparent); }
+        .sched-head .t1 .txt { font-size: 16.5px; font-weight: 800; color: var(--brand-dark);
+            letter-spacing: 3px; text-transform: uppercase; white-space: nowrap; }
+        .sched-head .t2 { display: inline-block; margin-top: 5px; font-size: 13px; font-weight: 700; color: #7c4a03;
+            background: #fffbea; border: 1.3px solid #f5c94c; border-radius: 16px; padding: 2px 22px;
+            box-shadow: 0 1px 2px rgba(180,131,9,.15); }
 
         table.routine { width: 100%; border-collapse: collapse; }
         table.routine thead th { background: var(--brand-dark); color: #fff; font-size: 12px; font-weight: 600;
@@ -180,7 +186,7 @@
 
             <!-- Schedule -->
             <div class="sched-head">
-                <div class="t1">Examination Schedule</div>
+                <div class="t1"><span class="rule"></span><span class="txt">Examination Schedule</span><span class="rule"></span></div>
                 @if($singleTime && $sorted->count())
                     <div class="t2">Time : {{ $timeLabel($sorted->first()->start_time, $sorted->first()->end_time) }}</div>
                 @endif
