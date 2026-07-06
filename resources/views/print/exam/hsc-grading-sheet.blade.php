@@ -168,7 +168,6 @@
                                             <th rowspan="2" style="width:26px;">SN</th>
                                             <th rowspan="2" style="width:44px;">Code</th>
                                             <th rowspan="2" class="text-left">Subject</th>
-                                            <th rowspan="2" style="width:78px;">Full Marks</th>
                                             <th colspan="4">Obtained Marks</th>
                                             <th rowspan="2" style="width:44px;">Grade</th>
                                             <th rowspan="2" style="width:40px;">GP</th>
@@ -205,7 +204,6 @@
                                                 <td class="text-left subj">
                                                     {{ $subject->title ?: ViewHelper::getSubjectById($subject->subjects_id) }}@if($isOptional)<span class="opt-star">*</span>@endif
                                                 </td>
-                                                <td class="fm">{{ count($fmParts) ? implode('+', $fmParts).' = '.($fmTotal + 0) : ($fmTotal + 0) }}</td>
                                                 <td>{{ $fmtMark($subject->obtain_mark_theory, $subject->th_remark ?? '') }}</td>
                                                 <td>{{ $fmtMark($subject->obtain_mark_mcq, $subject->mcq_remark ?? '') }}</td>
                                                 <td>{{ $fmtMark($subject->obtain_mark_practical, $subject->pr_remark ?? '') }}</td>
@@ -224,7 +222,7 @@
                                     </tbody>
                                     <tfoot>
                                         <tr>
-                                            <td colspan="4" class="text-left" style="text-align:right;">TOTAL OBTAINED</td>
+                                            <td colspan="3" class="text-left" style="text-align:right;">TOTAL OBTAINED</td>
                                             <td>{{ $student->total_mark_theory ?? '-' }}</td>
                                             <td>{{ $student->total_mark_mcq ?? '-' }}</td>
                                             <td>{{ $student->total_mark_practical ?? '-' }}</td>
