@@ -434,7 +434,7 @@ class ExamMarkLedgerController extends CollegeBaseController
             'printed_by' => auth()->user()->name,
         ];
 
-        return view($this->view_path.'.print', compact('data'));
+        return view(parent::loadDataToView($this->view_path.'.print'), compact('data'));
     }
 
     public function findSubject(Request $request)
