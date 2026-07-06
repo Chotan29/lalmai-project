@@ -114,7 +114,7 @@
                     faculty_id: $this.value
                 },
                 success: function (response) {
-                    var data = $.parseJSON(response);
+                    var data = (typeof response === 'string' ? $.parseJSON(response) : response);
                     if (data.error) {
                         $.notify(data.message, "warning");
                     } else {
@@ -155,7 +155,7 @@
                         semester_id: semester
                     },
                     success: function (response) {
-                        var data = $.parseJSON(response);
+                        var data = (typeof response === 'string' ? $.parseJSON(response) : response);
                         if (data.error) {
                             $('.semester_subject').html('')
                             toastr.warning(data.error, "Warning:");

@@ -2840,7 +2840,7 @@
                             id: guardians_id
                         },
                         success: function(response) {
-                            var data = $.parseJSON(response);
+                            var data = (typeof response === 'string' ? $.parseJSON(response) : response);
                             if (data.error) {
                                 toastr.warning(data.message, "warning");
                             } else {
