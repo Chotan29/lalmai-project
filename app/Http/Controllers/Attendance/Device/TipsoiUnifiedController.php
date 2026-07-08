@@ -18,6 +18,9 @@ use App\Models\Attendance;
 use App\Models\AttendanceStatus;
 use App\Jobs\AttendanceJobs\SyncLogsRunJob;
 use App\Jobs\AttendanceJobs\BatchUpdateRunJob;
+use App\Jobs\AttendanceJobs\BatchUpdateChunkJob;
+use App\Models\Faculty;
+use App\Models\Semester;
 
 class TipsoiUnifiedController extends CollegeBaseController
 {
@@ -34,6 +37,8 @@ class TipsoiUnifiedController extends CollegeBaseController
     public function dashboard()
     {
         $data = ['panel'=>$this->panel,'base_route'=>$this->base_route];
+        $data['faculties'] = Faculty::select('id','faculty')->where('status',1)->orderBy('faculty')->get();
+        $data['semesters'] = Semester::select('id','semester')->where('status',1)->orderBy('semester')->get();
         return view(parent::loadDataToView($this->view_path.'.index'), compact('data'));
     }
 
@@ -454,6 +459,8 @@ class TipsoiUnifiedController extends CollegeBaseController
             $devs   = $req->input('device_identifier', []);
             $photos = (int) $req->input('with_photos', 0) === 1;
             $rfid   = (int) $req->input('use_rfid', 0) === 1;
+            $facultyId  = (int) $req->input('faculty_id', 0);
+            $semesterId = (int) $req->input('semester_id', 0);
 
             // Validate minimally (we only enqueue)
             if (!in_array($who, ['student','staff','both'], true)) {
@@ -463,8 +470,48 @@ class TipsoiUnifiedController extends CollegeBaseController
                 return response()->json(['message'=>'At least one device required'], 422);
             }
 
-            // Your existing job class – make sure it does NOT declare a $queue property.
-            BatchUpdateRunJob::dispatch($run->id, $who, $devs, $photos, $rfid)->onQueue('attendance');
+            /*
+             * Chunked dispatch: many small jobs instead of one monster job.
+             * The old single BatchUpdateRunJob died on shared hosting
+             * (queue retry_after / worker timeout << full run duration).
+             */
+            $chunkSize = 60;
+            $chunks = []; // list of [type, ids[]]
+
+            if (in_array($who, ['student','both'], true)) {
+                $q = Student::query()->select('id');
+                if (Schema::hasColumn('students','reg_no')) {
+                    $q->whereNotNull('reg_no')->where('reg_no','!=','');
+                }
+                if ($facultyId > 0 && Schema::hasColumn('students','faculty'))   $q->where('faculty', $facultyId);
+                if ($semesterId > 0 && Schema::hasColumn('students','semester')) $q->where('semester', $semesterId);
+                foreach (array_chunk($q->orderBy('id')->pluck('id')->all(), $chunkSize) as $ids) {
+                    $chunks[] = ['student', $ids];
+                }
+            }
+            if (in_array($who, ['staff','both'], true)) {
+                $q = Staff::query()->select('id');
+                if (Schema::hasColumn('staff','reg_no')) {
+                    $q->whereNotNull('reg_no')->where('reg_no','!=','');
+                }
+                foreach (array_chunk($q->orderBy('id')->pluck('id')->all(), $chunkSize) as $ids) {
+                    $chunks[] = ['staff', $ids];
+                }
+            }
+
+            $totalPeople = array_sum(array_map(function ($c) { return count($c[1]); }, $chunks));
+            if ($totalPeople === 0) {
+                $run->update(['status'=>'failed','error'=>'No people matched the selected filters.','finished_at'=>now()]);
+                return response()->json(['message'=>'No people matched the selected filters.'], 422);
+            }
+
+            $run->update(['total_steps' => $totalPeople]);
+
+            $opts = ['devices'=>$devs, 'with_photos'=>$photos, 'use_rfid'=>$rfid];
+            $totalChunks = count($chunks);
+            foreach ($chunks as $i => [$type, $ids]) {
+                BatchUpdateChunkJob::dispatch($run->id, $type, $ids, $i + 1, $totalChunks, $opts);
+            }
         }
 
         return response()->json($run->fresh()->toArray());

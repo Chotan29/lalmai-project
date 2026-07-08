@@ -457,6 +457,22 @@
                             <label><input type="radio" name="bu-type" value="both"> Both</label>
                         </div>
 
+                        <div class="small" style="margin-top:8px"><b>Student filter</b> <span class="muted">(optional — push one class at a time, lighter &amp; faster)</span></div>
+                        <div class="flex">
+                            <select id="bu-faculty" class="input" style="max-width:220px">
+                                <option value="0">All Programs/Classes</option>
+                                @foreach(($data['faculties'] ?? []) as $f)
+                                    <option value="{{ $f->id }}">{{ $f->faculty }}</option>
+                                @endforeach
+                            </select>
+                            <select id="bu-semester" class="input" style="max-width:220px">
+                                <option value="0">All Semesters/Sections</option>
+                                @foreach(($data['semesters'] ?? []) as $s)
+                                    <option value="{{ $s->id }}">{{ $s->semester }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+
                         <div class="small" style="margin-top:8px"><b>Options</b></div>
                         <div class="flex">
                             <label><input type="checkbox" id="bu-photos"> Include photos</label>
@@ -892,7 +908,9 @@
                     who: who,
                     device_identifier: devs,
                     with_photos: photos,
-                    use_rfid: rfid
+                    use_rfid: rfid,
+                    faculty_id: $('#bu-faculty').val() || 0,
+                    semester_id: $('#bu-semester').val() || 0
                 }).done(function(resp) {
                     if (!resp || !resp.id) {
                         failProgress(prog);

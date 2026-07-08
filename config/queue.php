@@ -38,7 +38,9 @@ return [
             'driver' => 'database',
             'table' => 'jobs',
             'queue' => 'default',
-            'retry_after' => 90,
+            // must stay LARGER than any worker --timeout, else long jobs get
+            // re-dispatched mid-run (caused duplicate/failed tipsoi batch pushes)
+            'retry_after' => 600,
         ],
 
         'beanstalkd' => [
