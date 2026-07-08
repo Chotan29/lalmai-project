@@ -1,5 +1,6 @@
 <style>
-    .sched-panel { background: #fff; border: 1px solid #dce4ec; border-radius: 6px; margin-bottom: 18px; overflow: hidden; }
+    .sched-panel { background: #fff; border: 1px solid #dce4ec; border-radius: 6px; margin-bottom: 18px; }
+    .sched-panel .chosen-container { width: 100% !important; }
     .sched-panel-header { background: #f5f8fb; border-bottom: 2px solid #337ab7; padding: 10px 15px; }
     .sched-panel-header h4 { margin: 0; font-size: 15px; font-weight: 600; color: #2c3e50; display: inline-block; }
     .sched-panel-header h4 .fa { color: #337ab7; margin-right: 6px; }
