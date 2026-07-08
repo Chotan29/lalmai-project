@@ -49,6 +49,8 @@ class SmsTest extends Command
             $apiToken = $config['ApiToken'] ?? null;
             $sid      = $config['Sid'] ?? null;
             $baseUrl  = rtrim($config['BaseUrl'] ?? 'https://smsplus.sslwireless.com', '/');
+            // config may store the full endpoint - strip it so we don't double the path
+            $baseUrl  = preg_replace('#/api/v3/send-sms(?:/bulk)?$#', '', $baseUrl);
 
             if (!$apiToken || !$sid) {
                 $this->error('Missing ApiToken or Sid in GenNet config.');

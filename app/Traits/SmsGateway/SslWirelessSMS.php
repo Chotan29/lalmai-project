@@ -29,13 +29,20 @@ trait SslWirelessSMS
         $numbers = is_array($contactNumbers) ? $contactNumbers : explode(',', $contactNumbers);
         
         try {
-            // Determine which API to use based on number of recipients
-            if (count($numbers) === 1) {
-                return $this->sendSslSingleSMS($baseUrl, $apiToken, $sid, $numbers[0], $message);
-            } else {
-                return $this->sendSslBulkSMS($baseUrl, $apiToken, $sid, $numbers, $message);
+            /*
+             * Always send one-by-one via the single-SMS API.
+             * GenNet's bulk endpoint is unreliable (and one bad number used to
+             * mark the whole batch failed) — the single API is the proven path.
+             */
+            $okAny = false;
+            foreach ($numbers as $n) {
+                $n = trim((string) $n);
+                if ($n === '') continue;
+                $res = $this->sendSslSingleSMS($baseUrl, $apiToken, $sid, $n, $message);
+                if ($res === true) $okAny = true;
             }
-            
+            return $okAny;
+
         } catch (\Exception $e) {
             Log::error('SSL Wireless SMS Exception: ' . $e->getMessage());
             return false;
