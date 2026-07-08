@@ -20,6 +20,21 @@ class ClassRoutine extends BaseModel
     ];
 
 
+    /**
+     * Scope: routines for a student's cohort (faculty + semester + optional batch).
+     * Used by Student::todaysSlots() during attendance punch processing.
+     */
+    public function scopeForCohort($query, $faculty, $semester, $batch = null)
+    {
+        $query->where('faculty_id', $faculty)
+              ->where('semester_id', $semester)
+              ->where('status', 1);
+        if (!empty($batch)) {
+            $query->where('student_batch_id', $batch);
+        }
+        return $query;
+    }
+
     public function department()
     {
         return $this->belongsTo(Department::class);
