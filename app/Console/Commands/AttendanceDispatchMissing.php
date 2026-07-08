@@ -40,9 +40,10 @@ class AttendanceDispatchMissing extends Command
             $meta['notify']['last_status'] = $code;
             $meta['notify']['queued_at']   = now()->toDateTimeString();
 
+            // mass update bypasses model casts - meta must be JSON-encoded manually
             Attendance::whereKey($row->id)->update([
                 'notification_status' => 'pending',
-                'meta' => $meta,
+                'meta' => json_encode($meta),
             ]);
 
             SendAttendanceNotification::dispatch($row->id)->onQueue('notifications');
