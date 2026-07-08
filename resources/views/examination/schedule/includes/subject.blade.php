@@ -1,38 +1,49 @@
-<div class="form-group">
-    <div class="text-right" style="margin-bottom:5px;">
-        <button type="button" id="applyFirstRowAll" class="btn btn-xs btn-info" title="Copy 1st row's time & marks to every row below">
-            <i class="fa fa-clone"></i> Apply 1st Row Time &amp; Marks to All
-        </button>
+<style>
+    #subjectsTable thead th { background: #f5f8fb; color: #2c3e50; font-size: 11px; text-transform: uppercase; letter-spacing: .3px; text-align: center; vertical-align: middle; border-bottom: 2px solid #337ab7; }
+    #subjectsTable thead tr.sub-head th { font-size: 10px; color: #7f8c9a; border-bottom: 1px solid #dce4ec; }
+    #subjectsTable td { vertical-align: middle; }
+    #subjectsTable td input.form-control { text-align: center; padding: 4px 6px; height: 30px; font-size: 13px; }
+    #subjectsTable td input[name="subjects_id[]"] { text-align: left; font-weight: 600; color: #2c3e50; background: #fdfdfd; }
+    #subjectsTable tbody tr:hover { background: #f0f6fc !important; }
+    #subjectsTable tbody tr[style*="lightgrey"] td input { background: #eef1f4; }
+    .sched-th-theory { border-left: 2px solid #dce4ec !important; }
+    .sched-th-practical { border-left: 2px solid #dce4ec !important; }
+</style>
+
+<div class="sched-panel">
+    <div class="sched-panel-header clearfix">
+        <h4><i class="fa fa-calendar-check-o"></i> Subject Schedule &amp; Marks</h4>
+        <div class="pull-right">
+            <button type="button" id="applyFirstRowAll" class="btn btn-xs btn-info" title="Copy 1st row's time & marks to every row below">
+                <i class="fa fa-clone"></i> Apply 1st Row Time &amp; Marks to All
+            </button>
+        </div>
     </div>
-    <table id="subjectsTable" class="table table-striped table-bordered table-hover">
-        <thead>
-        <tr>
-            <th>Sort</th>
-            <th width="30%">Subject</th>
-            <th>Date</th>
-            <th>StartTime</th>
-            <th>EndTime</th>
-            <th>FM (T)</th>
-            <th>PM (T)</th>
-            <th>FM (P)</th>
-            <th>PM (P)</th>
-            <th></th>
-        </tr>
-        </thead>
+    <div class="sched-panel-body" style="padding:0;">
+        <table id="subjectsTable" class="table table-bordered table-hover" style="margin-bottom:0;">
+            <thead>
+            <tr>
+                <th rowspan="2" style="width:4%;">Sort</th>
+                <th rowspan="2" style="width:26%; text-align:left;">Subject</th>
+                <th rowspan="2" style="width:12%;">Exam Date</th>
+                <th rowspan="2" style="width:10%;">Start Time</th>
+                <th rowspan="2" style="width:10%;">End Time</th>
+                <th colspan="2" class="sched-th-theory">Theory Mark</th>
+                <th colspan="2" class="sched-th-practical">Practical Mark</th>
+                <th rowspan="2" style="width:5%;"></th>
+            </tr>
+            <tr class="sub-head">
+                <th class="sched-th-theory" style="width:8%;">Full</th>
+                <th style="width:8%;">Pass</th>
+                <th class="sched-th-practical" style="width:8%;">Full</th>
+                <th style="width:8%;">Pass</th>
+            </tr>
+            </thead>
 
-        <tbody id="subject_wrapper">
-        {{--@if($schedule)
-        @include('examination.schedule.includes.subject_tr_rows')
-        @endif--}}
-        {{--@if (isset($data['schedule']))
-
-            {!! $data['schedule'] !!}
-
-        @endif--}}
-
-        </tbody>
-
-    </table>
+            <tbody id="subject_wrapper">
+            </tbody>
+        </table>
+    </div>
 </div>
 @include('includes.scripts.inputMask_script')
 
