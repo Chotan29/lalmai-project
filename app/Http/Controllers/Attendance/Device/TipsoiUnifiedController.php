@@ -394,7 +394,8 @@ class TipsoiUnifiedController extends CollegeBaseController
 
         if (!$row) {
             $reg = $this->personIdentifierFor($type, $model);
-            Attendance::create([
+            $statusCode = AttendanceStatus::whereKey($statusId)->value('code');
+            $att = Attendance::create([
                 'date'                 => $date,
                 'attendable_type'      => $attType,
                 'attendable_id'        => $model->id,
@@ -403,7 +404,18 @@ class TipsoiUnifiedController extends CollegeBaseController
                 'check_in_at'          => $lt,
                 'check_out_at'         => $lt,
                 'source'               => 'device',
+                'notification_status'  => 'pending',
+                'meta'                 => ['notify' => ['last_status' => $statusCode, 'queued_at' => now()->toDateTimeString()]],
             ]);
+
+            /* instant SMS: dispatch right away instead of waiting for the 5-min sweep */
+            if ($type === 'student') {
+                try {
+                    \App\Jobs\AttendanceJobs\SendAttendanceNotification::dispatch($att->id)->onQueue('notifications');
+                } catch (\Throwable $e) {
+                    Log::warning('Instant attendance notification dispatch failed', ['id' => $att->id, 'err' => $e->getMessage()]);
+                }
+            }
             return;
         }
 

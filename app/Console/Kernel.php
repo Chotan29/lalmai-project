@@ -34,7 +34,7 @@ class Kernel extends ConsoleKernel
        $schedule->command('attendance:pipeline', [
                 '--start'              => now($tz)->toDateString(),
                 '--end'                => now($tz)->toDateString(),   // <- today, recomputed each minute
-                '--with-notifications' => 0,                          // or 1 if you want to drain notifications too
+                '--with-notifications' => 1,                          // drain notifications right after sync => instant SMS
             ])
             ->everyMinute()
             ->between('05:00', '23:59')
