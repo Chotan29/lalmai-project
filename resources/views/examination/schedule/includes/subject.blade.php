@@ -30,13 +30,15 @@
                 <th rowspan="2" style="width:9%;">Start Time</th>
                 <th rowspan="2" style="width:9%;">End Time</th>
                 <th colspan="2" class="sched-th-theory">Theory Mark</th>
-                <th rowspan="2" class="sched-th-theory" style="width:7%;" title="From Subject setup (Academic > Subject)">MCQ<br><small style="font-weight:normal; text-transform:none;">(subject)</small></th>
+                <th colspan="2" class="sched-th-theory" title="From Subject setup (Academic > Subject)">MCQ Mark <small style="font-weight:normal; text-transform:none;">(subject)</small></th>
                 <th colspan="2" class="sched-th-practical">Practical Mark</th>
                 <th rowspan="2" style="width:5%;"></th>
             </tr>
             <tr class="sub-head">
                 <th class="sched-th-theory" style="width:7%;">Full</th>
                 <th style="width:7%;">Pass</th>
+                <th class="sched-th-theory" style="width:6%;">Full</th>
+                <th style="width:6%;">Pass</th>
                 <th class="sched-th-practical" style="width:7%;">Full</th>
                 <th style="width:7%;">Pass</th>
             </tr>

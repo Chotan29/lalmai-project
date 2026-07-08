@@ -413,7 +413,7 @@ class ExamScheduleController extends CollegeBaseController
                     'exam_schedules.date', 'exam_schedules.start_time', 'exam_schedules.end_time',
                     'exam_schedules.full_mark_theory', 'exam_schedules.pass_mark_theory',
                     'exam_schedules.full_mark_practical',
-                    'exam_schedules.pass_mark_practical','s.id as sub_id', 's.title', 's.mcq_number_theory')
+                    'exam_schedules.pass_mark_practical','s.id as sub_id', 's.title', 's.mcq_number_theory', 's.mcq_number_practical')
                     ->where($whereCondition)
                     ->whereIn('exam_schedules.subjects_id', $existSubject)
                     ->join('subjects as s','s.id','=','exam_schedules.subjects_id')
