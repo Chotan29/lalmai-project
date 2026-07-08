@@ -225,6 +225,30 @@ class ExamDashboardController extends CollegeBaseController
             $deptSummary[$dKey]['entered'] += $doneUnits;
         }
 
+        /* Publish-control groups: one row per (year, month, exam, faculty, semester) */
+        $publishGroups = [];
+        foreach ($rows as $row) {
+            $s = $row['schedule'];
+            $gKey = implode('-', [$s->years_id, $s->months_id, $s->exams_id, $s->faculty_id, $s->semesters_id]);
+            if (!isset($publishGroups[$gKey])) {
+                $publishGroups[$gKey] = [
+                    'years_id' => $s->years_id, 'months_id' => $s->months_id, 'exams_id' => $s->exams_id,
+                    'faculty_id' => $s->faculty_id, 'semesters_id' => $s->semesters_id,
+                    'exam_title' => $s->exam_title, 'month_title' => $s->month_title, 'year_title' => $s->year_title,
+                    'faculty_title' => $s->faculty_title, 'semester_title' => $s->semester_title,
+                    'subjects' => 0, 'complete' => 0, 'published' => 0, 'remaining_entries' => 0,
+                ];
+            }
+            $publishGroups[$gKey]['subjects']++;
+            if ($row['status'] == 'complete') $publishGroups[$gKey]['complete']++;
+            if ($s->publish_status == 1) $publishGroups[$gKey]['published']++;
+            $publishGroups[$gKey]['remaining_entries'] += $row['remaining'];
+        }
+        foreach ($publishGroups as $k => $g) {
+            $publishGroups[$k]['publish_state'] = $g['published'] == 0 ? 'none'
+                : ($g['published'] == $g['subjects'] ? 'all' : 'mixed');
+        }
+
         $summary['overall_percent'] = $summary['expected_entries'] > 0
             ? round(($summary['done_entries'] / $summary['expected_entries']) * 100, 1) : 0;
 
@@ -242,6 +266,7 @@ class ExamDashboardController extends CollegeBaseController
         }
 
         $data['rows'] = $rows;
+        $data['publishGroups'] = $publishGroups;
         $data['summary'] = $summary;
         $data['overdue'] = $overdue;
         $data['deptSummary'] = $deptSummary;

@@ -158,6 +158,75 @@
                     </div>
                 @endif
 
+                {{-- Result Publish Control --}}
+                @ability('super-admin', 'exam-result-publish')
+                <div class="exd-section">
+                    <h4><i class="fa fa-bullhorn"></i> Result Publish Control
+                        <small>students see results (and guardians get SMS) only after publish</small>
+                    </h4>
+                    <div class="table-responsive">
+                        <table class="table table-condensed table-striped" style="margin-bottom:0;">
+                            <thead>
+                            <tr>
+                                <th>Exam</th><th>Department</th><th>Semester/Class</th>
+                                <th class="text-center">Subjects</th>
+                                <th class="text-center">Entry Complete</th>
+                                <th class="text-center">Publish Status</th>
+                                <th class="text-center">Action</th>
+                            </tr>
+                            </thead>
+                            <tbody>
+                            @forelse($data['publishGroups'] as $g)
+                                @php
+                                    $routeParams = [$g['years_id'], $g['months_id'], $g['exams_id'], $g['faculty_id'], $g['semesters_id']];
+                                    $incomplete = $g['subjects'] - $g['complete'];
+                                @endphp
+                                <tr>
+                                    <td>{{ $g['exam_title'] }} <span class="exd-muted">({{ $g['month_title'] }} {{ $g['year_title'] }})</span></td>
+                                    <td>{{ $g['faculty_title'] }}</td>
+                                    <td>{{ $g['semester_title'] }}</td>
+                                    <td class="text-center">{{ $g['subjects'] }}</td>
+                                    <td class="text-center">
+                                        <span class="label {{ $incomplete == 0 ? 'label-success' : 'label-warning' }}">{{ $g['complete'] }} / {{ $g['subjects'] }}</span>
+                                        @if($g['remaining_entries'] > 0)
+                                            <br><span class="exd-muted">{{ $g['remaining_entries'] }} entries left</span>
+                                        @endif
+                                    </td>
+                                    <td class="text-center">
+                                        @if($g['publish_state'] == 'all')
+                                            <span class="label label-success label-lg">Published</span>
+                                        @elseif($g['publish_state'] == 'mixed')
+                                            <span class="label label-warning label-lg">Partially Published</span>
+                                        @else
+                                            <span class="label label-default label-lg">Not Published</span>
+                                        @endif
+                                    </td>
+                                    <td class="text-center" style="white-space:nowrap;">
+                                        @if($g['publish_state'] != 'all')
+                                            <a href="{{ route('exam.schedule.result-publish', $routeParams) }}"
+                                               class="btn btn-success btn-xs exd-publish-btn"
+                                               data-incomplete="{{ $incomplete }}" data-total="{{ $g['subjects'] }}"
+                                               data-remaining="{{ $g['remaining_entries'] }}">
+                                                <i class="fa fa-check"></i> Publish
+                                            </a>
+                                        @endif
+                                        @if($g['publish_state'] != 'none')
+                                            <a href="{{ route('exam.schedule.result-un-publish', $routeParams) }}"
+                                               class="btn btn-danger btn-xs exd-unpublish-btn">
+                                                <i class="fa fa-times"></i> Unpublish
+                                            </a>
+                                        @endif
+                                    </td>
+                                </tr>
+                            @empty
+                                <tr><td colspan="7" class="text-center">No exam groups found</td></tr>
+                            @endforelse
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                @endability
+
                 {{-- Subject-wise progress table --}}
                 <div class="exd-section">
                     <h4><i class="fa fa-book"></i> Subject-wise Mark Entry Status</h4>
@@ -302,4 +371,33 @@
             </div>
         </div>
     </div>
+@endsection
+
+@section('js')
+    <script>
+        (function () {
+            /* Safety confirm before publish */
+            document.querySelectorAll('.exd-publish-btn').forEach(function (btn) {
+                btn.addEventListener('click', function (e) {
+                    var incomplete = parseInt(btn.getAttribute('data-incomplete') || '0', 10);
+                    var total = parseInt(btn.getAttribute('data-total') || '0', 10);
+                    var remaining = parseInt(btn.getAttribute('data-remaining') || '0', 10);
+                    var msg;
+                    if (incomplete > 0) {
+                        msg = 'WARNING: ' + incomplete + ' of ' + total + ' subjects have INCOMPLETE mark entry (' + remaining + ' entries left).\n\n'
+                            + 'Students will see incomplete/wrong results and guardians will receive result SMS.\n\nPublish anyway?';
+                    } else {
+                        msg = 'All ' + total + ' subjects complete. Publish result?\n(Guardians will receive result SMS.)';
+                    }
+                    if (!confirm(msg)) e.preventDefault();
+                });
+            });
+            /* Confirm before unpublish */
+            document.querySelectorAll('.exd-unpublish-btn').forEach(function (btn) {
+                btn.addEventListener('click', function (e) {
+                    if (!confirm('Unpublish this result? Students will no longer see it.')) e.preventDefault();
+                });
+            });
+        })();
+    </script>
 @endsection
