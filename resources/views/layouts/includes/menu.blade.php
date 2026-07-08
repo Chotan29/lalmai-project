@@ -1553,6 +1553,14 @@
                             <b class="arrow"></b>
 
                             <ul class="submenu">
+                                <li class="{!! request()->is('exam/dashboard*') ? 'active' : '' !!} hover">
+                                    <a href="{{ route('exam.dashboard') }}">
+                                        <i class="fa fa-caret-right"></i>
+                                        Exam Dashboard
+                                    </a>
+                                    <b class="arrow"></b>
+                                </li>
+
                                 <li class="{!! request()->is('exam/schedule*') ? 'active' : '' !!} hover">
                                     <a href="{{ route('exam.schedule') }}">
                                         <i class="fa fa-caret-right"></i>
@@ -2529,15 +2537,4 @@
                             </a>
                         </li>
                         <li class="hover">
-                            <a href="https://codecanyon.net/item/unlimited-edu-firm-school-college-information-management-system/21850988"
-                                target="_blank">
-                                <i class="fa fa-caret-right"></i>
-                                Buy New License
-                            </a>
-                        </li>
-                    </ul>
-                </li>
-            @endif
-        @endability
-    </ul><!-- /.nav-list -->
-</div>
+                            <a href="htt

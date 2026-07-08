@@ -1167,6 +1167,9 @@ Route::prefix('attendance')
 /*Exam group */
 Route::group(['prefix' => 'exam/',                                      'as' => 'exam',                                         'namespace' => 'Examination\\'], function () {
 
+    /*Exam Mark Entry Progress Dashboard*/
+    Route::get('dashboard',                         ['as' => '.dashboard',        'middleware' => ['ability:super-admin,exam-mark-ledger-index'],  'uses' => 'ExamDashboardController@index']);
+
     /*Exam Types Routes*/
     Route::get('',                                  ['as' => '',                  'middleware' => ['ability:super-admin,exam-index'],           'uses' => 'ExamController@index']);
     Route::post('store',                            ['as' => '.store',            'middleware' => ['ability:super-admin,exam-add'],             'uses' => 'ExamController@store']);
@@ -3161,8 +3164,4 @@ Route::group(['prefix' => 'webportal',                                   'as' =>
 
 
     Route::post('/registration/academicInfo-html',   ['as' => 'registration.academicInfo-html',   'uses' => 'Website\RegistrationController@academicInfoHtml']);
-    Route::post('/registration/workExperience-html', ['as' => 'registration.workExperience-html', 'uses' => 'Website\RegistrationController@workExperienceHtml']);
-
-    Route::get('/{page?}',         ['as' => '404',                'uses' => 'ErrController@pageNotFound'])->where('page','.*');
-});
-
+    Route::post('/registration/workExperience-html', ['as' => '
