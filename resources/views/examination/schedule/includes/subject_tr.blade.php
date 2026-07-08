@@ -27,6 +27,10 @@
         {!! Form::text('pass_mark_theory[]', $subject->pass_mark_theory, ["class" => "form-control border-form upper"]) !!}
     </td>
     <td>
+        <input type="text" class="form-control sched-mcq" value="{{ $subject->mcq_number_theory > 0 ? $subject->mcq_number_theory + 0 : '' }}"
+               disabled title="MCQ mark comes from Subject setup (Academic > Subject)">
+    </td>
+    <td>
         {!! Form::text('full_mark_practical[]', $subject->full_mark_practical, ["class" => "form-control border-form upper"]) !!}
     </td>
     <td>

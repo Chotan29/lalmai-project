@@ -6,6 +6,7 @@
     #subjectsTable td input[name="subjects_id[]"] { text-align: left; font-weight: 600; color: #2c3e50; background: #fdfdfd; }
     #subjectsTable tbody tr:hover { background: #f0f6fc !important; }
     #subjectsTable tbody tr[style*="lightgrey"] td input { background: #eef1f4; }
+    #subjectsTable td input.sched-mcq { background: #f4f7fa; color: #337ab7; font-weight: 600; cursor: not-allowed; }
     .sched-th-theory { border-left: 2px solid #dce4ec !important; }
     .sched-th-practical { border-left: 2px solid #dce4ec !important; }
 </style>
@@ -25,18 +26,19 @@
             <tr>
                 <th rowspan="2" style="width:4%;">Sort</th>
                 <th rowspan="2" style="width:26%; text-align:left;">Subject</th>
-                <th rowspan="2" style="width:12%;">Exam Date</th>
-                <th rowspan="2" style="width:10%;">Start Time</th>
-                <th rowspan="2" style="width:10%;">End Time</th>
+                <th rowspan="2" style="width:11%;">Exam Date</th>
+                <th rowspan="2" style="width:9%;">Start Time</th>
+                <th rowspan="2" style="width:9%;">End Time</th>
                 <th colspan="2" class="sched-th-theory">Theory Mark</th>
+                <th rowspan="2" class="sched-th-theory" style="width:7%;" title="From Subject setup (Academic > Subject)">MCQ<br><small style="font-weight:normal; text-transform:none;">(subject)</small></th>
                 <th colspan="2" class="sched-th-practical">Practical Mark</th>
                 <th rowspan="2" style="width:5%;"></th>
             </tr>
             <tr class="sub-head">
-                <th class="sched-th-theory" style="width:8%;">Full</th>
-                <th style="width:8%;">Pass</th>
-                <th class="sched-th-practical" style="width:8%;">Full</th>
-                <th style="width:8%;">Pass</th>
+                <th class="sched-th-theory" style="width:7%;">Full</th>
+                <th style="width:7%;">Pass</th>
+                <th class="sched-th-practical" style="width:7%;">Full</th>
+                <th style="width:7%;">Pass</th>
             </tr>
             </thead>
 
