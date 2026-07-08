@@ -172,8 +172,8 @@
                                 <th>Exam</th>
                                 <th>Exam Date</th>
                                 <th class="text-center">Students</th>
-                                <th class="text-center">Entered</th>
-                                <th class="text-center">Remaining</th>
+                                <th class="text-center" style="min-width:110px;">Entry (T / M / P)</th>
+                                <th class="text-center">Remaining<br><span class="exd-muted" style="font-weight:normal;">entries</span></th>
                                 <th class="text-center">Absent</th>
                                 <th style="min-width:120px;">Progress</th>
                                 <th class="text-center">Status</th>
@@ -196,7 +196,14 @@
                                         @endif
                                     </td>
                                     <td class="text-center">{{ $row['expected'] }}</td>
-                                    <td class="text-center"><b>{{ $row['entered'] }}</b></td>
+                                    <td class="text-center" style="white-space:nowrap;">
+                                        @foreach($row['components'] as $comp)
+                                            <span class="label {{ $comp['done'] ? 'label-success' : ($comp['entered'] > 0 ? 'label-warning' : 'label-danger') }}"
+                                                  title="{{ $comp['label'] }}: {{ $comp['entered'] }} of {{ $comp['expected'] }} entered">
+                                                {{ $comp['short'] }} {{ $comp['entered'] }}/{{ $comp['expected'] }}
+                                            </span>
+                                        @endforeach
+                                    </td>
                                     <td class="text-center">{{ $row['remaining'] }}</td>
                                     <td class="text-center">{{ $row['absent'] }}</td>
                                     <td>

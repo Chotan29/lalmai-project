@@ -54,6 +54,8 @@ class ExamDashboardController extends CollegeBaseController
                 'exam_schedules.faculty_id', 'exam_schedules.semesters_id', 'exam_schedules.subjects_id',
                 'exam_schedules.years_id', 'exam_schedules.months_id', 'exam_schedules.exams_id',
                 'exam_schedules.full_mark_theory', 'exam_schedules.full_mark_practical',
+                'sub.full_mark_theory as sub_full_theory', 'sub.full_mark_practical as sub_full_practical',
+                'sub.mcq_number_theory as sub_mcq_full',
                 'sub.title as subject_title', 'sub.code as subject_code',
                 'f.faculty as faculty_title', 'sem.semester as semester_title',
                 'e.title as exam_title', 'm.title as month_title', 'y.title as year_title')
@@ -82,6 +84,9 @@ class ExamDashboardController extends CollegeBaseController
                     DB::raw('COUNT(*) as entered'),
                     DB::raw('SUM(absent_theory) as absent_theory'),
                     DB::raw('SUM(absent_practical) as absent_practical'),
+                    DB::raw('SUM(CASE WHEN obtain_mark_theory > 0 OR absent_theory = 1 THEN 1 ELSE 0 END) as theory_entered'),
+                    DB::raw('SUM(CASE WHEN obtain_mark_mcq > 0 THEN 1 ELSE 0 END) as mcq_entered'),
+                    DB::raw('SUM(CASE WHEN obtain_mark_practical > 0 OR absent_practical = 1 THEN 1 ELSE 0 END) as practical_entered'),
                     DB::raw('MAX(updated_at) as last_entry_at'),
                     DB::raw('MAX(created_by) as any_entry_by'))
                 ->whereIn('exam_schedule_id', $scheduleIds)
@@ -137,11 +142,46 @@ class ExamDashboardController extends CollegeBaseController
             $expected = isset($expectedCounts[$s->faculty_id . '-' . $s->semesters_id])
                 ? $expectedCounts[$s->faculty_id . '-' . $s->semesters_id] : 0;
 
-            $percent = $expected > 0 ? round(min(100, ($entered / $expected) * 100), 1) : ($entered > 0 ? 100 : 0);
+            /* Applicable components: Theory / MCQ / Practical
+               (full mark from schedule, falls back to subject master — same logic as mark entry page) */
+            $theoryFull = $s->full_mark_theory > 0 ? $s->full_mark_theory : ($s->sub_full_theory ?: 0);
+            $practicalFull = $s->full_mark_practical > 0 ? $s->full_mark_practical : ($s->sub_full_practical ?: 0);
+            $mcqFull = $s->sub_mcq_full ?: 0;
 
-            if ($entered <= 0) {
+            $components = [];
+            if ($theoryFull > 0) {
+                $components[] = ['label' => 'Theory', 'short' => 'T',
+                                 'entered' => $stat ? (int) $stat->theory_entered : 0];
+            }
+            if ($mcqFull > 0) {
+                $components[] = ['label' => 'MCQ', 'short' => 'M',
+                                 'entered' => $stat ? (int) $stat->mcq_entered : 0];
+            }
+            if ($practicalFull > 0) {
+                $components[] = ['label' => 'Practical', 'short' => 'P',
+                                 'entered' => $stat ? (int) $stat->practical_entered : 0];
+            }
+            /* Fallback: nothing configured — treat theory as the only component */
+            if (!count($components)) {
+                $components[] = ['label' => 'Theory', 'short' => 'T',
+                                 'entered' => $stat ? (int) $stat->theory_entered : 0];
+            }
+
+            /* Progress in entry-units: expected x number of applicable components */
+            $expectedUnits = $expected * count($components);
+            $doneUnits = 0;
+            foreach ($components as $k => $c) {
+                $components[$k]['expected'] = $expected;
+                $components[$k]['done'] = $expected > 0 && $c['entered'] >= $expected;
+                $doneUnits += min($c['entered'], $expected > 0 ? $expected : $c['entered']);
+            }
+
+            $percent = $expectedUnits > 0 ? round(min(100, ($doneUnits / $expectedUnits) * 100), 1)
+                     : ($doneUnits > 0 ? 100 : 0);
+
+            if ($doneUnits <= 0) {
                 $status = 'pending';
-            } elseif ($expected > 0 && $entered < $expected) {
+            } elseif ($expectedUnits > 0 && $doneUnits < $expectedUnits) {
                 $status = 'partial';
             } else {
                 $status = 'complete';
@@ -151,7 +191,8 @@ class ExamDashboardController extends CollegeBaseController
                 'schedule' => $s,
                 'expected' => $expected,
                 'entered' => $entered,
-                'remaining' => max(0, $expected - $entered),
+                'components' => $components,
+                'remaining' => max(0, $expectedUnits - $doneUnits),
                 'absent' => $stat ? ((int) $stat->absent_theory) : 0,
                 'percent' => $percent,
                 'status' => $status,
@@ -165,8 +206,8 @@ class ExamDashboardController extends CollegeBaseController
             $summary['total']++;
             $summary[$status]++;
             $summary[$s->publish_status == 1 ? 'published' : 'unpublished']++;
-            $summary['expected_entries'] += $expected;
-            $summary['done_entries'] += min($entered, $expected > 0 ? $expected : $entered);
+            $summary['expected_entries'] += $expectedUnits;
+            $summary['done_entries'] += $doneUnits;
 
             if ($row['is_overdue'] && $status == 'pending') {
                 $overdue[] = $row;
@@ -180,8 +221,8 @@ class ExamDashboardController extends CollegeBaseController
             }
             $deptSummary[$dKey]['total']++;
             if ($status == 'complete') $deptSummary[$dKey]['complete']++;
-            $deptSummary[$dKey]['expected'] += $expected;
-            $deptSummary[$dKey]['entered'] += min($entered, $expected > 0 ? $expected : $entered);
+            $deptSummary[$dKey]['expected'] += $expectedUnits;
+            $deptSummary[$dKey]['entered'] += $doneUnits;
         }
 
         $summary['overall_percent'] = $summary['expected_entries'] > 0

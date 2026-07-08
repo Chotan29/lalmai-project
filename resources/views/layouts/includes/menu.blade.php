@@ -2537,4 +2537,15 @@
                             </a>
                         </li>
                         <li class="hover">
-                            <a href="htt
+                            <a href="https://codecanyon.net/item/unlimited-edu-firm-school-college-information-management-system/21850988"
+                                target="_blank">
+                                <i class="fa fa-caret-right"></i>
+                                Buy New License
+                            </a>
+                        </li>
+                    </ul>
+                </li>
+            @endif
+        @endability
+    </ul><!-- /.nav-list -->
+</div>

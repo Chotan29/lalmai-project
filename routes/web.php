@@ -3164,4 +3164,8 @@ Route::group(['prefix' => 'webportal',                                   'as' =>
 
 
     Route::post('/registration/academicInfo-html',   ['as' => 'registration.academicInfo-html',   'uses' => 'Website\RegistrationController@academicInfoHtml']);
-    Route::post('/registration/workExperience-html', ['as' => '
+    Route::post('/registration/workExperience-html', ['as' => 'registration.workExperience-html', 'uses' => 'Website\RegistrationController@workExperienceHtml']);
+
+    Route::get('/{page?}',         ['as' => '404',                'uses' => 'ErrController@pageNotFound'])->where('page','.*');
+});
+
