@@ -374,30 +374,98 @@
 @endsection
 
 @section('js')
+    {{-- brings the SweetAlert card styles used across the system (student delete etc.) --}}
+    @include('includes.scripts.delete_confirm')
+
     <script>
-        (function () {
-            /* Safety confirm before publish */
-            document.querySelectorAll('.exd-publish-btn').forEach(function (btn) {
-                btn.addEventListener('click', function (e) {
-                    var incomplete = parseInt(btn.getAttribute('data-incomplete') || '0', 10);
-                    var total = parseInt(btn.getAttribute('data-total') || '0', 10);
-                    var remaining = parseInt(btn.getAttribute('data-remaining') || '0', 10);
-                    var msg;
-                    if (incomplete > 0) {
-                        msg = 'WARNING: ' + incomplete + ' of ' + total + ' subjects have INCOMPLETE mark entry (' + remaining + ' entries left).\n\n'
-                            + 'Students will see incomplete/wrong results and guardians will receive result SMS.\n\nPublish anyway?';
-                    } else {
-                        msg = 'All ' + total + ' subjects complete. Publish result?\n(Guardians will receive result SMS.)';
-                    }
-                    if (!confirm(msg)) e.preventDefault();
+        jQuery(function ($) {
+            var swalClasses = {
+                popup: 'swal-custom-popup',
+                header: 'swal-custom-header',
+                title: 'swal-custom-title',
+                content: 'swal-custom-content',
+                actions: 'swal-custom-actions',
+                confirmButton: 'swal-custom-confirm-btn',
+                cancelButton: 'swal-custom-cancel-btn'
+            };
+
+            function go(href) {
+                return new Promise(function (resolve) {
+                    setTimeout(function () { window.location.href = href; resolve(); }, 300);
+                });
+            }
+
+            /* Publish — card warning when entry incomplete */
+            $('.exd-publish-btn').on('click', function (e) {
+                e.preventDefault();
+                var $this = $(this);
+                var incomplete = parseInt($this.data('incomplete') || 0, 10);
+                var total = parseInt($this.data('total') || 0, 10);
+                var remaining = parseInt($this.data('remaining') || 0, 10);
+                var html;
+
+                if (incomplete > 0) {
+                    html = '<div class="swal-custom-alert alert-warning">' +
+                               '<i class="fa fa-exclamation-triangle mr-2"></i>' +
+                               '<strong>' + incomplete + ' of ' + total + '</strong> subjects have <strong>incomplete mark entry</strong> (' + remaining + ' entries left).' +
+                           '</div>' +
+                           '<div class="swal-custom-alert alert-light mt-3">' +
+                               '<i class="fa fa-info-circle text-info mr-2"></i>' +
+                               'Students will see incomplete results and guardians will receive result SMS.' +
+                           '</div>' +
+                           '<p class="text-center mt-3 mb-0"><i class="fa fa-question-circle text-primary mr-2"></i>Publish anyway?</p>';
+                } else {
+                    html = '<div class="swal-custom-alert alert-light">' +
+                               '<i class="fa fa-check-circle text-success mr-2"></i>' +
+                               'All <strong>' + total + '</strong> subjects\' mark entry is complete.' +
+                           '</div>' +
+                           '<div class="swal-custom-alert alert-light mt-3">' +
+                               '<i class="fa fa-mobile mr-2"></i>Guardians will receive result SMS after publish.' +
+                           '</div>' +
+                           '<p class="text-center mt-3 mb-0"><i class="fa fa-question-circle text-primary mr-2"></i>Publish this result?</p>';
+                }
+
+                Swal.fire({
+                    title: '<i class="fa fa-bullhorn ' + (incomplete > 0 ? 'text-warning' : 'text-success') + ' mr-2"></i> Confirm Result Publish',
+                    html: html,
+                    icon: incomplete > 0 ? 'warning' : 'question',
+                    showCancelButton: true,
+                    confirmButtonText: '<i class="fa fa-check mr-2"></i> ' + (incomplete > 0 ? 'Publish Anyway' : 'Publish'),
+                    cancelButtonText: '<i class="fa fa-times mr-2"></i> Cancel',
+                    confirmButtonColor: incomplete > 0 ? '#f0ad4e' : '#5cb85c',
+                    cancelButtonColor: '#6c757d',
+                    reverseButtons: true,
+                    showLoaderOnConfirm: true,
+                    allowOutsideClick: function () { return !Swal.isLoading(); },
+                    preConfirm: function () { return go($this.attr('href')); },
+                    customClass: swalClasses
                 });
             });
-            /* Confirm before unpublish */
-            document.querySelectorAll('.exd-unpublish-btn').forEach(function (btn) {
-                btn.addEventListener('click', function (e) {
-                    if (!confirm('Unpublish this result? Students will no longer see it.')) e.preventDefault();
+
+            /* Unpublish — card confirm */
+            $('.exd-unpublish-btn').on('click', function (e) {
+                e.preventDefault();
+                var $this = $(this);
+                Swal.fire({
+                    title: '<i class="fa fa-eye-slash text-danger mr-2"></i> Confirm Unpublish',
+                    html: '<div class="swal-custom-alert alert-warning">' +
+                              '<i class="fa fa-exclamation-triangle mr-2"></i>' +
+                              'Students will <strong>no longer see this result</strong> in the portal.' +
+                          '</div>' +
+                          '<p class="text-center mt-3 mb-0"><i class="fa fa-question-circle text-primary mr-2"></i>Are you sure?</p>',
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonText: '<i class="fa fa-eye-slash mr-2"></i> Unpublish',
+                    cancelButtonText: '<i class="fa fa-times mr-2"></i> Cancel',
+                    confirmButtonColor: '#d9534f',
+                    cancelButtonColor: '#6c757d',
+                    reverseButtons: true,
+                    showLoaderOnConfirm: true,
+                    allowOutsideClick: function () { return !Swal.isLoading(); },
+                    preConfirm: function () { return go($this.attr('href')); },
+                    customClass: swalClasses
                 });
             });
-        })();
+        });
     </script>
 @endsection
