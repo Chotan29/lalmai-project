@@ -179,6 +179,7 @@ class ExamMarkLedgerController extends CollegeBaseController
         $userId = auth()->user()->id;
         $savedCount = 0;
         $skippedLocked = 0;
+        $invalidRows = [];
 
         if($request->has('students_id')) {
             foreach ($request->get('students_id') as $key => $student) {
@@ -215,8 +216,10 @@ class ExamMarkLedgerController extends CollegeBaseController
                 }
 
                 /*Ownership guard: a teacher can only modify rows he/she entered.
-                  Admin / super-admin (non-teacher roles) can modify everything.*/
-                if ($ledgerExist && $isTeacher && $ledgerExist->created_by != $userId) {
+                  Admin / super-admin (non-teacher roles) can modify everything.
+                  A row whose created_by is empty has been unlocked by an admin, so any
+                  teacher is allowed to edit it (and becomes nothing special — it stays open).*/
+                if ($ledgerExist && $isTeacher && !empty($ledgerExist->created_by) && $ledgerExist->created_by != $userId) {
                     $skippedLocked++;
                     continue;
                 }
@@ -236,39 +239,58 @@ class ExamMarkLedgerController extends CollegeBaseController
 
                 $regNo = isset($students[$student]) ? $students[$student]->reg_no : ('Student ID '.$student);
 
+                /*Validate THIS row only. An invalid row is skipped and reported, but it must
+                  NOT stop the rest of the batch from saving. Previously a single out-of-range
+                  mark did a return back() here, so every student processed after it (higher
+                  rolls) silently failed to save while earlier ones persisted.*/
+                $rowError = '';
                 if ($thMark < 0 || $mcqMark < 0 || $prMark < 0) {
-                    $request->session()->flash($this->message_warning, 'Mark cannot be negative for '.$regNo.'.');
-                    return back()->withInput();
+                    $rowError = 'negative mark';
+                } elseif ($theoryMax > 0 && $thMark > $theoryMax) {
+                    $rowError = 'theory exceeds '.$theoryMax;
+                } elseif ($mcqMax > 0 && $mcqMark > $mcqMax) {
+                    $rowError = 'MCQ exceeds '.$mcqMax;
+                } elseif ($practicalMax > 0 && $prMark > $practicalMax) {
+                    $rowError = 'practical exceeds '.$practicalMax;
                 }
 
-                if ($theoryMax > 0 && $thMark > $theoryMax) {
-                    $request->session()->flash($this->message_warning, 'Theory mark cannot exceed full mark ('.$theoryMax.') for '.$regNo.'.');
-                    return back()->withInput();
-                }
-
-                if ($mcqMax > 0 && $mcqMark > $mcqMax) {
-                    $request->session()->flash($this->message_warning, 'MCQ mark cannot exceed full mark ('.$mcqMax.') for '.$regNo.'.');
-                    return back()->withInput();
-                }
-
-                if ($practicalMax > 0 && $prMark > $practicalMax) {
-                    $request->session()->flash($this->message_warning, 'Practical mark cannot exceed full mark ('.$practicalMax.') for '.$regNo.'.');
-                    return back()->withInput();
+                if ($rowError !== '') {
+                    $invalidRows[] = $regNo.' ('.$rowError.')';
+                    continue;
                 }
 
                 if ($ledgerExist) {
-                    /*Update Own / Admin-Editable Mark Ledger*/
+                    /*Column-wise partial save: only overwrite a component (theory / MCQ /
+                      practical) when it was actually touched in THIS submission — i.e. a
+                      mark was typed OR its absent box was ticked. Untouched components keep
+                      their previously saved value. This lets a teacher enter theory first
+                      and add practical/MCQ later (even in a separate session) without the
+                      blank boxes wiping the marks entered earlier.*/
+                    $theoryTouched    = ($thRaw !== '' || $trAbsentStudent == 1);
+                    $mcqTouched       = ($mcqRaw !== '');
+                    $practicalTouched = ($prRaw !== '' || $prAbsentStudent == 1);
+
+                    /*Nothing filled for this existing row -> leave it untouched.*/
+                    if (!$theoryTouched && !$mcqTouched && !$practicalTouched) {
+                        continue;
+                    }
+
                     $ledgerUpdate = [
-                        'exam_schedule_id' => $examScheduleId->id,
-                        'students_id' => $student,
-                        'obtain_mark_theory' => $thMark,
-                        'obtain_mark_practical' => $prMark,
-                        'obtain_mark_mcq' => $mcqMark,
-                        'absent_theory' => $trAbsentStudent,
-                        'absent_practical' => $prAbsentStudent,
                         'sorting_order' => $key+1,
-                        'last_updated_by' => $userId
+                        'last_updated_by' => $userId,
                     ];
+
+                    if ($theoryTouched) {
+                        $ledgerUpdate['obtain_mark_theory'] = $thMark;
+                        $ledgerUpdate['absent_theory'] = $trAbsentStudent;
+                    }
+                    if ($mcqTouched) {
+                        $ledgerUpdate['obtain_mark_mcq'] = $mcqMark;
+                    }
+                    if ($practicalTouched) {
+                        $ledgerUpdate['obtain_mark_practical'] = $prMark;
+                        $ledgerUpdate['absent_practical'] = $prAbsentStudent;
+                    }
 
                     $ledgerExist->update($ledgerUpdate);
                     $savedCount++;
@@ -295,9 +317,20 @@ class ExamMarkLedgerController extends CollegeBaseController
             if ($skippedLocked > 0) {
                 $message .= ' '.$skippedLocked.' student(s) skipped (entered by another teacher).';
             }
+            if (count($invalidRows) > 0) {
+                $message .= ' '.count($invalidRows).' student(s) NOT saved due to invalid marks: '.implode(', ', $invalidRows).'. Please correct and save again.';
+            }
 
             if ($savedCount > 0) {
-                $request->session()->flash($this->message_success, $message);
+                /*Some rows saved but others had invalid marks -> show a warning so the
+                  invalid ones are not missed, otherwise a plain success.*/
+                if (count($invalidRows) > 0) {
+                    $request->session()->flash($this->message_warning, $message);
+                } else {
+                    $request->session()->flash($this->message_success, $message);
+                }
+            } elseif (count($invalidRows) > 0) {
+                $request->session()->flash($this->message_warning, 'No mark saved. Invalid marks for: '.implode(', ', $invalidRows).'. Please correct and save again.');
             } else {
                 $request->session()->flash($this->message_warning, 'No mark saved. '.($skippedLocked > 0 ? $skippedLocked.' student(s) are locked by another teacher.' : 'Please fill mark for at least one student.'));
             }
@@ -307,6 +340,56 @@ class ExamMarkLedgerController extends CollegeBaseController
 
         // Always return to add page so teacher can enter marks for next subject
         return back()->withInput();
+    }
+
+    /**
+     * Admin unlock: clear the owner (created_by) of one or more mark-ledger rows so that
+     * any teacher can edit them again. Works for a single student or a bulk selection.
+     * Only admin / super-admin (non-teacher) may unlock.
+     */
+    public function unlock(Request $request)
+    {
+        $response = ['error' => true, 'message' => ''];
+
+        if ($this->isTeacherUser()) {
+            $response['message'] = 'Only admin can unlock a mark row.';
+            return response()->json($response);
+        }
+
+        /*Resolve the exam schedule the same way store() does.*/
+        $examSchedule = ExamSchedule::select('id')->where([
+            ['years_id', '=', $request->get('years_id')],
+            ['months_id', '=', $request->get('months_id')],
+            ['exams_id', '=', $request->get('exams_id')],
+            ['faculty_id', '=', $request->get('faculty')],
+            ['semesters_id', '=', $request->get('semester_select')],
+            ['subjects_id', '=', $request->get('schedule_subject')],
+        ])->first();
+
+        if (!$examSchedule) {
+            $response['message'] = 'Exam schedule not found for the selected filter.';
+            return response()->json($response);
+        }
+
+        $studentIds = array_filter((array) $request->get('students_id'));
+        if (empty($studentIds)) {
+            $response['message'] = 'No student selected to unlock.';
+            return response()->json($response);
+        }
+
+        /* created_by column is NOT NULL (unsignedInteger), so 0 is used as the
+           "no owner / unlocked" sentinel. The store() guard treats an empty
+           created_by (0) as editable by any teacher. */
+        $affected = ExamMarkLedger::where('exam_schedule_id', $examSchedule->id)
+            ->whereIn('students_id', $studentIds)
+            ->update(['created_by' => 0, 'last_updated_by' => auth()->user()->id]);
+
+        $response['error'] = false;
+        $response['unlocked'] = $affected;
+        $response['student_ids'] = array_values($studentIds);
+        $response['message'] = $affected.' mark row(s) unlocked. Any teacher can now edit them.';
+
+        return response()->json($response);
     }
 
     public function delete(Request $request, $exam=null, $student=null)
@@ -538,7 +621,9 @@ class ExamMarkLedgerController extends CollegeBaseController
             $lockedIds = [];
             $ownerNames = [];
             foreach ($ledgerExist as $ledgerRow) {
-                if ($isTeacher && $ledgerRow->created_by != $userId) {
+                /*A row with empty created_by (0) has been unlocked by an admin, so it is
+                  NOT locked for any teacher — treat it as open/editable (white row).*/
+                if ($isTeacher && !empty($ledgerRow->created_by) && $ledgerRow->created_by != $userId) {
                     $lockedIds[] = $ledgerRow->students_id;
                     $ownerNames[$ledgerRow->students_id] = $ledgerRow->entered_by_name ?: 'Another user';
                 }
@@ -590,6 +675,7 @@ class ExamMarkLedgerController extends CollegeBaseController
                         'markLimits' => $markLimits,
                         'lockedIds' => $lockedIds,
                         'ownerNames' => $ownerNames,
+                        'canUnlock' => !$isTeacher,
                     ])->render();
 
                     $response['students'] = view($this->view_path.'.includes.student_tr', [

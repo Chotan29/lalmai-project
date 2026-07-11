@@ -55,6 +55,11 @@
                                     <i class="fa fa-print bigger-110"></i>
                                     Print My Entries
                                 </button>
+
+                                <button class="btn btn-info" type="button" id="unlock-selected-btn" style="display:none;">
+                                    <i class="fa fa-unlock bigger-110"></i>
+                                    Unlock Selected
+                                </button>
                             </div>
                         </div>
 
@@ -255,6 +260,8 @@
                         updateMarkHeaders(data.limits);
                         applyAbsentState();
                         updateSummary(data.exist_count, data.new_count, data.locked_count);
+                        /*Admin-only: show the bulk unlock button when owned rows are present*/
+                        $('#unlock-selected-btn').toggle($('.unlock-chk').length > 0);
                         toastr.success(data.message, "Success:");
                     }
                 }
@@ -463,6 +470,59 @@
                     });
                 }
             });
+        });
+
+        /* =============================================================
+           Admin: Unlock mark rows (single + bulk multi-select)
+           ============================================================= */
+        function currentLedgerFilter() {
+            return {
+                _token: '{{ csrf_token() }}',
+                years_id: $('select[name="years_id"]').val(),
+                months_id: $('select[name="months_id"]').val(),
+                exams_id: $('select[name="exams_id"]').val(),
+                faculty: $('select[name="faculty"]').val(),
+                semester_select: $('select[name="semester_select"]').val(),
+                schedule_subject: $('select[name="schedule_subject"]').val()
+            };
+        }
+
+        function doUnlock(studentIds) {
+            if (!studentIds || !studentIds.length) {
+                toastr.info('Please select at least one locked row.', 'Info:');
+                return;
+            }
+            var payload = currentLedgerFilter();
+            payload['students_id'] = studentIds;
+            $.ajax({
+                type: 'POST',
+                url: '{{ route('exam.mark-ledger.unlock') }}',
+                data: payload,
+                success: function (response) {
+                    var data = (typeof response === 'string' ? $.parseJSON(response) : response);
+                    if (data.error) {
+                        toastr.warning(data.message, 'Warning:');
+                    } else {
+                        toastr.success(data.message, 'Success:');
+                        /*reload the student list so unlocked rows become editable*/
+                        loadStudent(null);
+                    }
+                },
+                error: function () {
+                    toastr.error('Unlock failed. Please try again.', 'Error:');
+                }
+            });
+        }
+
+        /*single row unlock*/
+        $('#student_wrapper').on('click', '.unlock-one-btn', function () {
+            doUnlock([$(this).data('student-id')]);
+        });
+
+        /*bulk unlock of selected rows*/
+        $('#unlock-selected-btn').click(function () {
+            var ids = $('.unlock-chk:checked').map(function () { return $(this).val(); }).get();
+            doUnlock(ids);
         });
 
     </script>

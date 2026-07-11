@@ -1213,6 +1213,7 @@ Route::group(['prefix' => 'exam/',                                      'as' => 
     Route::get('mark-ledger/print',                                                ['as' => '.mark-ledger.print',               'middleware' => ['ability:super-admin,exam-mark-ledger-add'],                   'uses' => 'ExamMarkLedgerController@printMyEntries']);
     Route::post('mark-ledger/find-subject',                                        ['as' => '.mark-ledger.find-subject',                                                                                        'uses' => 'ExamMarkLedgerController@findSubject']);
     Route::post('mark-ledger/student-html',                                        ['as' => '.mark-ledger.student-html',                                                                                        'uses' => 'ExamMarkLedgerController@studentHtmlRow']);
+    Route::post('mark-ledger/unlock',                                              ['as' => '.mark-ledger.unlock',              'middleware' => ['ability:super-admin,exam-mark-ledger-edit'],                  'uses' => 'ExamMarkLedgerController@unlock']);
 
 });
 
