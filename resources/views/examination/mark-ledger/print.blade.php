@@ -37,7 +37,15 @@
                  + (float) $r->obtain_mark_mcq
                  + ($r->absent_practical == 1 ? 0 : (float) $r->obtain_mark_practical);
         });
-        $absentCount = $rows->filter(function ($r) { return $r->absent_theory == 1 && ($r->absent_practical == 1 || $r->obtain_mark_practical == 0); })->count();
+        /*Component-wise absent counts: CQ (theory) and Practical shown separately.
+          "Appeared" = students absent in NO component that this subject has.*/
+        $absentTh = $showTh ? $rows->where('absent_theory', 1)->count() : 0;
+        $absentPr = $showPr ? $rows->where('absent_practical', 1)->count() : 0;
+        $fullyAbsent = $rows->filter(function ($r) use ($showTh, $showPr) {
+            $thAb = !$showTh || $r->absent_theory == 1;
+            $prAb = !$showPr || $r->absent_practical == 1;
+            return ($showTh || $showPr) && $thAb && $prAb;
+        })->count();
         $presentTotals = $rows->filter(function ($r) { return !($r->absent_theory == 1); })->map(function ($r) {
             return ($r->absent_theory == 1 ? 0 : (float) $r->obtain_mark_theory)
                  + (float) $r->obtain_mark_mcq
@@ -253,8 +261,13 @@
             <!-- Summary -->
             <div class="summary">
                 <div class="sum-card"><div class="val">{{ $rows->count() }}</div><div class="lbl">Students</div></div>
-                <div class="sum-card"><div class="val">{{ $rows->count() - $absentCount }}</div><div class="lbl">Appeared</div></div>
-                <div class="sum-card"><div class="val">{{ $absentCount }}</div><div class="lbl">Absent</div></div>
+                <div class="sum-card"><div class="val">{{ $rows->count() - $fullyAbsent }}</div><div class="lbl">Appeared</div></div>
+                @if($showTh)
+                    <div class="sum-card"><div class="val">{{ $absentTh }}</div><div class="lbl">Absent (CQ)</div></div>
+                @endif
+                @if($showPr)
+                    <div class="sum-card"><div class="val">{{ $absentPr }}</div><div class="lbl">Absent (Practical)</div></div>
+                @endif
                 <div class="sum-card"><div class="val">{{ $fmt($highest) }}</div><div class="lbl">Highest</div></div>
                 <div class="sum-card"><div class="val">{{ $fmt(round($average, 2)) }}</div><div class="lbl">Average</div></div>
             </div>
@@ -268,22 +281,4 @@
                     <div class="hint">{{ $data['teacher_only'] ? $data['printed_by'] : '' }}&nbsp;</div>
                 </div>
                 <div class="sign">
-                    <div class="line"></div>
-                    <div class="role">Controller of Examinations</div>
-                    <div class="hint">&nbsp;</div>
-                </div>
-                <div class="sign">
-                    <div class="line"></div>
-                    <div class="role">Principal</div>
-                    <div class="hint">&nbsp;</div>
-                </div>
-            </div>
-
-            <div class="foot">
-                <span>This is a computer generated document &mdash; {{ $institute }} IMS</span>
-                <span>Printed by {{ $data['printed_by'] }} on {{ date('d M Y, h:i A') }}</span>
-            </div>
-        </div>
-    </div>
-</body>
-</html>
+                    <div class="li
