@@ -1,7 +1,25 @@
 @extends('layouts.master')
 
 @section('css')
+    <style>
+        /* Keep the mark-entry table header visible while scrolling */
+        #studentsTable thead th {
+            position: -webkit-sticky;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+        /* sticky needs its own opaque background so rows don't show through;
+           JS below copies the theme's real header colors at load time. */
 
+        /* .table-responsive's overflow:auto traps position:sticky inside the
+           wrapper, so the header never sticks to the page. On desktop widths
+           the table fits anyway - release the overflow so sticky works.
+           Below 768px keep the horizontal scroll for small screens. */
+        @media (min-width: 768px) {
+            #ledger-table-wrap { overflow: visible !important; }
+        }
+    </style>
 @endsection
 
 @section('content')
@@ -86,6 +104,28 @@
     @include('includes.scripts.jquery_validation_scripts')
     <!-- inline scripts related to this page -->
     <script type="text/javascript">
+        /*Sticky table header: copy the theme's real header background onto the
+          sticky THs (otherwise rows show through) and offset below any fixed navbar.*/
+        jQuery(function ($) {
+            var $ths = $('#studentsTable thead th');
+            if (!$ths.length) return;
+            var $src = $('#studentsTable thead tr');
+            var bgColor = $src.css('background-color');
+            var bgImage = $src.css('background-image');
+            $ths.each(function () {
+                var $th = $(this);
+                var ownColor = $th.css('background-color');
+                if (!ownColor || ownColor === 'rgba(0, 0, 0, 0)' || ownColor === 'transparent') {
+                    $th.css('background-color', (bgColor && bgColor !== 'rgba(0, 0, 0, 0)') ? bgColor : '#eff3f8');
+                    if (bgImage && bgImage !== 'none') $th.css('background-image', bgImage);
+                }
+            });
+            var $nav = $('.navbar-fixed-top, #navbar').first();
+            if ($nav.length && $nav.css('position') === 'fixed') {
+                $ths.css('top', $nav.outerHeight() + 'px');
+            }
+        });
+
         function loadSemesters($this) {
             var year = $('select[name="years_id"]').val();
             var month = $('select[name="months_id"]').val();
@@ -471,48 +511,3 @@
                             $('.schedule_subject').val(oldFilter.subject);
 
                             /*Step 3: reload student list*/
-                            loadStudent(null);
-                        }
-                    });
-                }
-            });
-        });
-
-        /* =============================================================
-           Admin: Unlock mark rows (single + bulk multi-select)
-           ============================================================= */
-        function currentLedgerFilter() {
-            return {
-                _token: '{{ csrf_token() }}',
-                years_id: $('select[name="years_id"]').val(),
-                months_id: $('select[name="months_id"]').val(),
-                exams_id: $('select[name="exams_id"]').val(),
-                faculty: $('select[name="faculty"]').val(),
-                semester_select: $('select[name="semester_select"]').val(),
-                schedule_subject: $('select[name="schedule_subject"]').val()
-            };
-        }
-
-        function doUnlock(studentIds) {
-            if (!studentIds || !studentIds.length) {
-                toastr.info('Please select at least one locked row.', 'Info:');
-                return;
-            }
-            var payload = currentLedgerFilter();
-            payload['students_id'] = studentIds;
-            $.ajax({
-                type: 'POST',
-                url: '{{ route('exam.mark-ledger.unlock') }}',
-                data: payload,
-                success: function (response) {
-                    var data = (typeof response === 'string' ? $.parseJSON(response) : response);
-                    if (data.error) {
-                        toastr.warning(data.message, 'Warning:');
-                    } else {
-                        toastr.success(data.message, 'Success:');
-                        /*reload the student list so unlocked rows become editable*/
-                        loadStudent(null);
-                    }
-                },
-                error: function () {
-                    toastr.error('Unlock failed. Please try again

@@ -1,4 +1,4 @@
-<div class="form-group table-responsive">
+<div class="form-group table-responsive" id="ledger-table-wrap">
     <div id="entry-summary" class="alert alert-info" style="display:none; margin-bottom:8px;"></div>
     <table id="studentsTable" class="table table-striped table-bordered table-hover">
         <thead>
@@ -20,4 +20,4 @@
 
     </table>
 </div>
-@include('includes.scripts.inputMask_script')
+@include('includes.scr
