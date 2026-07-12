@@ -151,6 +151,22 @@ class ExamMarkLedgerController extends CollegeBaseController
             ['subjects_id', '=' , $subject],
         ];
 
+        /*Truncation guard: PHP's max_input_vars silently drops POST fields beyond its
+          limit (default 1000). Every student row submits 4+ inputs, so with ~250+
+          students the later rows never reach PHP and those marks silently do not save.
+          The form sends expected_rows (placed at the very top of the form so it always
+          survives) with the on-screen row count; if fewer rows arrived, refuse to do a
+          partial save and tell the operator exactly what to fix.*/
+        $expectedRows = (int) $request->get('expected_rows', 0);
+        $receivedRows = is_array($request->get('students_id')) ? count($request->get('students_id')) : 0;
+        if ($expectedRows > 0 && $receivedRows < $expectedRows) {
+            $request->session()->flash($this->message_warning,
+                'Mark entry NOT saved: the form had '.$expectedRows.' students but the server only received '
+                .$receivedRows.'. The server\'s PHP max_input_vars limit is cutting off the request. '
+                .'Increase max_input_vars (e.g. to 10000) in php.ini / .user.ini, or enter marks in smaller batches.');
+            return back()->withInput();
+        }
+
         /*Find Exam Schedule Id*/
         $examScheduleId = ExamSchedule::select('id')->where($examScheduleCondition)->first();
 
@@ -673,35 +689,4 @@ class ExamMarkLedgerController extends CollegeBaseController
                         'absent_theory' => $trAbsentStudent,
                         'absent_practical' => $prAbsentStudent,
                         'markLimits' => $markLimits,
-                        'lockedIds' => $lockedIds,
-                        'ownerNames' => $ownerNames,
-                        'canUnlock' => !$isTeacher,
-                    ])->render();
-
-                    $response['students'] = view($this->view_path.'.includes.student_tr', [
-                        'students' => $activeStudent,
-                        'markLimits' => $markLimits,
-                    ])->render();
-
-                    $response['message'] = 'Active Students Found. Please, Manage Mark.';
-                }else{
-                    $response['error'] = false;
-
-                    $response['students'] = view($this->view_path.'.includes.student_tr', [
-                        'students' => $activeStudent,
-                        'markLimits' => $markLimits,
-                    ])->render();
-
-                    $response['message'] = 'Active Students Found. Please, Manage Mark.';
-                }
-            }else{
-                $response['error'] = 'No Any Active Students in This Faculty/Semester.';
-            }
-        }else{
-            $response['error'] = 'Exam Not Scheduled. Please Schedule First';
-        }
-
-        return response()->json(json_encode($response));
-    }
-
-}
+                        'lockedIds

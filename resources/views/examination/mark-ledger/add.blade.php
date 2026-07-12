@@ -31,6 +31,11 @@
                         {!! Form::open(['route' => $base_route.'.store', 'method' => 'POST', 'class' => 'form-horizontal',
                         'id' => 'validation-form', "enctype" => "multipart/form-data"]) !!}
 
+                        {{-- Truncation guard: placed at the TOP of the form so it always survives
+                             PHP max_input_vars truncation. JS fills it with the row count at submit;
+                             the server compares it against the received students_id[] count. --}}
+                        <input type="hidden" name="expected_rows" id="expected-rows" value="0">
+
                         @include($view_path.'.includes.form')
 
                         <div class="clearfix form-actions">
@@ -367,8 +372,9 @@
             window.open(url, '_blank');
         });
 
-        /*Block double submission*/
+        /*Block double submission + set expected row count for server-side truncation check*/
         $('#validation-form').on('submit', function () {
+            $('#expected-rows').val($('#student_wrapper tr.option_value').length);
             var $btns = $(this).find('button[type="submit"]');
             setTimeout(function () { $btns.prop('disabled', true); }, 10);
             setTimeout(function () { $btns.prop('disabled', false); }, 8000);
@@ -509,25 +515,4 @@
                     }
                 },
                 error: function () {
-                    toastr.error('Unlock failed. Please try again.', 'Error:');
-                }
-            });
-        }
-
-        /*single row unlock*/
-        $('#student_wrapper').on('click', '.unlock-one-btn', function () {
-            doUnlock([$(this).data('student-id')]);
-        });
-
-        /*bulk unlock of selected rows*/
-        $('#unlock-selected-btn').click(function () {
-            var ids = $('.unlock-chk:checked').map(function () { return $(this).val(); }).get();
-            doUnlock(ids);
-        });
-
-    </script>
-
-    @include('includes.scripts.table_tr_sort')
-
-@endsection
-
+                    toastr.error('Unlock failed. Please try again
