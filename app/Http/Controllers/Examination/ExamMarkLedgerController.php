@@ -178,6 +178,11 @@ class ExamMarkLedgerController extends CollegeBaseController
         $examSchedule = ExamSchedule::select('id', 'subjects_id', 'full_mark_theory', 'full_mark_practical')
             ->find($examScheduleId->id);
 
+        /*Optional twin: marks of students who took this subject as Optional are
+          saved under the twin (Optional) subject's schedule automatically.*/
+        list($optionalScheduleId, $optionalSubjectId, $optionalStudentIds) =
+            $this->optionalTwinSchedule($examSchedule->subjects_id, $year, $month, $exam, $faculty, $semester);
+
         $subject = Subject::select('id', 'full_mark_theory', 'full_mark_practical', 'mcq_number_theory')->find($examSchedule->subjects_id);
 
         $scheduleTheoryMax = (float) ($examSchedule->full_mark_theory ?? 0);
@@ -220,8 +225,11 @@ class ExamMarkLedgerController extends CollegeBaseController
                 $rowFilled = ($thRaw !== '' || $mcqRaw !== '' || $prRaw !== '' || $trAbsentStudent == 1 || $prAbsentStudent == 1);
 
                 /*Ledger Already Exist*/
+                $targetScheduleId = ($optionalScheduleId && in_array((int) $student, $optionalStudentIds, true))
+                    ? $optionalScheduleId : $examScheduleId->id;
+
                 $ledgerWhere = [
-                    ['exam_schedule_id','=',$examScheduleId->id],
+                    ['exam_schedule_id','=',$targetScheduleId],
                     ['students_id','=', $student]
                 ];
                 $ledgerExist = ExamMarkLedger::select('id', 'created_by')->where($ledgerWhere)->first();
@@ -314,7 +322,7 @@ class ExamMarkLedgerController extends CollegeBaseController
                 }else{
                     /*First entry: this user becomes the owner of the row*/
                     ExamMarkLedger::create([
-                        'exam_schedule_id' => $examScheduleId->id,
+                        'exam_schedule_id' => $targetScheduleId,
                         'students_id' => $student,
                         'obtain_mark_theory' => $thMark,
                         'obtain_mark_practical' => $prMark,
@@ -493,6 +501,15 @@ class ExamMarkLedgerController extends CollegeBaseController
         $isTeacher = $this->isTeacherUser();
         $userId = auth()->user()->id;
 
+        /*Optional twin rows print together with the compulsory subject*/
+        $printScheduleIds = [$examSchedule->id];
+        list($twinScheduleId) = $this->optionalTwinSchedule($examSchedule->subjects_id,
+            $request->get('years_id'), $request->get('months_id'), $request->get('exams_id'),
+            $request->get('faculty_id'), $request->get('semester_id'));
+        if ($twinScheduleId) {
+            $printScheduleIds[] = $twinScheduleId;
+        }
+
         $rowsQuery = ExamMarkLedger::select('exam_mark_ledgers.students_id',
                 'exam_mark_ledgers.obtain_mark_theory', 'exam_mark_ledgers.obtain_mark_mcq',
                 'exam_mark_ledgers.obtain_mark_practical', 'exam_mark_ledgers.absent_theory',
@@ -500,7 +517,7 @@ class ExamMarkLedgerController extends CollegeBaseController
                 'exam_mark_ledgers.updated_at',
                 'u.name as entered_by_name',
                 's.reg_no', 's.first_name', 's.middle_name', 's.last_name')
-            ->where('exam_mark_ledgers.exam_schedule_id', $examSchedule->id)
+            ->whereIn('exam_mark_ledgers.exam_schedule_id', $printScheduleIds)
             ->join('students as s', 's.id', '=', 'exam_mark_ledgers.students_id')
             ->leftJoin('users as u', 'u.id', '=', 'exam_mark_ledgers.created_by');
 
@@ -603,6 +620,18 @@ class ExamMarkLedgerController extends CollegeBaseController
             $examScheduleId[] = $examSchedule->id;
         }
 
+        /*Optional twin: entering the compulsory subject also loads/saves the
+          students who took the same subject as Optional (O-code convention).*/
+        $optionalScheduleId = null;
+        $optionalStudentIds = [];
+        if ($examSchedule) {
+            list($optionalScheduleId, $optionalSubjectId, $optionalStudentIds) =
+                $this->optionalTwinSchedule($examSchedule->subjects_id, $year, $month, $exam, $faculty, $semester);
+            if ($optionalScheduleId) {
+                $examScheduleId[] = $optionalScheduleId;
+            }
+        }
+
         $subjectDetail = $examSchedule ? Subject::select('id', 'full_mark_theory', 'full_mark_practical', 'mcq_number_theory')->find($examSchedule->subjects_id) : null;
         $scheduleTheoryLimit = (float) ($examSchedule->full_mark_theory ?? 0);
         $schedulePracticalLimit = (float) ($examSchedule->full_mark_practical ?? 0);
@@ -685,8 +714,82 @@ class ExamMarkLedgerController extends CollegeBaseController
                     $response['error'] = false;
 
                     $response['exist'] = view($this->view_path.'.includes.student_tr_rows', [
+                        'optionalIds' => $optionalStudentIds,
                         'exist' => $ledgerExist,
                         'absent_theory' => $trAbsentStudent,
                         'absent_practical' => $prAbsentStudent,
                         'markLimits' => $markLimits,
-                        'lockedIds
+                        'lockedIds' => $lockedIds,
+                        'ownerNames' => $ownerNames,
+                        'canUnlock' => !$isTeacher,
+                    ])->render();
+
+                    $response['students'] = view($this->view_path.'.includes.student_tr', [
+                        'optionalIds' => $optionalStudentIds,
+                        'students' => $activeStudent,
+                        'markLimits' => $markLimits,
+                    ])->render();
+
+                    $response['message'] = 'Active Students Found. Please, Manage Mark.';
+                }else{
+                    $response['error'] = false;
+
+                    $response['students'] = view($this->view_path.'.includes.student_tr', [
+                        'optionalIds' => $optionalStudentIds,
+                        'students' => $activeStudent,
+                        'markLimits' => $markLimits,
+                    ])->render();
+
+                    $response['message'] = 'Active Students Found. Please, Manage Mark.';
+                }
+            }else{
+                $response['error'] = 'No Any Active Students in This Faculty/Semester.';
+            }
+        }else{
+            $response['error'] = 'Exam Not Scheduled. Please Schedule First';
+        }
+
+        return response()->json(json_encode($response));
+    }
+
+    /*Find the "(Optional)" twin of a compulsory subject (code convention: O + same code)
+      and its exam schedule for the same year/month/exam/faculty/semester.
+      Returns [optionalScheduleId, optionalSubjectId, optionalStudentIds[]] or [null, null, []].*/
+    private function optionalTwinSchedule($mainSubjectId, $year, $month, $exam, $faculty, $semester)
+    {
+        $main = Subject::select('id', 'code', 'sub_type')->find($mainSubjectId);
+        if (!$main || strtolower(trim((string) $main->sub_type)) === 'optional') {
+            return [null, null, []];
+        }
+        $norm = strtoupper(preg_replace('/[^A-Za-z0-9]/', '', (string) $main->code));
+        if ($norm === '') {
+            return [null, null, []];
+        }
+        $twin = Subject::select('id', 'code', 'sub_type', 'title')
+            ->whereRaw("UPPER(REPLACE(REPLACE(REPLACE(code, '-', ''), ' ', ''), '_', '')) = ?", ['O'.$norm])
+            ->where('id', '!=', $main->id)
+            ->get()
+            ->first(function ($s) {
+                return strtolower(trim((string) $s->sub_type)) === 'optional'
+                    || stripos((string) $s->title, 'optional') !== false;
+            });
+        if (!$twin) {
+            return [null, null, []];
+        }
+        $twinSchedule = ExamSchedule::select('id')->where([
+            ['years_id', '=', $year],
+            ['months_id', '=', $month],
+            ['exams_id', '=', $exam],
+            ['faculty_id', '=', $faculty],
+            ['semesters_id', '=', $semester],
+            ['subjects_id', '=', $twin->id],
+        ])->first();
+        if (!$twinSchedule) {
+            return [null, null, []];
+        }
+        $studentIds = \App\Models\StudentSubject::where('subjects_id', $twin->id)
+            ->pluck('students_id')->map(function ($v) { return (int) $v; })->all();
+        return [$twinSchedule->id, $twin->id, $studentIds];
+    }
+
+}

@@ -30,6 +30,9 @@
         </td>
         <td>
             {{ $student->first_name.' '.$student->middle_name.' '.$student->last_name }}
+            @if(isset($optionalIds) && in_array((int) $student->student_id, $optionalIds, true))
+                <span class="label label-info" title="Takes this subject as Optional (4th subject) - mark will be saved under the Optional subject automatically.">Optional</span>
+            @endif
         </td>
         <td>
             {!! Form::checkbox('absent_theory[]', $student->student_id, in_array($student->student_id, $absent_theory), array_merge(['class' => 'form-control'], $isLocked ? ['disabled' => 'disabled'] : [])) !!}
@@ -60,12 +63,4 @@
                     <i class="fa fa-unlock"></i> Unlock
                 </button>
             @else
-                <div class="btn-group">
-                    <label class="btn btn-xs btn-danger" onclick="$(this).closest('tr').remove();">
-                        <i class="fa fa-trash bigger-120"></i>
-                    </label>
-                </div>
-            @endif
-        </td>
-    </tr>
-@endforeach
+               

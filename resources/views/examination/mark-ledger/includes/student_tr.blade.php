@@ -13,6 +13,9 @@
         </td>
         <td>
             {{ $student->first_name.' '.$student->middle_name.' '.$student->last_name }}
+            @if(isset($optionalIds) && in_array((int) $student->id, $optionalIds, true))
+                <span class="label label-info" title="Takes this subject as Optional (4th subject) - mark will be saved under the Optional subject automatically.">Optional</span>
+            @endif
         </td>
         <td>
             {!! Form::checkbox('absent_theory[]', $student->id, false, ['class' => 'form-control']) !!}
@@ -30,12 +33,4 @@
             {!! Form::number('obtain_mark_practical[]', null, ["class" => "form-control border-form","min"=>"0",'step'=>'any','max' => (float)($markLimits['practical'] ?? 0)]) !!}
         </td>
 
-        <td>
-            <div class="btn-group">
-                <label class="btn btn-xs btn-danger" onclick="$(this).closest('tr').remove();">
-                    <i class="fa fa-trash bigger-120"></i>
-                </label>
-            </div>
-        </td>
-    </tr>
- @endforeach
+    
