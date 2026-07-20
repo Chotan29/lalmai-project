@@ -347,6 +347,10 @@ trait CertificateScope{
             case 'IDENTITY CARD':
                 $layoutPath = 'print.certificate.identity-card';
                 break;
+            case 'ID CARD':
+            case 'STUDENT ID CARD':
+                $layoutPath = 'print.certificate.id-card';
+                break;
             case 'MEDIUM OF INSTRUCTION':
                 $layoutPath = 'print.certificate.moi';
                 break;

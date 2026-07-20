@@ -37,6 +37,12 @@ class CertificatePrintController extends CollegeBaseController
 
      public function generalCertificate(Request $request)
     {
+        /*Dedicated pixel-perfect ID card design (front+back, 54x86mm) - bypasses
+          the generic placeholder template flow.*/
+        $idCardTemplate = CertificateTemplate::find($request->certificate);
+        if ($idCardTemplate && in_array(strtoupper(trim($idCardTemplate->certificate)), ['ID CARD', 'STUDENT ID CARD'])) {
+            return $this->idCardPrint($request, $idCardTemplate);
+        }
         /*$studIds = $request->get('chkIds');
         $students = Student::select('id')->whereIn('id',$studIds)->get();
         $certificateTemplate = CertificateTemplate::find($request->certificate);
@@ -142,6 +148,49 @@ class CertificatePrintController extends CollegeBaseController
     }
 
 
+
+    /*Pixel ID card: front+back per student, 54x86mm pages, QR verify link*/
+    public function idCardPrint(Request $request, $certificateTemplate)
+    {
+        $studIds = [];
+        if ($request->get('chkIds')) {
+            foreach ($request->get('chkIds') as $studentId) {
+                $studIds[] = decrypt($studentId);
+            }
+        }
+
+        $students = Student::select('students.id', 'students.reg_no', 'students.first_name', 'students.middle_name',
+            'students.last_name', 'students.date_of_birth', 'students.blood_group', 'students.email',
+            'students.student_image',
+            'f.faculty as faculty_name', 'b.title as batch_title', 'sem.semester as semester_name',
+            'ai.address', 'ai.state', 'ai.mobile_1', 'ai.home_phone',
+            'pd.father_first_name', 'pd.father_middle_name', 'pd.father_last_name',
+            'pd.mother_first_name', 'pd.mother_middle_name', 'pd.mother_last_name')
+            ->whereIn('students.id', $studIds)
+            ->leftJoin('faculties as f', 'f.id', '=', 'students.faculty')
+            ->leftJoin('student_batches as b', 'b.id', '=', 'students.batch')
+            ->leftJoin('semesters as sem', 'sem.id', '=', 'students.semester')
+            ->leftJoin('addressinfos as ai', 'ai.students_id', '=', 'students.id')
+            ->leftJoin('parent_details as pd', 'pd.students_id', '=', 'students.id')
+            ->orderBy('students.reg_no', 'asc')
+            ->get();
+
+        foreach ($students as $student) {
+            $verifyUrl = route('verification.id-card', ['t' => encrypt($student->id)]);
+            try {
+                $svg = \SimpleSoftwareIO\QrCode\Facades\QrCode::format('svg')
+                    ->size(240)->margin(0)->errorCorrection('M')->generate($verifyUrl);
+                $student->qr_data_uri = 'data:image/svg+xml;base64,'.base64_encode((string) $svg);
+            } catch (\Exception $e) {
+                $student->qr_data_uri = '';
+            }
+        }
+
+        $data['certificate_template'] = $certificateTemplate;
+        $data['student'] = $students;
+
+        return view(parent::loadDataToView($this->view_path.'.id-card'), compact('data'));
+    }
 
 }
 

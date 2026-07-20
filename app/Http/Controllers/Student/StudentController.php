@@ -2603,6 +2603,13 @@ class StudentController extends CollegeBaseController
 
             if ($request->get('bulk_action') == 'print-certificate') {
                 $template = CertificateTemplate::find($request->get('certificate-template'));
+
+                /*Dedicated pixel-perfect ID card design (front+back, 54x86mm)*/
+                if ($template && in_array(strtoupper(trim($template->certificate)), ['ID CARD', 'STUDENT ID CARD'])) {
+                    return app(\App\Http\Controllers\PrintOut\CertificatePrintController::class)
+                        ->idCardPrint($request, $template);
+                }
+
                 $request->merge(['certificate' => $template->id]);
                 $data = $this->printCertificate($request);
                 $certificateLayoutPath = $template ? $this->CertificateViewPath($template->certificate) : 'print.certificate.generate';

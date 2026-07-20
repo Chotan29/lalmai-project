@@ -456,6 +456,9 @@ Route::group(['prefix' => 'registration-payment', 'as' => 'registration-payment.
 //certificate verification
 Route::get('certificate-verification',              ['as' => 'verification.certificate',         'uses' => 'VerificationController@certificate']);
 
+//public student ID card verification (QR on ID card)
+Route::get('id-card-verify',                        ['as' => 'verification.id-card',             'uses' => 'VerificationController@idCard']);
+
 /*Students Guardian Grouping*/
 Route::group(['prefix' => 'guardian/',                                   'as' => 'guardian',                                     'namespace' => 'Student\\'], function () {
 

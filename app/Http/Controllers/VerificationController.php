@@ -176,4 +176,30 @@ class VerificationController extends CollegeBaseController
         return view(parent::loadDataToView($this->view_path.'.certificate.index'), compact('data','student'));
     }
 
+    /*Public: verify a student ID card scanned via QR (?t=encrypted student id)*/
+    public function idCard(Request $request)
+    {
+        $student = null;
+        $token = (string) $request->get('t', '');
+        if ($token !== '') {
+            try {
+                $studentId = decrypt($token);
+            } catch (\Exception $e) {
+                $studentId = null;
+            }
+            if ($studentId) {
+                $student = Student::select('students.id', 'students.reg_no', 'students.first_name',
+                    'students.middle_name', 'students.last_name', 'students.date_of_birth',
+                    'students.blood_group', 'students.student_image', 'students.status',
+                    'f.faculty as faculty_name', 'b.title as batch_title', 'sem.semester as semester_name')
+                    ->leftJoin('faculties as f', 'f.id', '=', 'students.faculty')
+                    ->leftJoin('student_batches as b', 'b.id', '=', 'students.batch')
+                    ->leftJoin('semesters as sem', 'sem.id', '=', 'students.semester')
+                    ->where('students.id', $studentId)
+                    ->first();
+            }
+        }
+        return view('verification.id-card', compact('student'));
+    }
+
 }
