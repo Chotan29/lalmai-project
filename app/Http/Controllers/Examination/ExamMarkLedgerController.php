@@ -228,11 +228,14 @@ class ExamMarkLedgerController extends CollegeBaseController
                 $targetScheduleId = ($optionalScheduleId && in_array((int) $student, $optionalStudentIds, true))
                     ? $optionalScheduleId : $examScheduleId->id;
 
-                $ledgerWhere = [
-                    ['exam_schedule_id','=',$targetScheduleId],
-                    ['students_id','=', $student]
-                ];
-                $ledgerExist = ExamMarkLedger::select('id', 'created_by')->where($ledgerWhere)->first();
+                /*Look in BOTH schedules (main + Optional twin) so a legacy row saved
+                  under the wrong one is found, updated and migrated - never duplicated.*/
+                $pairScheduleIds = array_values(array_filter([$examScheduleId->id, $optionalScheduleId]));
+                $ledgerExist = ExamMarkLedger::select('id', 'created_by', 'exam_schedule_id')
+                    ->whereIn('exam_schedule_id', $pairScheduleIds)
+                    ->where('students_id', $student)
+                    ->orderByRaw('exam_schedule_id = ? desc', [$targetScheduleId])
+                    ->first();
 
                 /*Skip completely empty rows: no record is created for untouched students*/
                 if (!$ledgerExist && !$rowFilled) {
@@ -302,6 +305,8 @@ class ExamMarkLedgerController extends CollegeBaseController
                     $ledgerUpdate = [
                         'sorting_order' => $key+1,
                         'last_updated_by' => $userId,
+                        /*migrate a legacy wrong-schedule row to the student's own subject*/
+                        'exam_schedule_id' => $targetScheduleId,
                     ];
 
                     if ($theoryTouched) {
@@ -317,6 +322,15 @@ class ExamMarkLedgerController extends CollegeBaseController
                     }
 
                     $ledgerExist->update($ledgerUpdate);
+
+                    /*Remove leftover duplicates of this student inside the pair (rows in
+                      the other schedule) so results never count the student twice.*/
+                    if (count($pairScheduleIds) > 1) {
+                        ExamMarkLedger::whereIn('exam_schedule_id', $pairScheduleIds)
+                            ->where('students_id', $student)
+                            ->where('id', '!=', $ledgerExist->id)
+                            ->delete();
+                    }
                     $savedCount++;
 
                 }else{
@@ -659,6 +673,25 @@ class ExamMarkLedgerController extends CollegeBaseController
                 ->leftJoin('users as u','u.id','=','exam_mark_ledgers.created_by')
                 ->orderBy('s.reg_no','asc')
                 ->get();
+
+            /*One row per student: a legacy double entry (same student in both the
+              main and the Optional twin schedule) must not show twice. Keep the row
+              that belongs to the student's OWN subject; the wrong-schedule leftover
+              is hidden here and migrated on the next save.*/
+            if ($optionalScheduleId) {
+                $ledgerExist = $ledgerExist->groupBy('students_id')->map(function ($rows) use ($optionalScheduleId, $optionalStudentIds) {
+                    if ($rows->count() === 1) {
+                        return $rows->first();
+                    }
+                    $isOptionalTaker = in_array((int) $rows->first()->students_id, $optionalStudentIds, true);
+                    $preferred = $rows->first(function ($r) use ($isOptionalTaker, $optionalScheduleId) {
+                        return $isOptionalTaker
+                            ? $r->exam_schedule_id == $optionalScheduleId
+                            : $r->exam_schedule_id != $optionalScheduleId;
+                    });
+                    return $preferred ?: $rows->first();
+                })->sortBy('reg_no')->values();
+            }
 
             /*Rows locked for the current teacher (entered by someone else)*/
             $isTeacher = $this->isTeacherUser();
