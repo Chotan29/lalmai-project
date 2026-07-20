@@ -646,6 +646,22 @@ class ExamMarkLedgerController extends CollegeBaseController
             }
         }
 
+        /*Selected subject IS an Optional subject: its screen shows ONLY its own
+          takers (students mapped to it) and its own saved marks - never the
+          whole class and never the main-subject students.*/
+        $isOptionalSubject = false;
+        $ownTakerIds = [];
+        if ($examSchedule) {
+            $selectedSubject = Subject::select('id', 'sub_type', 'title')->find($examSchedule->subjects_id);
+            $isOptionalSubject = $selectedSubject
+                && (strtolower(trim((string) $selectedSubject->sub_type)) === 'optional'
+                    || stripos((string) $selectedSubject->title, 'optional') !== false);
+            if ($isOptionalSubject) {
+                $ownTakerIds = \App\Models\StudentSubject::where('subjects_id', $selectedSubject->id)
+                    ->pluck('students_id')->map(function ($v) { return (int) $v; })->all();
+            }
+        }
+
         $subjectDetail = $examSchedule ? Subject::select('id', 'full_mark_theory', 'full_mark_practical', 'mcq_number_theory')->find($examSchedule->subjects_id) : null;
         $scheduleTheoryLimit = (float) ($examSchedule->full_mark_theory ?? 0);
         $schedulePracticalLimit = (float) ($examSchedule->full_mark_practical ?? 0);
@@ -711,13 +727,16 @@ class ExamMarkLedgerController extends CollegeBaseController
             $existStudentId  = array_pluck($ledgerExist, 'students_id');
 
             //Get Active Student For Related Faculty and Semester
-            $activeStudent = Student::select('id','reg_no','first_name','middle_name','last_name')
+            $activeStudentQuery = Student::select('id','reg_no','first_name','middle_name','last_name')
                 ->where($studentCondition)
                 ->whereNotIn('id',$existStudentId)
                 ->Active()
-                //->orderBy('id','asc')
-                ->orderBy('reg_no','asc')
-                ->get();
+                ->orderBy('reg_no','asc');
+            if ($isOptionalSubject) {
+                /*Optional subject screen: only its own takers can get a new row*/
+                $activeStudentQuery->whereIn('id', count($ownTakerIds) > 0 ? $ownTakerIds : [0]);
+            }
+            $activeStudent = $activeStudentQuery->get();
 
 
             if($activeStudent) {
