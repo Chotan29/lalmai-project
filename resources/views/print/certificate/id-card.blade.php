@@ -98,6 +98,10 @@
                 $address = strtoupper(implode(', ', $addressParts));
                 $group = strtoupper(trim((string) $student->faculty_name));
                 $session = trim((string) $student->batch_title);
+                /*HSC students (Class Eleven/Twelve) get the HSC prefix like the sample*/
+                if ($session !== '' && stripos((string) $student->semester_name, 'class') !== false) {
+                    $session = 'HSC '.$session;
+                }
                 $dob = $student->date_of_birth ? \Carbon\Carbon::parse($student->date_of_birth)->format('d-m-Y') : '';
                 $mobile = trim((string) $student->mobile_1) ?: trim((string) $student->home_phone);
                 $photo = $student->student_image
@@ -113,7 +117,11 @@
                     <div class="f-college">Lalmai Govt. College</div>
                     <div class="f-addr">Cumilla Sadar South, Cumilla</div>
                     @if($group !== '')
-                        <div class="f-badge">GROUP: {{ $group }}</div>
+                        @if(strlen($group) <= 12)
+                            <div class="f-badge">GROUP: {{ $group }}</div>
+                        @else
+                            <div class="f-badge" style="font-size: 6.4pt; padding: .7mm 2.5mm;">{{ $group }}</div>
+                        @endif
                     @endif
                 </div>
                 <div class="f-photo-wrap">
@@ -163,11 +171,4 @@
                     <div class="ttl">Personal Details</div>
                     @if($father !== '')
                         <div class="b-row"><span class="lb">Father's Name</span><span class="cl">:</span><span class="vl">{{ $father }}</span></div>
-                    @endif
-                    @if($mother !== '')
-                        <div class="b-row"><span class="lb">Mother's Name</span><span class="cl">:</span><span class="vl">{{ $mother }}</span></div>
-                    @endif
-                    @if($address !== '')
-                        <div class="b-row"><span class="lb">Permanent Address</span><span class="cl">:</span><span class="vl">{{ $address }}</span></div>
-                    @endif
-                    @if($mobile !== '')
+               
