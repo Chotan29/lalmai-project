@@ -710,30 +710,14 @@ class ExamMarkLedgerController extends CollegeBaseController
             /*get ledger exist student id*/
             $existStudentId  = array_pluck($ledgerExist, 'students_id');
 
-            /*Only students who actually take this subject (main or its Optional twin,
-              via the student_subject mapping). Fallback: if the mapping is empty for
-              this subject pair, keep the old behaviour (whole class) so classes
-              without subject mapping keep working.*/
-            $takerIds = [];
-            $pairSubjectIds = array_values(array_filter([
-                $examSchedule->subjects_id ?? null,
-                isset($optionalSubjectId) ? $optionalSubjectId : null,
-            ]));
-            if (count($pairSubjectIds) > 0) {
-                $takerIds = \App\Models\StudentSubject::whereIn('subjects_id', $pairSubjectIds)
-                    ->pluck('students_id')->map(function ($v) { return (int) $v; })->unique()->values()->all();
-            }
-
-            //Get Active Student For Related Faculty and Semester (subject takers only)
-            $activeStudentQuery = Student::select('id','reg_no','first_name','middle_name','last_name')
+            //Get Active Student For Related Faculty and Semester
+            $activeStudent = Student::select('id','reg_no','first_name','middle_name','last_name')
                 ->where($studentCondition)
                 ->whereNotIn('id',$existStudentId)
                 ->Active()
-                ->orderBy('reg_no','asc');
-            if (count($takerIds) > 0) {
-                $activeStudentQuery->whereIn('id', $takerIds);
-            }
-            $activeStudent = $activeStudentQuery->get();
+                //->orderBy('id','asc')
+                ->orderBy('reg_no','asc')
+                ->get();
 
 
             if($activeStudent) {
