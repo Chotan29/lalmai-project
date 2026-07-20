@@ -11,7 +11,7 @@
            unlocked / no owner (created_by = 0) = white */
         $rowBg = $isLocked ? '#f6f0e3' : ($hasOwner ? 'lightgrey' : '#ffffff');
     @endphp
-    <tr class="option_value {{ $isLocked ? 'ledger-locked-row' : '' }}" data-student-id="{{ $student->student_id }}" style="background: {{ $rowBg }}">
+    <tr class="option_value {{ $isLocked ? 'ledger-locked-row' : '' }}" data-student-id="{{ $student->student_id }}" data-reg="{{ $student->reg_no }}" style="background: {{ $rowBg }}">
         <td>
             <div class="btn-group">
                 <label class="btn btn-xs {{ $isLocked ? 'btn-warning' : 'btn-primary' }}">
@@ -62,5 +62,3 @@
                 <button type="button" class="btn btn-xs btn-warning unlock-one-btn" data-student-id="{{ $student->student_id }}" title="Unlock this row so any teacher can edit">
                     <i class="fa fa-unlock"></i> Unlock
                 </button>
-            @else
-               

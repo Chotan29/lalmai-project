@@ -1,5 +1,5 @@
 @foreach($students as $student)
-    <tr class="option_value">
+    <tr class="option_value" data-reg="{{ $student->reg_no }}">
         <td>
             <div class="btn-group">
                 <label class="btn btn-xs btn-primary">
@@ -30,7 +30,4 @@
             {!! Form::checkbox('absent_practical[]', $student->id, false, ['class' => 'form-control']) !!}
         </td>
         <td>
-            {!! Form::number('obtain_mark_practical[]', null, ["class" => "form-control border-form","min"=>"0",'step'=>'any','max' => (float)($markLimits['practical'] ?? 0)]) !!}
-        </td>
-
-    
+            {!! Form::number('obtain_mark_practical[]', null, ["class" => "form-control border-form","min"=>"0",'step'=>'any','max' => (float)($markLimits['practical'] 

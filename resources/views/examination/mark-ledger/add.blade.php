@@ -239,6 +239,17 @@
 
         }
 
+        /*Keep the whole list in one ascending run by Reg No, mixing already-entered
+          and new students together instead of two separate blocks.*/
+        function sortStudentRows() {
+            var $wrap = $('#student_wrapper');
+            var rows = $wrap.find('tr').get();
+            rows.sort(function (a, b) {
+                return String($(a).data('reg')).localeCompare(String($(b).data('reg')), undefined, {numeric: true, sensitivity: 'base'});
+            });
+            $.each(rows, function (_, r) { $wrap.append(r); });
+        }
+
         function loadStudent($this) {
             var year = $('select[name="years_id"]').val();
             var month = $('select[name="months_id"]').val();
@@ -302,6 +313,7 @@
                         }else{
                             $('#student_wrapper').append(data.students);
                         }
+                        sortStudentRows();
                         updateMarkHeaders(data.limits);
                         applyAbsentState();
                         updateSummary(data.exist_count, data.new_count, data.locked_count);
@@ -511,3 +523,48 @@
                             $('.schedule_subject').val(oldFilter.subject);
 
                             /*Step 3: reload student list*/
+                            loadStudent(null);
+                        }
+                    });
+                }
+            });
+        });
+
+        /* =============================================================
+           Admin: Unlock mark rows (single + bulk multi-select)
+           ============================================================= */
+        function currentLedgerFilter() {
+            return {
+                _token: '{{ csrf_token() }}',
+                years_id: $('select[name="years_id"]').val(),
+                months_id: $('select[name="months_id"]').val(),
+                exams_id: $('select[name="exams_id"]').val(),
+                faculty: $('select[name="faculty"]').val(),
+                semester_select: $('select[name="semester_select"]').val(),
+                schedule_subject: $('select[name="schedule_subject"]').val()
+            };
+        }
+
+        function doUnlock(studentIds) {
+            if (!studentIds || !studentIds.length) {
+                toastr.info('Please select at least one locked row.', 'Info:');
+                return;
+            }
+            var payload = currentLedgerFilter();
+            payload['students_id'] = studentIds;
+            $.ajax({
+                type: 'POST',
+                url: '{{ route('exam.mark-ledger.unlock') }}',
+                data: payload,
+                success: function (response) {
+                    var data = (typeof response === 'string' ? $.parseJSON(response) : response);
+                    if (data.error) {
+                        toastr.warning(data.message, 'Warning:');
+                    } else {
+                        toastr.success(data.message, 'Success:');
+                        /*reload the student list so unlocked rows become editable*/
+                        loadStudent(null);
+                    }
+                },
+                error: function () {
+     
