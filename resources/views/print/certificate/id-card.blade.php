@@ -97,6 +97,25 @@
                 $addressParts = array_filter([trim((string) $student->address), trim((string) $student->state)]);
                 $address = strtoupper(implode(', ', $addressParts));
                 $group = strtoupper(trim((string) $student->faculty_name));
+
+                /*Per-department accent color (badge, roll, borders, strip).
+                  First matching keyword wins; default red.*/
+                $accentMap = [
+                    'science' => '#e01e26',
+                    'humanities' => '#1565c0',
+                    'business' => '#007a33',
+                    'accounting' => '#00695c',
+                    'management' => '#4527a0',
+                    'english' => '#ad1457',
+                    'marketing' => '#e65100',
+                    'bbs' => '#5d4037',
+                    'bss' => '#e65100',
+                    'b.a' => '#7b1fa2',
+                ];
+                $accent = '#e01e26';
+                foreach ($accentMap as $kw => $clr) {
+                    if ($group !== '' && stripos($group, $kw) !== false) { $accent = $clr; break; }
+                }
                 $session = trim((string) $student->batch_title);
                 /*HSC students (Class Eleven/Twelve) get the HSC prefix like the sample*/
                 if ($session !== '' && stripos((string) $student->semester_name, 'class') !== false) {
@@ -110,7 +129,7 @@
             @endphp
 
             {{-- FRONT --}}
-            <div class="card">
+            <div class="card" style="--accent: {{ $accent }};">
                 <div class="f-top">
                     <img class="monogram" src="{{ asset('images/idcard/govt_monogram.png') }}" alt="">
                     <div class="f-govt">Government of the People's Republic of Bangladesh</div>
@@ -155,7 +174,7 @@
             </div>
 
             {{-- BACK --}}
-            <div class="card">
+            <div class="card" style="--accent: {{ $accent }};">
                 <div class="b-top">
                     <img class="clogo" src="{{ asset('images/idcard/college_logo.jpg') }}" alt="">
                 </div>
@@ -171,4 +190,27 @@
                     <div class="ttl">Personal Details</div>
                     @if($father !== '')
                         <div class="b-row"><span class="lb">Father's Name</span><span class="cl">:</span><span class="vl">{{ $father }}</span></div>
-               
+                    @endif
+                    @if($mother !== '')
+                        <div class="b-row"><span class="lb">Mother's Name</span><span class="cl">:</span><span class="vl">{{ $mother }}</span></div>
+                    @endif
+                    @if($address !== '')
+                        <div class="b-row"><span class="lb">Permanent Address</span><span class="cl">:</span><span class="vl">{{ $address }}</span></div>
+                    @endif
+                    @if($mobile !== '')
+                        <div class="b-row"><span class="lb">Mobile No</span><span class="cl">:</span><span class="vl">{{ $mobile }}</span></div>
+                    @endif
+                    @if(trim((string) $student->email) !== '')
+                        <div class="b-row"><span class="lb">E-mail</span><span class="cl">:</span><span class="vl">{{ $student->email }}</span></div>
+                    @endif
+                </div>
+                <div class="b-found">If it is found, please inform the College Office</div>
+                <div class="b-strip"></div>
+            </div>
+        @endforeach
+    @else
+        <p style="background:#fff;padding:20px;">No student selected.</p>
+    @endif
+    </div>
+</body>
+</html>
