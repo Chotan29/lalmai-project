@@ -72,7 +72,8 @@
         .b-row .lb { width: 19.5mm; font-weight: bold; flex: none; white-space: nowrap; }
         .b-row .cl { width: 2.2mm; flex: none; font-weight: bold; }
         .b-row .vl { font-weight: bold; min-width: 0; overflow-wrap: anywhere; word-break: normal; }
-        .b-found { text-align: center; color: var(--accent); font-weight: 900; font-size: 7.6pt; margin-top: auto; padding: 1mm 2mm 1.6mm 2mm; }
+        .b-expiry { text-align: center; color: #000; font-weight: 900; font-size: 7.6pt; margin-top: auto; padding-top: 1.2mm; }
+        .b-found { text-align: center; color: var(--accent); font-weight: 900; font-size: 7.6pt; padding: .8mm 2mm 1.6mm 2mm; }
         .b-strip { height: 5.5mm; background: var(--accent); flex: none; }
 
         @media print {
@@ -97,6 +98,8 @@
                 $addressParts = array_filter([trim((string) $student->address), trim((string) $student->state)]);
                 $address = strtoupper(implode(', ', $addressParts));
                 $group = strtoupper(trim((string) $student->faculty_name));
+                /*display names per the approved sample*/
+                if ($group === 'BUSINESS') { $group = 'BUSINESS STUDIES'; }
 
                 /*Per-department accent color (badge, roll, borders, strip).
                   First matching keyword wins; default red.*/
@@ -122,6 +125,11 @@
                     $session = 'HSC '.$session;
                 }
                 $dob = $student->date_of_birth ? \Carbon\Carbon::parse($student->date_of_birth)->format('d-m-Y') : '';
+                /*Expiry: 31 December of (last batch year + 1), e.g. 2025-2026 -> 2027*/
+                $expiry = '';
+                if (preg_match_all('/(20\d{2})/', (string) $student->batch_title, $ym) && count($ym[1]) > 0) {
+                    $expiry = '31 December '.((int) max($ym[1]) + 1);
+                }
                 $mobile = trim((string) $student->mobile_1) ?: trim((string) $student->home_phone);
                 $photo = $student->student_image
                     ? asset('images/studentProfile/'.$student->student_image)
@@ -204,6 +212,9 @@
                         <div class="b-row"><span class="lb">E-mail</span><span class="cl">:</span><span class="vl">{{ $student->email }}</span></div>
                     @endif
                 </div>
+                @if($expiry !== '')
+                    <div class="b-expiry">Expiry Date : {{ $expiry }}</div>
+                @endif
                 <div class="b-found">If it is found, please inform the College Office</div>
                 <div class="b-strip"></div>
             </div>
