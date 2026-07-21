@@ -768,6 +768,27 @@
                             <div class="form-section">
                                 <h3 class="section-title"><i class="fa fa-info-circle"></i> Enrollment Information
                                 </h3>
+
+                                {{-- Old (returning) students type the Student ID / Registration Number
+                                     the college already issued them. Hidden for new students. --}}
+                                <div class="row" id="oldStudentIdFields" style="display:none;">
+                                    <div class="col-md-4">
+                                        <div class="form-group">
+                                            <label>Student ID <span class="text-danger">*</span></label>
+                                            <input type="text" name="old_student_id" class="form-control"
+                                                   placeholder="Your existing Student ID / Roll">
+                                            <small class="text-muted">Write the ID given by the college.</small>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="form-group">
+                                            <label>Registration Number</label>
+                                            <input type="text" name="old_university_reg" class="form-control"
+                                                   placeholder="Board/University Registration No">
+                                        </div>
+                                    </div>
+                                </div>
+
                                 <div class="row">
                                     <div class="col-md-4">
                                         <div class="form-group">
@@ -3174,6 +3195,9 @@
             const currentTab = $('.tab-pane.active').attr('id');
             if (currentTab) { updateNavigationButtons(currentTab); }
 
+            /*Only returning students type their existing Student ID / Reg. Number*/
+            toggleOldStudentIdFields(studentType === 'old');
+
             if (studentType === 'new') {
                 studentTypeInfoText.text('As a new student, you will need to complete all required information and pay the registration fee.');
                 studentTypeInfoDiv.show();
@@ -3181,7 +3205,7 @@
                 $('#registrationFeeAmount').text('৳{{ $data['registration_setting']->new_student_registration_fee ?? 0 }}');
                 setPaymentButtonState(true);
             } else if (studentType === 'old') {
-                studentTypeInfoText.text('As a returning student, please ensure your information is up-to-date.');
+                studentTypeInfoText.text('As a returning student, please enter your existing Student ID and Registration Number in the General Information tab.');
                 studentTypeInfoDiv.show();
                 studentTypeNextBtn.prop('disabled', false);
                 $('#registrationFeeAmount').text('৳{{ $data['registration_setting']->old_student_registration_fee ?? 0 }}');
@@ -3193,6 +3217,23 @@
                 $('#registrationFeeAmount').text('৳0');
                 setPaymentButtonState(false);
                 window.localStorage.removeItem('online_registration_student_type');
+            }
+        }
+
+        /*Show/hide + require the returning-student ID fields*/
+        function toggleOldStudentIdFields(show) {
+            const $box = $('#oldStudentIdFields');
+            if (!$box.length) { return; }
+
+            const $studentId = $box.find('input[name="old_student_id"]');
+
+            if (show) {
+                $box.show();
+                $studentId.prop('required', true);
+            } else {
+                $box.hide();
+                $studentId.prop('required', false);
+                $box.find('input').val('');
             }
         }
 

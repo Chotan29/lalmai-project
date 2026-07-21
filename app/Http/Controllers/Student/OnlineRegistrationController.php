@@ -286,6 +286,41 @@ class OnlineRegistrationController extends CollegeBaseController
 
         }*/
 
+        /*Old (returning) students already have a college-issued Student ID and
+          Registration Number, so they type their own instead of getting an
+          auto-generated one. New students keep the auto-generated number.*/
+        $isOldStudent = strtolower(trim((string) $request->input('student_type'))) === 'old';
+        $typedStudentId = trim((string) $request->input('old_student_id'));
+        $typedUniversityReg = trim((string) $request->input('old_university_reg'));
+
+        if ($isOldStudent) {
+            $idErrors = [];
+
+            if ($typedStudentId === '') {
+                $idErrors['old_student_id'] = ['Please enter your Student ID.'];
+            } elseif (Student::where('reg_no', $typedStudentId)->orWhere('reg_no', Str::slug($typedStudentId))->exists()) {
+                $idErrors['old_student_id'] = ['This Student ID is already registered. Please check your ID or contact the college office.'];
+            }
+
+            if ($typedUniversityReg !== '' && Student::where('university_reg', $typedUniversityReg)->exists()) {
+                $idErrors['old_university_reg'] = ['This Registration Number is already registered.'];
+            }
+
+            if (!empty($idErrors)) {
+                $firstError = reset($idErrors)[0];
+
+                if ($request->expectsJson() || $request->ajax()) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => $firstError,
+                        'errors' => $idErrors,
+                    ], 422);
+                }
+
+                return back()->withErrors($idErrors)->withInput();
+            }
+        }
+
         $batchModel = StudentBatch::find($request->batch);
         $batchTitle = $batchModel->title;
         $regPrefix = Str::slug($batchTitle);
@@ -313,7 +348,12 @@ class OnlineRegistrationController extends CollegeBaseController
             $sluggedRegNum = Str::slug($regNum);
             $sn++;
         } while (Student::where('reg_no', $sluggedRegNum)->exists());
-       
+
+        /*Old student: keep the Student ID exactly as typed (no slug/serial)*/
+        if ($isOldStudent && $typedStudentId !== '') {
+            $regNum = $typedStudentId;
+        }
+
         $request->request->add(['reg_no' => $regNum]);
         //reg generator End
 
@@ -329,7 +369,11 @@ class OnlineRegistrationController extends CollegeBaseController
         $year = Year::Active()->first()->title;
         //$regNum = $year.$request->faculty.$oldStudent->id;
         $request->request->add(['created_by' => 0]);
-        $request->request->add(['reg_no' => Str::slug($regNum)]);
+        /*Old student's typed ID is stored as-is; new student's generated one is slugged*/
+        $request->request->add(['reg_no' => ($isOldStudent && $typedStudentId !== '') ? $typedStudentId : Str::slug($regNum)]);
+        if ($isOldStudent && $typedUniversityReg !== '') {
+            $request->request->add(['university_reg' => $typedUniversityReg]);
+        }
         $request->request->add(['reg_date' => Carbon::today()->toDateString()]);
         //$request->request->add(['semester' => $semSec?$semSec:0]);
         $request->request->add(['academic_status' => 8]);
