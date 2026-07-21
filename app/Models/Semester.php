@@ -6,7 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class Semester extends BaseModel
 {
-     protected $fillable = ['created_by', 'last_updated_by', 'semester', 'slug', 'semester_fee', 'staff_id', 'gradingType_id', 'major_subject_count', 'status'];
+     protected $fillable = ['created_by', 'last_updated_by', 'semester', 'slug', 'semester_fee', 'staff_id', 'gradingType_id', 'major_subject_count', 'max_compulsory_count', 'max_optional_count', 'status'];
 
     public function faculty()
     {

@@ -2187,10 +2187,20 @@
         function getSubjectMaxCount() {
             const maxFromInput = parseInt($('input[name="max_subjects_count"]').val(), 10);
             if (!Number.isNaN(maxFromInput) && maxFromInput > 0) {
-                return Math.min(maxFromInput, 7);
+                return maxFromInput;
             }
 
-            return Math.min($('#subjects_wrapper').find('input[name="subject[]"]').length, 7);
+            return $('#subjects_wrapper').find('input[name="subject[]"]').length;
+        }
+
+        function getMaxOptionalCount() {
+            const v = parseInt($('input[name="max_optional_count"]').val(), 10);
+            return (!Number.isNaN(v) && v >= 0) ? v : 1;
+        }
+
+        function getMaxCompulsoryCount() {
+            const v = parseInt($('input[name="max_compulsory_count"]').val(), 10);
+            return (!Number.isNaN(v) && v >= 0) ? v : 6;
         }
 
         function validateSubjectSelection(showToast) {
@@ -2205,8 +2215,8 @@
             const maxCount = getSubjectMaxCount();
             const selectedOptionalCount = $subjects.filter(':checked').filter('[data-subject-type="optional"]').length;
             const selectedCompulsoryCount = $subjects.filter(':checked').filter('[data-subject-type="compulsory"]').length;
-            const maxOptionalCount = 1;
-            const maxCompulsoryCount = 6;
+            const maxOptionalCount = getMaxOptionalCount();
+            const maxCompulsoryCount = getMaxCompulsoryCount();
 
             if (selectedCount < 1) {
                 setFieldInvalid($wrapper, 'Please select at least 1 subject.', showToast);
@@ -2214,12 +2224,12 @@
             }
 
             if (selectedOptionalCount > maxOptionalCount) {
-                setFieldInvalid($wrapper, 'You can select maximum 1 optional subject.', showToast);
+                setFieldInvalid($wrapper, 'You can select maximum ' + maxOptionalCount + ' optional subject(s).', showToast);
                 return false;
             }
 
             if (selectedCompulsoryCount > maxCompulsoryCount) {
-                setFieldInvalid($wrapper, 'You can select maximum 6 compulsory subjects.', showToast);
+                setFieldInvalid($wrapper, 'You can select maximum ' + maxCompulsoryCount + ' compulsory subjects.', showToast);
                 return false;
             }
 
@@ -2767,15 +2777,18 @@
                 const selectedOptionalCount = $subjects.filter(':checked').filter('[data-subject-type="optional"]').length;
                 const selectedCompulsoryCount = $subjects.filter(':checked').filter('[data-subject-type="compulsory"]').length;
 
-                if ($(this).is(':checked') && $(this).data('subject-type') === 'optional' && selectedOptionalCount > 1) {
+                const maxOptionalCount = getMaxOptionalCount();
+                const maxCompulsoryCount = getMaxCompulsoryCount();
+
+                if ($(this).is(':checked') && $(this).data('subject-type') === 'optional' && selectedOptionalCount > maxOptionalCount) {
                     this.checked = false;
-                    setFieldInvalid($('#subjects_wrapper'), 'You can select maximum 1 optional subject.', true);
+                    setFieldInvalid($('#subjects_wrapper'), 'You can select maximum ' + maxOptionalCount + ' optional subject(s).', true);
                     return;
                 }
 
-                if ($(this).is(':checked') && $(this).data('subject-type') === 'compulsory' && selectedCompulsoryCount > 6) {
+                if ($(this).is(':checked') && $(this).data('subject-type') === 'compulsory' && selectedCompulsoryCount > maxCompulsoryCount) {
                     this.checked = false;
-                    setFieldInvalid($('#subjects_wrapper'), 'You can select maximum 6 compulsory subjects.', true);
+                    setFieldInvalid($('#subjects_wrapper'), 'You can select maximum ' + maxCompulsoryCount + ' compulsory subjects.', true);
                     return;
                 }
 

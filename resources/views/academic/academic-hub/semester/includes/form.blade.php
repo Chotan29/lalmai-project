@@ -62,8 +62,26 @@
 <div class="form-group">
     {!! Form::label('major_subject_count', 'Total Major Subjects', ['class' => 'col-sm-6 control-label']) !!}
     <div class="col-sm-6">
-        {!! Form::number('major_subject_count', null, ["placeholder" => "", "class" => "input-sm form-control border-form"]) !!}
+        {!! Form::number('major_subject_count', null, ["placeholder" => "", "class" => "input-sm form-control border-form", 'min' => '0']) !!}
         @include('includes.form_fields_validation_message', ['name' => 'major_subject_count'])
+    </div>
+</div>
+
+<div class="form-group">
+    {!! Form::label('max_compulsory_count', 'Max Compulsory (Main) a Student Can Select', ['class' => 'col-sm-6 control-label']) !!}
+    <div class="col-sm-6">
+        {!! Form::number('max_compulsory_count', null, ["placeholder" => "e.g. 6", "class" => "input-sm form-control border-form", 'min' => '0']) !!}
+        <small class="text-muted">Leave blank for no specific limit.</small>
+        @include('includes.form_fields_validation_message', ['name' => 'max_compulsory_count'])
+    </div>
+</div>
+
+<div class="form-group">
+    {!! Form::label('max_optional_count', 'Max Optional a Student Can Select', ['class' => 'col-sm-6 control-label']) !!}
+    <div class="col-sm-6">
+        {!! Form::number('max_optional_count', null, ["placeholder" => "e.g. 1", "class" => "input-sm form-control border-form", 'min' => '0']) !!}
+        <small class="text-muted">Leave blank for no specific limit.</small>
+        @include('includes.form_fields_validation_message', ['name' => 'max_optional_count'])
     </div>
 </div>
 <div class="space-4"></div>

@@ -4,7 +4,10 @@
             return (int) $id;
         })->all();
 
-        $maxAllowedSubjects = min((int) $numOfSubject, 7);
+        /*Admin-configured per-semester limits (passed from controller; safe fallbacks)*/
+        $maxCompulsory = isset($maxCompulsory) ? (int) $maxCompulsory : 6;
+        $maxOptional = isset($maxOptional) ? (int) $maxOptional : 1;
+        $maxAllowedSubjects = isset($totalMax) ? (int) $totalMax : ($maxCompulsory + $maxOptional);
 
         $optionalSubjects = $subjects->filter(function ($subject) {
             return strtolower(trim((string) ($subject->subject_type ?? $subject->sub_type ?? ''))) === 'optional';
@@ -17,16 +20,18 @@
 
     <div class="subject-selection-header">
         <div class="subject-selection-title">Select Subjects</div>
-        <div class="subject-selection-limit">Maximum {{$maxAllowedSubjects}} subjects (Compulsory up to 6, Optional up to 1).</div>
+        <div class="subject-selection-limit">Maximum {{$maxAllowedSubjects}} subjects (Compulsory up to {{$maxCompulsory}}, Optional up to {{$maxOptional}}).</div>
     </div>
 
     <div class="subject-structure-note">
         <span><strong>Left:</strong> Compulsory subjects</span>
         <span><strong>Right:</strong> Optional subject</span>
-        <span><strong>Total:</strong> 7 subjects maximum</span>
+        <span><strong>Total:</strong> {{$maxAllowedSubjects}} subjects maximum</span>
     </div>
 
     <input type="hidden" name="max_subjects_count" value="{{$maxAllowedSubjects}}">
+    <input type="hidden" name="max_compulsory_count" value="{{$maxCompulsory}}">
+    <input type="hidden" name="max_optional_count" value="{{$maxOptional}}">
 
     <div class="row subject-selection-grid">
         <div class="col-md-6 mb-3 mb-md-0">

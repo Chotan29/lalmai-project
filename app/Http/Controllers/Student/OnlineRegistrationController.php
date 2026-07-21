@@ -196,15 +196,22 @@ class OnlineRegistrationController extends CollegeBaseController
 
         $subjectLimitErrors = [];
 
-        if (count($selectedSubjects) > 7) {
-            $subjectLimitErrors[] = 'You can select maximum 7 subjects.';
-        }
-
         $semesterId = (int) $request->input('semester');
         if ($semesterId > 0 && count($selectedSubjects) > 0) {
             $semester = Semester::find($semesterId);
 
             if ($semester) {
+                /*Per-semester dynamic limits set by admin (fallback 6 compulsory + 1 optional)*/
+                $maxCompulsory = ($semester->max_compulsory_count === null || $semester->max_compulsory_count === '')
+                    ? 6 : (int) $semester->max_compulsory_count;
+                $maxOptional = ($semester->max_optional_count === null || $semester->max_optional_count === '')
+                    ? 1 : (int) $semester->max_optional_count;
+                $maxTotal = $maxCompulsory + $maxOptional;
+
+                if (count($selectedSubjects) > $maxTotal) {
+                    $subjectLimitErrors[] = 'You can select maximum ' . $maxTotal . ' subjects.';
+                }
+
                 $subjectRows = $semester->subjects()
                     ->select('subjects.id', 'subjects.sub_type')
                     ->whereIn('subjects.id', $selectedSubjects)
@@ -219,12 +226,12 @@ class OnlineRegistrationController extends CollegeBaseController
 
                     $compulsoryCount = $subjectRows->count() - $optionalCount;
 
-                    if ($optionalCount > 1) {
-                        $subjectLimitErrors[] = 'You can select maximum 1 optional subject.';
+                    if ($optionalCount > $maxOptional) {
+                        $subjectLimitErrors[] = 'You can select maximum ' . $maxOptional . ' optional subject(s).';
                     }
 
-                    if ($compulsoryCount > 6) {
-                        $subjectLimitErrors[] = 'You can select maximum 6 compulsory subjects.';
+                    if ($compulsoryCount > $maxCompulsory) {
+                        $subjectLimitErrors[] = 'You can select maximum ' . $maxCompulsory . ' compulsory subjects.';
                     }
                 }
             }
@@ -759,14 +766,25 @@ class OnlineRegistrationController extends CollegeBaseController
                 ]);
             }
 
-            $numOfSubject = $semester->major_subject_count ?: $subjects->count();
+            /*Per-semester dynamic limits set by admin. Fallbacks keep old behaviour
+              (6 compulsory + 1 optional = 7) when a semester has no value yet.*/
+            $maxCompulsory = $semester->max_compulsory_count;
+            $maxOptional = $semester->max_optional_count;
+            $maxCompulsory = ($maxCompulsory === null || $maxCompulsory === '') ? 6 : (int) $maxCompulsory;
+            $maxOptional = ($maxOptional === null || $maxOptional === '') ? 1 : (int) $maxOptional;
+
+            $totalMax = $maxCompulsory + $maxOptional;
+            $numOfSubject = $semester->major_subject_count ?: $totalMax;
 
             return response()->json([
                 'subjects' => view($this->view_path . '.includes.forms.fetch-subjects', [
                     'subjects' => $subjects,
                     'numOfSubject' => $numOfSubject,
+                    'maxCompulsory' => $maxCompulsory,
+                    'maxOptional' => $maxOptional,
+                    'totalMax' => $totalMax,
                 ])->render(),
-                'success' => 'Please, Select Maximum ' . $numOfSubject . ' Subjects in Subject List.'
+                'success' => 'Please, Select Maximum ' . $totalMax . ' Subjects in Subject List.'
             ]);
         }
 
