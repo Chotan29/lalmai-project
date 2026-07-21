@@ -1991,7 +1991,7 @@
 
             $.ajax({
                 type: 'POST',
-                url: '{{ route('online-registration.check-email', [], false) }}',
+                url: '{{ route('online-registration.check-email') }}',
                 dataType: 'json',
                 data: {
                     _token: '{{ csrf_token() }}',
@@ -2848,7 +2848,7 @@
             $('select[name="guardian_link_id"]').select2({
                 placeholder: 'Select Guardian...',
                 ajax: {
-                    url: '{{ route('student.guardian-name-autocomplete', [], false) }}',
+                    url: '{{ route('student.guardian-name-autocomplete') }}',
                     dataType: 'json',
                     delay: 250,
                     processResults: function(data) {
@@ -2868,7 +2868,7 @@
                     $('#guardian_wrapper').empty();
                     $.ajax({
                         type: 'POST',
-                        url: '{{ route('student.guardianInfo-html', [], false) }}',
+                        url: '{{ route('student.guardianInfo-html') }}',
                         data: {
                             _token: '{{ csrf_token() }}',
                             id: guardians_id
@@ -3061,7 +3061,7 @@
         function loadSemesters($this) {
             $.ajax({
                 type: 'POST',
-                url: '{{ route('online-registration.find-semester', [], false) }}',
+                url: '{{ route('online-registration.find-semester') }}',
                 dataType: 'json',
                 data: {
                     _token: '{{ csrf_token() }}',
@@ -3106,7 +3106,7 @@
             } else {
                 $.ajax({
                     type: 'POST',
-                    url: '{{ route('online-registration.find-subject', [], false) }}',
+                    url: '{{ route('online-registration.find-subject') }}',
                     dataType: 'json',
                     data: {
                         _token: '{{ csrf_token() }}',
@@ -3144,7 +3144,7 @@
 
             $.ajax({
                 type: 'POST',
-                url: '{{ route('student.academicInfo-html', [], false) }}',
+                url: '{{ route('student.academicInfo-html') }}',
                 data: {
                     _token: '{{ csrf_token() }}',
                     semester_id: $semester
@@ -3371,7 +3371,7 @@
 
             // Submit payment request
             $.ajax({
-                url: '{{ route("registration-payment.pay", [], false) }}',
+                url: '{{ route("registration-payment.pay") }}',
                 type: 'POST',
                 data: payload,
                 processData: false,
