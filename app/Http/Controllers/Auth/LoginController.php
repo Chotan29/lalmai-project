@@ -69,7 +69,14 @@ class LoginController extends Controller
 
     protected function authenticated(Request $request, $user)
     {
-        Auth::logoutOtherDevices($request->password);
+        /*
+         * NOTE: Auth::logoutOtherDevices() was removed here. Combined with the
+         * AuthenticateSession middleware it re-hashed the user's password on every
+         * login and invalidated the session hash, which locked users out on their
+         * SECOND login ("logged in once, then couldn't log in again"). Removing it
+         * restores normal repeat logins. If single-session enforcement is needed
+         * later, re-enable AuthenticateSession + StartSession consistently first.
+         */
     }
 
 
