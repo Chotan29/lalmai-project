@@ -76,17 +76,58 @@
         .b-found { text-align: center; color: var(--accent); font-weight: 900; font-size: 7.4pt; padding: .6mm 2mm 1.4mm 2mm; }
         .b-strip { height: 5mm; background: var(--accent); flex: none; }
 
+        /* front+back pair wrapper: invisible on screen so cards keep the grid flow */
+        .pair { display: contents; }
+
+        /* print-type chooser modal */
+        .print-modal {
+            display: none; position: fixed; inset: 0; z-index: 9999;
+            background: rgba(0,0,0,.45); align-items: center; justify-content: center;
+        }
+        .print-modal.open { display: flex; }
+        .print-modal-box {
+            background: #fff; border-radius: 8px; padding: 22px 26px; text-align: center;
+            box-shadow: 0 10px 40px rgba(0,0,0,.35); min-width: 300px; font-family: Arial, sans-serif;
+        }
+        .print-modal-box h3 { font-size: 16px; margin-bottom: 16px; color: #222; }
+        .print-modal-box button {
+            display: block; width: 100%; margin: 8px 0; padding: 11px 16px; cursor: pointer;
+            font-size: 14px; font-weight: bold; border: 0; border-radius: 5px; color: #fff;
+        }
+        .print-modal-box button.opt-main { background: #2d6da3; }
+        .print-modal-box button.opt-demo { background: #007a33; }
+        .print-modal-box button.cancel { background: #999; }
+
         @media print {
-            .toolbar { display: none; }
+            .toolbar, .print-modal { display: none !important; }
             html, body { background: #fff; }
             .sheet { display: block; padding: 0; }
             .card { box-shadow: none; page-break-after: always; }
-            @page { size: 54mm 86mm; margin: 0; }
+
+            /* DEMO (A4): each student's front + back side by side, 3 students per page */
+            body.demo-print .sheet { padding: 0; }
+            body.demo-print .pair {
+                display: flex; justify-content: center; align-items: flex-start;
+                gap: 4mm; margin-bottom: 4mm;
+                page-break-inside: avoid; break-inside: avoid;
+            }
+            body.demo-print .card { page-break-after: auto; }
+            body.demo-print .pair:nth-of-type(3n) { page-break-after: always; }
         }
     </style>
 </head>
 <body>
-    <div class="toolbar"><button onclick="window.print()">&#128424; Print ID Cards</button></div>
+    <style id="pageStyle">@page { size: 54mm 86mm; margin: 0; }</style>
+    <div class="toolbar"><button onclick="openPrintModal()">&#128424; Print ID Cards</button></div>
+
+    <div class="print-modal" id="printModal">
+        <div class="print-modal-box">
+            <h3>Select Print Type</h3>
+            <button class="opt-main" onclick="doPrint('main')">&#128424; Main Card Print (54 &times; 86 mm)</button>
+            <button class="opt-demo" onclick="doPrint('demo')">&#128196; Demo Print (A4 &mdash; 3 cards / page)</button>
+            <button class="cancel" onclick="closePrintModal()">Cancel</button>
+        </div>
+    </div>
 
     <div class="sheet">
     @if($data['student'] && $data['student']->count() > 0)
@@ -136,6 +177,7 @@
                     : asset('assets/images/avatars/profile-pic.jpg');
             @endphp
 
+            <div class="pair">
             {{-- FRONT --}}
             <div class="card" style="--accent: {{ $accent }};">
                 <div class="f-top">
@@ -218,6 +260,7 @@
                 <div class="b-found">If it is found, please inform the College Office</div>
                 <div class="b-strip"></div>
             </div>
+            </div>{{-- /.pair --}}
         @endforeach
     @else
         <p style="background:#fff;padding:20px;">No student selected.</p>
@@ -253,10 +296,37 @@
         function fitAll() {
             document.querySelectorAll('.card').forEach(shrinkToFit);
         }
+        window.__fitAll = fitAll;
         if (document.readyState === 'complete') { fitAll(); }
         else { window.addEventListener('load', fitAll); }
         window.addEventListener('beforeprint', fitAll);
     })();
+
+    /* Print-type chooser: Main (54x86 per page) vs Demo (A4, 3 students/page) */
+    function openPrintModal() { document.getElementById('printModal').classList.add('open'); }
+    function closePrintModal() { document.getElementById('printModal').classList.remove('open'); }
+    function doPrint(mode) {
+        closePrintModal();
+        var ps = document.getElementById('pageStyle');
+        if (mode === 'demo') {
+            document.body.classList.add('demo-print');
+            ps.textContent = '@page { size: A4; margin: 6mm; }';
+        } else {
+            document.body.classList.remove('demo-print');
+            ps.textContent = '@page { size: 54mm 86mm; margin: 0; }';
+        }
+        setTimeout(function () {
+            if (window.__fitAll) window.__fitAll();
+            window.print();
+        }, 200);
+    }
+    window.addEventListener('afterprint', function () {
+        document.body.classList.remove('demo-print');
+    });
+    document.addEventListener('DOMContentLoaded', function () {
+        var m = document.getElementById('printModal');
+        if (m) m.addEventListener('click', function (e) { if (e.target === this) closePrintModal(); });
+    });
     </script>
 </body>
 </html>
