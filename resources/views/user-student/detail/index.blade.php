@@ -553,6 +553,13 @@
                             </div>
                         </div>
                     </div>
+                    @permission('student-profile-edit')
+                    <div class="ml-md-auto mt-3 mt-md-0 text-center" style="position: relative; z-index: 2;">
+                        <a href="{{ route('user-student.profile.edit', encrypt($data['student']->id)) }}" class="btn btn-light btn-sm" style="font-weight: 600; border-radius: 8px; padding: 0.5rem 1.1rem;">
+                            <i class="bi bi-pencil-square mr-1"></i> Edit Profile
+                        </a>
+                    </div>
+                    @endpermission
                 </div>
             </div>
 
