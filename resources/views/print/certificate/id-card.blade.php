@@ -223,4 +223,40 @@
         <p style="background:#fff;padding:20px;">No student selected.</p>
     @endif
     </div>
-</
+
+    <script>
+    /* Auto-fit: if a card's content (e.g. a long address) overflows its fixed
+       height, shrink the detail-row font-size just enough to fit. Resets inline
+       styles first each run so repeated calls (load + print) never compound. */
+    (function () {
+        function shrinkToFit(card) {
+            var rows = card.querySelectorAll('.f-row, .b-row');
+            if (!rows.length) return;
+
+            // reset any previous auto-fit so we always measure from the design size
+            rows.forEach(function (r) { r.style.fontSize = ''; r.style.lineHeight = ''; });
+
+            var base = [];
+            rows.forEach(function (r) { base.push(parseFloat(window.getComputedStyle(r).fontSize)); });
+
+            var scale = 1, guard = 0;
+            // step down to at most 60% of the original size
+            while (card.scrollHeight > card.clientHeight + 1 && scale > 0.60 && guard < 60) {
+                scale -= 0.03;
+                rows.forEach(function (r, i) {
+                    r.style.fontSize = (base[i] * scale).toFixed(2) + 'px';
+                    r.style.lineHeight = '1.28';
+                });
+                guard++;
+            }
+        }
+        function fitAll() {
+            document.querySelectorAll('.card').forEach(shrinkToFit);
+        }
+        if (document.readyState === 'complete') { fitAll(); }
+        else { window.addEventListener('load', fitAll); }
+        window.addEventListener('beforeprint', fitAll);
+    })();
+    </script>
+</body>
+</html>
