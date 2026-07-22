@@ -57,6 +57,8 @@ trait UserScope{
         $request->request->add(['password' => bcrypt($request->get('password'))]);
         $request->request->add(['hook_id' => isset($request->hook_id)?intval(decrypt($request->get('hook_id'))):'']);
         $request->request->add(['role_id' => isset($request->role_id)?intval($request->get('role_id')):'']);
+        /*A freshly created login should be active so the user can log in.*/
+        $request->request->add(['status' => 'active']);
 
         //dd($request->all());
         $user = User::create($request->all());
@@ -109,6 +111,11 @@ trait UserScope{
 
         if ($request->get('password')){
             $new_password= bcrypt($request->get('password'));
+            /*Setting a login password activates the user so they can log in
+              (the login check requires status = 1). Without this an online-
+              registered student stays "in-active" in the users table even after
+              a password is assigned, and login fails with "credentials do not match".*/
+            $request->request->add(['status' => 'active']);
         }
 
         $request->request->add(['password' => isset($new_password)?$new_password:$row->password]);
