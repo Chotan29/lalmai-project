@@ -61,7 +61,7 @@ class UserController extends CollegeBaseController
                         $this->filter_query['users.status'] = $request->get('status');
                     }
                 })
-                ->join('role_user as ru','ru.user_id','=','users.id')
+                ->leftJoin('role_user as ru','ru.user_id','=','users.id')
                 //->get();
                 ->paginate(env('PAGINATION_LIMIT',$this->pagination_limit));
         }else {
@@ -87,7 +87,7 @@ class UserController extends CollegeBaseController
                             $this->filter_query['users.status'] = $request->get('status');
                         }
                     })
-                    ->join('role_user as ru', 'ru.user_id', '=', 'users.id')
+                    ->leftJoin('role_user as ru', 'ru.user_id', '=', 'users.id')
                     ->paginate(env('PAGINATION_LIMIT', $this->pagination_limit));
             } else {
                 $data['rows'] = User::select('users.id', 'users.name', 'users.email', 'users.profile_image', 'users.contact_number',
@@ -107,8 +107,8 @@ class UserController extends CollegeBaseController
                             $this->filter_query['users.status'] = $request->get('status');
                         }
                     })
-                    ->join('role_user as ru', 'ru.user_id', '=', 'users.id')
-                    ->join('roles as r', 'r.id', '=', 'ru.role_id')
+                    ->leftJoin('role_user as ru', 'ru.user_id', '=', 'users.id')
+                    ->leftJoin('roles as r', 'r.id', '=', 'ru.role_id')
                     ->paginate(env('PAGINATION_LIMIT', $this->pagination_limit));
             }
         }
