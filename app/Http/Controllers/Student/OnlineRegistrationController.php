@@ -360,7 +360,14 @@ class OnlineRegistrationController extends CollegeBaseController
         //upload student image
         if ($request->hasFile('student_main_image')){
             $student_image = $request->file('student_main_image');
-            $student_image_name = Str::slug($batchTitle.'-'.$serial).'.'.$student_image->getClientOriginalExtension();
+            /*Name the photo from the student's UNIQUE reg_no plus a uniqid, NOT the batch
+              serial. The old serial-based name was not tied to the actual student: an
+              old/returning student keeps their typed Student ID as reg_no, so the auto
+              serial stayed unused and the next registrant reused the same serial - the
+              new photo overwrote the earlier student's file, making the printed form show
+              another student's picture. A per-student unique name prevents any overwrite.*/
+            $imageRegNo = ($isOldStudent && $typedStudentId !== '') ? $typedStudentId : Str::slug($regNum);
+            $student_image_name = Str::slug($imageRegNo).'-'.uniqid().'.'.$student_image->getClientOriginalExtension();
             $student_image->move(public_path().DIRECTORY_SEPARATOR.'images'.DIRECTORY_SEPARATOR.'studentProfile'.DIRECTORY_SEPARATOR, $student_image_name);
         }else{
             $student_image_name = "";
