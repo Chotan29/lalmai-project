@@ -83,6 +83,11 @@
                                     <i class="fa fa-unlock bigger-110"></i>
                                     Unlock Selected
                                 </button>
+
+                                <button class="btn btn-danger" type="button" id="unlock-all-btn" style="display:none;">
+                                    <i class="fa fa-unlock-alt bigger-110"></i>
+                                    Unlock All
+                                </button>
                             </div>
                         </div>
 
@@ -317,8 +322,9 @@
                         updateMarkHeaders(data.limits);
                         applyAbsentState();
                         updateSummary(data.exist_count, data.new_count, data.locked_count);
-                        /*Admin-only: show the bulk unlock button when owned rows are present*/
+                        /*Admin-only: show the bulk unlock buttons when owned rows are present*/
                         $('#unlock-selected-btn').toggle($('.unlock-chk').length > 0);
+                        $('#unlock-all-btn').toggle($('.unlock-chk').length > 0);
                         toastr.success(data.message, "Success:");
                     }
                 }
@@ -567,4 +573,38 @@
                     }
                 },
                 error: function () {
-     
+                    toastr.error('Unlock failed. Please try again.', 'Error:');
+                }
+            });
+        }
+
+        /*single row unlock*/
+        $('#student_wrapper').on('click', '.unlock-one-btn', function () {
+            doUnlock([$(this).data('student-id')]);
+        });
+
+        /*bulk unlock of selected rows*/
+        $('#unlock-selected-btn').click(function () {
+            var ids = $('.unlock-chk:checked').map(function () { return $(this).val(); }).get();
+            doUnlock(ids);
+        });
+
+        /*unlock ALL locked rows at once (no need to tick each row)*/
+        $('#unlock-all-btn').click(function () {
+            var ids = $('.unlock-chk').map(function () { return $(this).val(); }).get();
+            if (!ids.length) {
+                toastr.info('No locked row to unlock.', 'Info:');
+                return;
+            }
+            if (!confirm('Unlock ALL ' + ids.length + ' locked mark row(s)? Any teacher will then be able to edit them.')) {
+                return;
+            }
+            doUnlock(ids);
+        });
+
+    </script>
+
+    @include('includes.scripts.table_tr_sort')
+
+@endsection
+
