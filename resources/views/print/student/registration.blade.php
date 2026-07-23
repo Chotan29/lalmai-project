@@ -2,225 +2,109 @@
 
 @section('css')
     <style>
-        /* A4 Page Settings */
-        @page {
-            size: A4;
-            margin: 15mm 10mm;
-        }
-        
+        @page { size: A4; margin: 12mm 10mm; }
+
         body {
-            font-family: 'Arial', sans-serif;
-            font-size: 11pt;
-            line-height: 1.4;
-            color: #000;
-            background: #fff;
-            padding: 0;
-            margin: 0;
+            font-family: 'Arial', Helvetica, sans-serif;
+            font-size: 11pt; line-height: 1.4; color: #1a1a1a; background: #fff;
+            padding: 0; margin: 0;
+            -webkit-print-color-adjust: exact; print-color-adjust: exact;
         }
-        
-        /* Main Container */
-        .print-container {
-            width: 210mm;
-            min-height: 297mm;
-            margin: 0 auto;
-            padding: 5mm;
-            box-sizing: border-box;
+
+        .reg-sheet {
+            width: 210mm; min-height: 297mm; margin: 0 auto; padding: 0;
+            box-sizing: border-box; background: #fff;
         }
-        
-        /* Header Section */
-        .header {
-            display: flex;
-            align-items: center;
-            margin-bottom: 5mm;
-            border-bottom: 1px solid #ddd;
-            padding-bottom: 3mm;
+        .reg-doc { border: 1px solid #d8d8d8; border-radius: 4px; overflow: hidden; }
+
+        .reg-topbar { height: 6px; background: #0f5132; }
+
+        .reg-head { display: flex; align-items: center; gap: 5mm; padding: 4mm 6mm 3mm; }
+        .reg-monogram { width: 20mm; height: 20mm; object-fit: contain; }
+        .reg-monogram-fallback {
+            width: 20mm; height: 20mm; border-radius: 50%; border: 2px solid #0f5132;
+            display: flex; align-items: center; justify-content: center; color: #0f5132; font-size: 20pt;
         }
-        
-        .logo {
-            width: 25mm;
-            height: 25mm;
-            object-fit: contain;
-            margin-right: 5mm;
+        .reg-inst { flex: 1; text-align: center; }
+        .reg-inst .gov { font-size: 8.5pt; letter-spacing: .3px; color: #555; }
+        .reg-inst .name { font-size: 18pt; font-weight: bold; color: #0f5132; margin: 1mm 0; }
+        .reg-inst .addr { font-size: 8.5pt; color: #444; }
+        .reg-photo-box { text-align: center; }
+        .reg-photo { width: 26mm; height: 31mm; object-fit: cover; border: 1px solid #bbb; background: #f4f4f4; }
+        .reg-sign-img { width: 30mm; height: 12mm; object-fit: contain; margin-top: 1mm; }
+        .reg-photo-cap { font-size: 7.5pt; color: #888; margin-top: .5mm; }
+
+        .reg-title { text-align: center; padding: 1mm 0 3mm; }
+        .reg-title span {
+            display: inline-block; background: #0f5132; color: #fff; font-size: 12pt; font-weight: bold;
+            letter-spacing: 1px; padding: 1.4mm 8mm; border-radius: 2mm;
         }
-        
-        .institution-info {
-            flex-grow: 1;
-            text-align: center;
-        }
-        
-        .institution-name {
-            font-size: 14pt;
-            font-weight: bold;
-            margin: 0;
-            text-transform: uppercase;
-        }
-        
-        .institution-address {
-            font-size: 9pt;
-            margin: 1mm 0;
-        }
-        
-        .form-title {
-            font-size: 16pt;
-            font-weight: bold;
-            text-align: center;
-            margin: 3mm 0;
-            text-decoration: underline;
-        }
-        
-        /* Student Images */
-        .student-images {
-            text-align: right;
-            width: 40mm;
-        }
-        
-        .student-photo {
-            width: 30mm;
-            height: 35mm;
-            object-fit: cover;
-            border: 1px solid #ddd;
-            margin-bottom: 2mm;
-        }
-        
-        .student-signature {
-            width: 40mm;
-            height: 15mm;
-            object-fit: contain;
-        }
-        
-        /* Information Tables */
-        .info-table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-bottom: 3mm;
-            font-size: 10pt;
-        }
-        
-        .info-table td {
-            padding: 2mm 3mm;
-            border: 1px solid #ddd;
-            vertical-align: top;
-        }
-        
-        .info-table b {
-            font-weight: 600;
-        }
-        
-        /* Academic Table */
-        .academic-table {
-            width: 100%;
-            border-collapse: collapse;
-            margin: 3mm 0;
-            font-size: 9pt;
-        }
-        
-        .academic-table th, 
-        .academic-table td {
-            border: 1px solid #ddd;
-            padding: 2mm;
-            text-align: center;
-        }
-        
-        .academic-table th {
-            background-color: #f5f5f5;
-            font-weight: bold;
-        }
-        
-        /* Declaration Section */
-        .declaration {
-            margin: 5mm 0;
-            font-size: 10pt;
-            text-align: justify;
-        }
-        
-        .declaration-title {
-            font-weight: bold;
-            text-align: center;
-            margin-bottom: 2mm;
-        }
-        
-        /* Signature Section */
-        .signature-section {
-            margin-top: 8mm;
-        }
-        
-        .signature-table {
-            width: 100%;
-            margin-top: 5mm;
-        }
-        
-        .signature-table td {
-            padding: 2mm;
-            vertical-align: bottom;
-        }
-        
-        /* Annexures */
-        .annexures {
-            margin-top: 5mm;
-            font-size: 10pt;
-        }
-        
-        .annexures-title {
-            font-weight: bold;
-            margin-bottom: 2mm;
-        }
-        
-        .annexure-item {
-            margin-left: 5mm;
-        }
-        
-        /* Utility Classes */
-        .text-center {
-            text-align: center;
-        }
-        
-        .mb-2 {
-            margin-bottom: 2mm;
-        }
-        
-        /* Print Specific */
+
+        .reg-strip { display: flex; margin: 0 6mm; border: 1px solid #d5d5d5; border-radius: 2mm; overflow: hidden; font-size: 9.5pt; }
+        .reg-strip > div { flex: 1; padding: 2mm 3mm; border-right: 1px solid #e2e2e2; }
+        .reg-strip > div:last-child { border-right: 0; }
+        .reg-strip .lb { color: #777; }
+
+        .reg-section { padding: 3mm 6mm 1mm; }
+        .reg-sec-head { display: flex; align-items: center; gap: 2mm; margin-bottom: 2mm; }
+        .reg-sec-head .bar { width: 1.2mm; height: 4.2mm; background: #0f5132; display: inline-block; }
+        .reg-sec-head .txt { font-size: 10.5pt; font-weight: bold; color: #0f5132; letter-spacing: .3px; }
+
+        .reg-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.6mm 8mm; font-size: 9.5pt; }
+        .reg-grid .item { border-bottom: 1px dotted #ccc; padding: 1mm 0; }
+        .reg-grid .item.full { grid-column: 1 / -1; }
+        .reg-grid .lb { color: #777; }
+        .reg-grid .hl { background: #f2f8f4; }
+        .reg-grid .hl .lb, .reg-grid .hl b { color: #0f5132; }
+
+        .reg-table { width: 100%; border-collapse: collapse; font-size: 9pt; }
+        .reg-table th { background: #eef3ef; color: #0f5132; border: 1px solid #cfd8d2; padding: 1.6mm; }
+        .reg-table td { border: 1px solid #dcdcdc; padding: 1.4mm; }
+        .reg-badge-opt { background: #e6f0ff; color: #185fa5; padding: .3mm 2.4mm; border-radius: 3mm; font-size: 8.5pt; }
+
+        .reg-declaration { padding: 3mm 6mm 1mm; }
+        .reg-declaration .dt { font-size: 10pt; font-weight: bold; text-align: center; color: #0f5132; margin-bottom: 1mm; }
+        .reg-declaration p { font-size: 9pt; color: #333; text-align: justify; line-height: 1.5; margin: 0; }
+
+        .reg-pay { margin: 4mm 6mm 0; border: 1px solid #cfd8d2; border-radius: 2mm; overflow: hidden; }
+        .reg-pay .ph { background: #eef3ef; color: #0f5132; font-weight: bold; text-align: center; padding: 1.6mm; font-size: 9.5pt; }
+        .reg-pay .pb { display: grid; grid-template-columns: 1fr 1fr; gap: 1.2mm 8mm; padding: 2mm 4mm; font-size: 9.5pt; }
+        .reg-pay .lb { color: #777; }
+
+        .reg-signs { display: flex; justify-content: space-between; padding: 10mm 8mm 5mm; font-size: 9.5pt; }
+        .reg-signs .col { text-align: center; }
+        .reg-signs .line { border-top: 1px solid #555; width: 55mm; padding-top: 1mm; }
+
+        .reg-annex { padding: 1mm 6mm 3mm; font-size: 9pt; }
+        .reg-annex .at { font-weight: bold; color: #0f5132; margin-bottom: 1mm; }
+        .reg-annex .ai { margin-left: 4mm; }
+
+        .reg-footer { background: #0f5132; color: #dfeee6; font-size: 8pt; text-align: center; padding: 1.6mm; }
+
         @media print {
-            .no-print {
-                display: none;
-            }
-            
-            .print-container {
-                padding: 0;
-            }
-            
-            body {
-                padding: 0;
-                margin: 0;
-                background: #fff;
-            }
+            .no-print { display: none; }
+            body { padding: 0; margin: 0; background: #fff; }
+            .reg-sheet { padding: 0; }
         }
     </style>
 @endsection
 
 @section('content')
-    {{-- Display success message if available --}}
     @if(session()->has('message_success'))
-        <div class="alert alert-success alert-dismissible fade show no-print" role="alert" style="margin-bottom: 15px;">
+        <div class="alert alert-success alert-dismissible fade show no-print" role="alert" style="margin-bottom:15px;">
             <strong><i class="fa fa-check-circle"></i> Success!</strong> {{ session()->get('message_success') }}
-            <button type="button" class="close" data-dismiss="alert" aria-label="Close">
-                <span aria-hidden="true">&times;</span>
-            </button>
+            <button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button>
         </div>
     @endif
-    
     @if(session()->has('message_danger'))
-        <div class="alert alert-danger alert-dismissible fade show no-print" role="alert" style="margin-bottom: 15px;">
+        <div class="alert alert-danger alert-dismissible fade show no-print" role="alert" style="margin-bottom:15px;">
             <strong><i class="fa fa-exclamation-circle"></i> Error!</strong> {{ session()->get('message_danger') }}
-            <button type="button" class="close" data-dismiss="alert" aria-label="Close">
-                <span aria-hidden="true">&times;</span>
-            </button>
+            <button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button>
         </div>
     @endif
-    
-    <div class="no-print text-center" style="margin-bottom: 10px;">
-        <button class="btn btn-primary" onclick="window.print()">
-            <i class="fa fa-print"></i> Print Registration Form
-        </button>
+
+    <div class="no-print text-center" style="margin-bottom:10px;">
+        <button class="btn btn-primary" onclick="window.print()"><i class="fa fa-print"></i> Print Registration Form</button>
         @if(isset($data['onlinePayment']) && $data['onlinePayment'])
             <a href="{{ route('print-out.fees.online-payment-receipt', ['id' => encrypt($data['onlinePayment']->id)]) }}" target="_blank" class="btn btn-info">
                 <i class="fa fa-file-pdf-o"></i> Print Payment Receipt
@@ -228,210 +112,201 @@
         @endif
     </div>
 
-    <div class="print-container">
-        <!-- Header Section -->
-        <div class="header">
-            @if(isset($generalSetting->logo))
-                <img class="logo" src="{{ asset('images'.DIRECTORY_SEPARATOR.'setting'.DIRECTORY_SEPARATOR.'general'.DIRECTORY_SEPARATOR.$generalSetting->logo) }}" alt="Institution Logo">
-            @endif
-            
-            <div class="institution-info">
-                <div class="institution-name">{{ isset($generalSetting->institute) ? $generalSetting->institute : 'INSTITUTE NAME' }}</div>
-                <div class="institution-address">
-                    {{ isset($generalSetting->address) ? $generalSetting->address : '' }}<br>
-                    {{ isset($generalSetting->phone) ? 'Phone: '.$generalSetting->phone : '' }} | 
-                    {{ isset($generalSetting->email) ? 'Email: '.$generalSetting->email : '' }}
-                </div>
-            </div>
-            
-            <div class="student-images">
-                @if($data['student']->student_image != '')
-                    <img class="student-photo" src="{{ asset('images'.DIRECTORY_SEPARATOR.$folder_name.DIRECTORY_SEPARATOR.$data['student']->student_image) }}" alt="Student Photo">
+    @php
+        $s = $data['student'];
+        $fullName = trim(preg_replace('/\s+/', ' ', $s->first_name.' '.$s->middle_name.' '.$s->last_name));
+        $fatherName = trim(preg_replace('/\s+/', ' ', $s->father_first_name.' '.$s->father_middle_name.' '.$s->father_last_name));
+        $motherName = trim(preg_replace('/\s+/', ' ', $s->mother_first_name.' '.$s->mother_middle_name.' '.$s->mother_last_name));
+        $guardianName = trim(preg_replace('/\s+/', ' ', $s->guardian_first_name.' '.$s->guardian_middle_name.' '.$s->guardian_last_name));
+        $session = ViewHelper::getStudentBatchId($s->batch);
+        $program = ViewHelper::getFacultyTitle($s->faculty);
+        $semesterTitle = ViewHelper::getSemesterTitle($s->semester);
+        $appliedSubjects = isset($data['appliedSubjects']) ? $data['appliedSubjects'] : collect();
+    @endphp
+
+    <div class="reg-sheet">
+        <div class="reg-doc">
+            <div class="reg-topbar"></div>
+
+            <div class="reg-head">
+                @if(isset($generalSetting->logo) && $generalSetting->logo)
+                    <img class="reg-monogram" src="{{ asset('images'.DIRECTORY_SEPARATOR.'setting'.DIRECTORY_SEPARATOR.'general'.DIRECTORY_SEPARATOR.$generalSetting->logo) }}" alt="Logo">
                 @else
-                    <img class="student-photo" src="{{ asset('assets/images/avatars/profile-pic.jpg') }}" alt="Student Photo">
+                    <div class="reg-monogram-fallback"><i class="fa fa-university"></i></div>
                 @endif
-                
-                @if($data['student']->student_signature != '')
-                    <img class="student-signature" src="{{ asset('images'.DIRECTORY_SEPARATOR.$folder_name.DIRECTORY_SEPARATOR.$data['student']->student_signature) }}" alt="Student Signature">
-                @endif
-            </div>
-        </div>
-        
-        <!-- Form Title -->
-        <div class="form-title">STUDENT REGISTRATION FORM</div>
-        
-        <!-- Registration Info -->
-        <table class="info-table">
-            <tr>
-                <td width="50%"><b>Registration No:</b> {{ $data['student']->reg_no }}</td>
-                <td width="50%"><b>Date:</b> {{ \Carbon\Carbon::parse($data['student']->reg_date)->format('d-m-Y') }}</td>
-            </tr>
-            <tr>
-                <td colspan="2"><b>Program:</b> {{ ViewHelper::getFacultyTitle($data['student']->faculty) }} - {{ ViewHelper::getSemesterTitle($data['student']->semester) }}</td>
-            </tr>
-        </table>
-        
-        <!-- Personal Information -->
-        <table class="info-table">
-            <tr>
-                <td width="50%"><b>Full Name:</b> {{ $data['student']->first_name.' '.$data['student']->middle_name.' '.$data['student']->last_name }}</td>
-                <td width="50%"><b>Subjects:</b> 
-                    @if(isset($data['appliedSubjects']) && $data['appliedSubjects']->count() > 0)
-                        @foreach($data['appliedSubjects'] as $subject)
-                            {{ ViewHelper::getSubjectById($subject->subjects_id ?? $subject->subject_id) }}@if(!$loop->last), @endif
-                        @endforeach
+                <div class="reg-inst">
+                    <div class="gov">Government of the People's Republic of Bangladesh</div>
+                    <div class="name">{{ isset($generalSetting->institute) ? $generalSetting->institute : 'Lalmai Govt. College' }}</div>
+                    <div class="addr">
+                        {{ isset($generalSetting->address) ? $generalSetting->address : 'Cumilla Sadar South, Cumilla' }}
+                        @if(isset($generalSetting->phone) && $generalSetting->phone) &middot; Mob: {{ $generalSetting->phone }} @endif
+                        @if(isset($generalSetting->email) && $generalSetting->email) &middot; {{ $generalSetting->email }} @endif
+                    </div>
+                </div>
+                <div class="reg-photo-box">
+                    @if($s->student_image != '')
+                        <img class="reg-photo" src="{{ asset('images'.DIRECTORY_SEPARATOR.$folder_name.DIRECTORY_SEPARATOR.$s->student_image) }}" alt="Photo">
+                    @else
+                        <img class="reg-photo" src="{{ asset('assets/images/avatars/profile-pic.jpg') }}" alt="Photo">
                     @endif
-                </td>
-            </tr>
-            <tr>
-                <td><b>Gender:</b> {{ $data['student']->gender }}</td>
-                <td><b>Date of Birth:</b> {{ \Carbon\Carbon::parse($data['student']->date_of_birth)->format('d-m-Y') }}</td>
-            </tr>
-            <tr>
-                <td><b>National ID:</b> {{ $data['student']->national_id_1 }}</td>
-                <td></td>
-            </tr>
-            <tr>
-                <td><b>Mobile:</b> {{ $data['student']->mobile_1 }}</td>
-                <td><b>Email:</b> {{ $data['student']->email }}</td>
-            </tr>
-            <tr>
-                <td><b>Religion:</b> {{ $data['student']->religion }}</td>
-                <td></td>
-            </tr>
-        </table>
-        
-        <!-- Academic Information -->
-        <table class="info-table">
-            <tr>
-                <td></td>
-                <td><b>Enrollment No:</b> {{ $data['student']->university_enrollment_no }}</td>
-            </tr>
-            <tr>
-                <td></td>
-                <td><b>Division:</b> {{ $data['student']->state }}</td>
-            </tr>
-        </table>
-        
-        <!-- Family Information -->
-        <table class="info-table">
-            <tr>
-                <td width="50%"><b>Father's Name:</b> {{ $data['student']->father_first_name.' '.$data['student']->father_middle_name.' '.$data['student']->father_last_name }}</td>
-                <td width="50%"><b>Mother's Name:</b> {{ $data['student']->mother_first_name.' '.$data['student']->mother_middle_name.' '.$data['student']->mother_last_name }}</td>
-            </tr>
-            <tr>
-                <td><b>Guardian Name:</b> {{ $data['student']->guardian_first_name.' '.$data['student']->guardian_middle_name.' '.$data['student']->guardian_last_name }}</td>
-                <td><b>Guardian Mobile:</b> {{ $data['student']->guardian_mobile_1 }}</td>
-            </tr>
-        </table>
-        
-        <!-- Address Information -->
-        <table class="info-table">
-            <tr>
-                <td colspan="2"><b>Permanent Address:</b> {{ $data['student']->address }}{{ isset($data['student']->postal_code) ? ', '.$data['student']->postal_code : '' }}</td>
-            </tr>
-            <tr>
-                <td colspan="2"><b>Temporary Address:</b> {{ $data['student']->temp_address }}{{ isset($data['student']->temp_postal_code) ? ', '.$data['student']->temp_postal_code : '' }}</td>
-            </tr>
-        </table>
-        
-        <!-- Academic Qualifications -->
-        @if (isset($data['academicInfos']) && $data['academicInfos']->count() > 0)
-            <div class="text-center mb-2" style="font-weight: bold; font-size: 11pt;">
-                EDUCATIONAL QUALIFICATIONS
-            </div>
-            
-            <table class="academic-table">
-                <thead>
-                    <tr>
-                        <th width="20%">Exam</th>
-                        <th width="25%">Board/University</th>
-                        <th width="10%">Year</th>
-                        <th width="25%">Subjects</th>
-                        <th width="10%">Grade Point</th>
-                        <th width="10%">Grade</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @foreach($data['academicInfos'] as $academicInfo)
-                        <tr>
-                            <td>{{ $academicInfo->board }}</td>
-                            <td>{{ $academicInfo->institution }}</td>
-                            <td>{{ $academicInfo->pass_year }}</td>
-                            <td>{{ $academicInfo->major_subjects }}</td>
-                            <td>{{ $academicInfo->grade_point }}</td>
-                            <td>{{ $academicInfo->grade_letter }}</td>
-                        </tr>
-                    @endforeach
-                </tbody>
-            </table>
-        @endif
-        
-        <!-- Payment Receipt Information -->
-        @if(isset($data['onlinePayment']) && $data['onlinePayment'])
-            <div style="margin: 8mm 0; padding: 3mm; border: 1px solid #999; background-color: #f9f9f9;">
-                <table class="info-table">
-                    <tr>
-                        <td colspan="2" style="background-color: #f0f0f0; font-weight: bold; text-align: center;"><b>PAYMENT RECEIPT</b></td>
-                    </tr>
-                    <tr>
-                        <td width="50%"><b>Payment Date:</b> {{ \Carbon\Carbon::parse($data['onlinePayment']->date)->format('d-m-Y H:i:s') }}</td>
-                        <td width="50%"><b>Payment Mode:</b> {{ $data['onlinePayment']->payment_gateway }}</td>
-                    </tr>
-                    <tr>
-                        <td><b>Transaction Ref:</b> {{ $data['onlinePayment']->ref_no }}</td>
-                        <td><b>Amount Paid:</b> ৳{{ number_format($data['onlinePayment']->amount, 2) }}</td>
-                    </tr>
-                    <tr>
-                        <td colspan="2"><b>Payment Status:</b> <span style="color: green; font-weight: bold;">{{ strtoupper($data['onlinePayment']->payment_status) }}</span></td>
-                    </tr>
-                </table>
-                <div style="text-align: center; margin-top: 3mm;">
-                    <a href="{{ route('print-out.fees.online-payment-receipt', ['id' => encrypt($data['onlinePayment']->id)]) }}" target="_blank" class="no-print" style="padding: 5px 15px; background-color: #007bff; color: white; text-decoration: none; border-radius: 3px; display: inline-block;">
-                        <i class="fa fa-print"></i> Print Receipt
-                    </a>
+                    @if($s->student_signature != '')
+                        <img class="reg-sign-img" src="{{ asset('images'.DIRECTORY_SEPARATOR.$folder_name.DIRECTORY_SEPARATOR.$s->student_signature) }}" alt="Signature">
+                        <div class="reg-photo-cap">Signature</div>
+                    @endif
                 </div>
             </div>
-        @endif
-        
-        <!-- Declaration Section -->
-        <div class="declaration" style="margin-top: 5mm;">
-            <div class="declaration-title">DECLARATION</div>
-            <p>
-                I declare that I have gone through the rules of College and University and I have met the eligibility criteria for admission. The information given in this form is true and correct to the best of my knowledge. No disciplinary action or court case or use of unfair means in exams has been reported against me. My application is liable to get cancelled if my application is found to contain incorrect / false information. I, further declare that I shall abide by the rules & regulations of the college.
-            </p>
-        </div>
-        
-        <!-- Signatures -->
-        <div class="signature-section">
-            <table class="signature-table">
-                <tr>
-                    <td width="50%"><b>Date:</b> _________________________</td>
-                    <td width="50%"></td>
-                </tr>
-                <tr>
-                    <td><b>Signature of Parent/Guardian:</b> _________________________</td>
-                    <td><b>Signature of Student:</b> _________________________</td>
-                </tr>
-            </table>
-        </div>
-        
-        <!-- Annexures -->
-        @if(isset($data['annexure']) && $data['annexure']->count() > 0)
-            <div class="annexures">
-                <div class="annexures-title">DOCUMENTS ATTACHED:</div>
-                @foreach($data['annexure'] as $annexure)
-                    <div class="annexure-item">✓ {{ ViewHelper::getAnnextureById($annexure->annexures_id) }}</div>
-                @endforeach
+
+            <div class="reg-title"><span>STUDENT REGISTRATION FORM</span></div>
+
+            <div class="reg-strip">
+                <div><span class="lb">Registration No</span><br><b>{{ $s->reg_no }}</b></div>
+                <div><span class="lb">Session</span><br><b>{{ $session ?: 'N/A' }}</b></div>
+                <div><span class="lb">Program</span><br><b>{{ $program }}{{ $semesterTitle ? ' - '.$semesterTitle : '' }}</b></div>
+                <div><span class="lb">Date</span><br><b>{{ $s->reg_date ? \Carbon\Carbon::parse($s->reg_date)->format('d-m-Y') : '' }}</b></div>
             </div>
-        @endif
+
+            <div class="reg-section">
+                <div class="reg-sec-head"><span class="bar"></span><span class="txt">Personal Information</span></div>
+                <div class="reg-grid">
+                    <div class="item"><span class="lb">Full Name</span> &nbsp; <b>{{ $fullName }}</b></div>
+                    <div class="item"><span class="lb">Gender</span> &nbsp; <b>{{ $s->gender }}</b></div>
+                    <div class="item"><span class="lb">Date of Birth</span> &nbsp; <b>{{ $s->date_of_birth ? \Carbon\Carbon::parse($s->date_of_birth)->format('d-m-Y') : '' }}</b></div>
+                    <div class="item"><span class="lb">Blood Group</span> &nbsp; <b>{{ $s->blood_group }}</b></div>
+                    <div class="item"><span class="lb">Religion</span> &nbsp; <b>{{ $s->religion }}</b></div>
+                    <div class="item"><span class="lb">National ID</span> &nbsp; <b>{{ $s->national_id_1 }}</b></div>
+                    <div class="item"><span class="lb">Student Mobile</span> &nbsp; <b>{{ $s->mobile_1 }}</b></div>
+                    <div class="item"><span class="lb">Email</span> &nbsp; <b>{{ $s->email }}</b></div>
+                </div>
+            </div>
+
+            @if($appliedSubjects->count() > 0)
+                <div class="reg-section">
+                    <div class="reg-sec-head"><span class="bar"></span><span class="txt">Subjects Taken</span></div>
+                    <table class="reg-table">
+                        <thead>
+                            <tr>
+                                <th style="width:10mm; text-align:center;">SL</th>
+                                <th style="width:20mm; text-align:center;">Code</th>
+                                <th style="text-align:left;">Subject</th>
+                                <th style="width:28mm; text-align:center;">Type</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach($appliedSubjects as $i => $subject)
+                                @php
+                                    $subId = isset($subject->subjects_id) ? $subject->subjects_id : (isset($subject->subject_id) ? $subject->subject_id : null);
+                                    $subModel = $subId ? \App\Models\Subject::find($subId) : null;
+                                    $subCode = $subModel ? $subModel->code : '';
+                                    $subTitle = $subModel ? $subModel->title : ViewHelper::getSubjectById($subId);
+                                    $subType = $subModel ? (string) $subModel->sub_type : '';
+                                    $isOpt = stripos($subType, 'optional') !== false || stripos((string) $subTitle, 'optional') !== false;
+                                @endphp
+                                <tr>
+                                    <td style="text-align:center;">{{ $i + 1 }}</td>
+                                    <td style="text-align:center;">{{ $subCode }}</td>
+                                    <td>{{ $subTitle }}</td>
+                                    <td style="text-align:center;">
+                                        @if($isOpt)<span class="reg-badge-opt">Optional</span>@else{{ $subType ?: 'Compulsory' }}@endif
+                                    </td>
+                                </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                </div>
+            @endif
+
+            <div class="reg-section">
+                <div class="reg-sec-head"><span class="bar"></span><span class="txt">Parents &amp; Guardian</span></div>
+                <div class="reg-grid">
+                    <div class="item"><span class="lb">Father's Name</span> &nbsp; <b>{{ $fatherName }}</b></div>
+                    <div class="item"><span class="lb">Father's Mobile</span> &nbsp; <b>{{ $s->father_mobile_1 }}</b></div>
+                    <div class="item"><span class="lb">Mother's Name</span> &nbsp; <b>{{ $motherName }}</b></div>
+                    <div class="item"><span class="lb">Mother's Mobile</span> &nbsp; <b>{{ $s->mother_mobile_1 }}</b></div>
+                    <div class="item"><span class="lb">Guardian Name</span> &nbsp; <b>{{ $guardianName ?: $fatherName }}</b></div>
+                    <div class="item hl"><span class="lb"><i class="fa fa-phone"></i> Guardian Mobile</span> &nbsp; <b>{{ $s->guardian_mobile_1 ?: $s->father_mobile_1 }}</b></div>
+                    <div class="item"><span class="lb">Relation</span> &nbsp; <b>{{ $s->guardian_relation }}</b></div>
+                    <div class="item"><span class="lb">Guardian Email</span> &nbsp; <b>{{ $s->guardian_email }}</b></div>
+                </div>
+            </div>
+
+            <div class="reg-section">
+                <div class="reg-sec-head"><span class="bar"></span><span class="txt">Address</span></div>
+                <div class="reg-grid">
+                    <div class="item full"><span class="lb">Permanent Address</span> &nbsp; <b>{{ $s->address }}{{ isset($s->postal_code) && $s->postal_code ? ', '.$s->postal_code : '' }}</b></div>
+                    <div class="item full"><span class="lb">Present Address</span> &nbsp; <b>{{ $s->temp_address }}{{ isset($s->temp_postal_code) && $s->temp_postal_code ? ', '.$s->temp_postal_code : '' }}</b></div>
+                </div>
+            </div>
+
+            @if(isset($data['academicInfos']) && $data['academicInfos']->count() > 0)
+                <div class="reg-section">
+                    <div class="reg-sec-head"><span class="bar"></span><span class="txt">Educational Qualifications</span></div>
+                    <table class="reg-table">
+                        <thead>
+                            <tr>
+                                <th style="text-align:left;">Exam</th>
+                                <th style="text-align:left;">Board / Institution</th>
+                                <th style="width:16mm; text-align:center;">Year</th>
+                                <th style="width:22mm; text-align:center;">Subjects</th>
+                                <th style="width:16mm; text-align:center;">GPA</th>
+                                <th style="width:14mm; text-align:center;">Grade</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach($data['academicInfos'] as $academicInfo)
+                                <tr>
+                                    <td>{{ $academicInfo->board }}</td>
+                                    <td>{{ $academicInfo->institution }}</td>
+                                    <td style="text-align:center;">{{ $academicInfo->pass_year }}</td>
+                                    <td style="text-align:center;">{{ $academicInfo->major_subjects }}</td>
+                                    <td style="text-align:center;">{{ $academicInfo->grade_point }}</td>
+                                    <td style="text-align:center;">{{ $academicInfo->grade_letter }}</td>
+                                </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                </div>
+            @endif
+
+            @if(isset($data['onlinePayment']) && $data['onlinePayment'])
+                <div class="reg-pay">
+                    <div class="ph">Payment Receipt</div>
+                    <div class="pb">
+                        <div><span class="lb">Payment Date</span> &nbsp; <b>{{ \Carbon\Carbon::parse($data['onlinePayment']->date)->format('d-m-Y H:i') }}</b></div>
+                        <div><span class="lb">Payment Mode</span> &nbsp; <b>{{ $data['onlinePayment']->payment_gateway }}</b></div>
+                        <div><span class="lb">Transaction Ref</span> &nbsp; <b>{{ $data['onlinePayment']->ref_no }}</b></div>
+                        <div><span class="lb">Amount Paid</span> &nbsp; <b>&#2547;{{ number_format($data['onlinePayment']->amount, 2) }}</b></div>
+                        <div><span class="lb">Status</span> &nbsp; <b style="color:#0f5132;">{{ strtoupper($data['onlinePayment']->payment_status) }}</b></div>
+                    </div>
+                </div>
+            @endif
+
+            <div class="reg-declaration">
+                <div class="dt">Declaration</div>
+                <p>I declare that I have gone through the rules of the College and University and I have met the eligibility criteria for admission. The information given in this form is true and correct to the best of my knowledge. My application is liable to be cancelled if it is found to contain incorrect / false information. I further declare that I shall abide by the rules and regulations of the college.</p>
+            </div>
+
+            <div class="reg-signs">
+                <div class="col"><div class="line">Signature of Parent / Guardian</div></div>
+                <div class="col"><div class="line">Signature of Student</div></div>
+            </div>
+
+            @if(isset($data['annexure']) && $data['annexure']->count() > 0)
+                <div class="reg-annex">
+                    <div class="at">Documents Attached:</div>
+                    @foreach($data['annexure'] as $annexure)
+                        <div class="ai">&#10003; {{ ViewHelper::getAnnextureById($annexure->annexures_id) }}</div>
+                    @endforeach
+                </div>
+            @endif
+
+            <div class="reg-footer">{{ isset($generalSetting->institute) ? $generalSetting->institute : 'Lalmai Govt. College' }} &middot; Generated on {{ \Carbon\Carbon::now()->format('d-m-Y') }} &middot; This is a system-generated registration form</div>
+        </div>
     </div>
 @endsection
 
 @section('js')
     <script>
         $(document).ready(function() {
-            // Automatically trigger print dialog when needed
             @if(request()->has('autoprint'))
                 window.print();
             @endif
