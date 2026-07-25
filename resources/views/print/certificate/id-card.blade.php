@@ -72,6 +72,8 @@
         .b-row .lb { width: 18.5mm; font-weight: bold; flex: none; white-space: nowrap; }
         .b-row .cl { width: 2.2mm; flex: none; font-weight: bold; }
         .b-row .vl { font-weight: bold; min-width: 0; overflow-wrap: anywhere; word-break: normal; }
+        .b-parentmob { text-align: center; color: #000; font-weight: 900; font-size: 7.2pt; margin-top: auto; padding: 1mm 2mm 0; }
+        .b-parentmob + .b-expiry { margin-top: .4mm; }
         .b-expiry { text-align: center; color: #000; font-weight: 900; font-size: 7.4pt; margin-top: auto; padding-top: 1mm; }
         .b-found { text-align: center; color: var(--accent); font-weight: 900; font-size: 7.4pt; padding: .6mm 2mm 1.4mm 2mm; }
         .b-strip { height: 5mm; background: var(--accent); flex: none; }
@@ -184,7 +186,7 @@
                     <img class="monogram" src="{{ asset('images/idcard/govt_monogram.png') }}" alt="">
                     <div class="f-govt">Government of the People's Republic of Bangladesh</div>
                     <div class="f-college">Lalmai Govt. College</div>
-                    <div class="f-addr">Cumilla Sadar South, Cumilla</div>
+                    <div class="f-addr">Cumilla Sadar Dakshin, Cumilla</div>
                     @if($group !== '')
                         @if(strlen($group) <= 12)
                             <div class="f-badge">GROUP: {{ $group }}</div>
@@ -229,12 +231,12 @@
                     <img class="clogo" src="{{ asset('images/idcard/college_logo.jpg') }}" alt="">
                 </div>
                 <div class="b-contact">
-                    Cumilla Sadar South, Cumilla<br>
+                    Cumilla Sadar Dakshin, Cumilla<br>
                     Web: lalmaigc.edu.bd<br>
                     E-mail: lalmaicollege1969@gmail.com<br>
                     lalmai_college@yahoo.com<br>
                     principallgc2026@gmail.com<br>
-                    Mob: 01309-105746
+                    Principal Mob: 01309-105746
                 </div>
                 <div class="b-box">
                     <div class="ttl">Personal Details</div>
@@ -247,13 +249,13 @@
                     @if($address !== '')
                         <div class="b-row"><span class="lb">Permanent Address</span><span class="cl">:</span><span class="vl">{{ $address }}</span></div>
                     @endif
-                    @if($mobile !== '')
-                        <div class="b-row"><span class="lb">Mobile No</span><span class="cl">:</span><span class="vl">{{ $mobile }}</span></div>
-                    @endif
                     @if(trim((string) $student->email) !== '')
                         <div class="b-row"><span class="lb">E-mail</span><span class="cl">:</span><span class="vl">{{ $student->email }}</span></div>
                     @endif
                 </div>
+                @if($mobile !== '')
+                    <div class="b-parentmob">Parent Mob : {{ $mobile }}</div>
+                @endif
                 @if($expiry !== '')
                     <div class="b-expiry">Expiry Date : {{ $expiry }}</div>
                 @endif
