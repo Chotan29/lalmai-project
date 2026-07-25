@@ -173,7 +173,8 @@
                 if (preg_match_all('/(20\d{2})/', (string) $student->batch_title, $ym) && count($ym[1]) > 0) {
                     $expiry = '31 December '.((int) max($ym[1]) + 1);
                 }
-                $mobile = trim((string) $student->mobile_1) ?: trim((string) $student->home_phone);
+                $studentMobile = trim((string) $student->mobile_1) ?: trim((string) $student->home_phone);
+                $parentMobile = trim((string) $student->father_mobile_1) ?: trim((string) $student->mother_mobile_1);
                 $photo = $student->student_image
                     ? asset('images/studentProfile/'.$student->student_image)
                     : asset('assets/images/avatars/profile-pic.jpg');
@@ -249,12 +250,15 @@
                     @if($address !== '')
                         <div class="b-row"><span class="lb">Permanent Address</span><span class="cl">:</span><span class="vl">{{ $address }}</span></div>
                     @endif
+                    @if($studentMobile !== '')
+                        <div class="b-row"><span class="lb">Mobile</span><span class="cl">:</span><span class="vl">{{ $studentMobile }}</span></div>
+                    @endif
                     @if(trim((string) $student->email) !== '')
                         <div class="b-row"><span class="lb">E-mail</span><span class="cl">:</span><span class="vl">{{ $student->email }}</span></div>
                     @endif
                 </div>
-                @if($mobile !== '')
-                    <div class="b-parentmob">Parent Mob : {{ $mobile }}</div>
+                @if($parentMobile !== '')
+                    <div class="b-parentmob">Parent Mob : {{ $parentMobile }}</div>
                 @endif
                 @if($expiry !== '')
                     <div class="b-expiry">Expiry Date : {{ $expiry }}</div>

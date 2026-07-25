@@ -164,8 +164,8 @@ class CertificatePrintController extends CollegeBaseController
             'students.student_image',
             'f.faculty as faculty_name', 'b.title as batch_title', 'sem.semester as semester_name',
             'ai.address', 'ai.state', 'ai.mobile_1', 'ai.home_phone',
-            'pd.father_first_name', 'pd.father_middle_name', 'pd.father_last_name',
-            'pd.mother_first_name', 'pd.mother_middle_name', 'pd.mother_last_name')
+            'pd.father_first_name', 'pd.father_middle_name', 'pd.father_last_name', 'pd.father_mobile_1',
+            'pd.mother_first_name', 'pd.mother_middle_name', 'pd.mother_last_name', 'pd.mother_mobile_1')
             ->whereIn('students.id', $studIds)
             ->leftJoin('faculties as f', 'f.id', '=', 'students.faculty')
             ->leftJoin('student_batches as b', 'b.id', '=', 'students.batch')
