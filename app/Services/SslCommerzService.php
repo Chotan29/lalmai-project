@@ -133,6 +133,98 @@ class SslCommerzService
     }
 
     /**
+     * Query SSLCommerz by transaction id only (no val_id needed).
+     *
+     * Used by payment recovery: when the browser callback is lost, the session and
+     * the REG-xxxx reference are gone, so tran_id is the only key left. The gateway's
+     * own record gives back value_a (our REG ref), status and amount, which lets a
+     * paid-but-unfinished registration be completed safely.
+     *
+     * @return array ['found'=>bool,'valid'=>bool,'status'=>string,'amount'=>float,
+     *                'currency'=>string,'value_a'=>string,'value_b'=>string,
+     *                'tran_date'=>string,'bank_tran_id'=>string,'card_type'=>string,
+     *                'raw'=>array,'error'=>string|null]
+     */
+    public function queryByTransactionId(string $tranId): array
+    {
+        $out = [
+            'found' => false, 'valid' => false, 'status' => '', 'amount' => 0.0,
+            'currency' => '', 'value_a' => '', 'value_b' => '', 'tran_date' => '',
+            'bank_tran_id' => '', 'card_type' => '', 'raw' => [], 'error' => null,
+        ];
+
+        $tranId = trim($tranId);
+        if ($tranId === '') {
+            $out['error'] = 'Transaction ID is empty.';
+            return $out;
+        }
+
+        if ($this->storeId === '' || $this->storePassword === '') {
+            $out['error'] = 'SSLCommerz configuration missing: store_id/store_password.';
+            return $out;
+        }
+
+        $endpoint = $this->baseUrl() . '/validator/api/merchantTransIDvalidationAPI.php';
+        $query = [
+            'tran_id'      => $tranId,
+            'store_id'     => $this->storeId,
+            'store_passwd' => $this->storePassword,
+            'v'            => 1,
+            'format'       => 'json',
+        ];
+
+        try {
+            $res  = $this->http->get($endpoint, ['query' => $query]);
+            $body = json_decode((string) $res->getBody(), true) ?? [];
+            $out['raw'] = $body;
+
+            /* Matching transactions come under element_data (a tran_id can have more
+               than one attempt). Prefer a VALID/VALIDATED row, else keep the first. */
+            $row = null;
+            $rows = $body['element_data'] ?? $body['element'] ?? null;
+            if (is_array($rows) && !empty($rows)) {
+                foreach ($rows as $candidate) {
+                    if (!is_array($candidate)) { continue; }
+                    $st = strtoupper((string) ($candidate['status'] ?? ''));
+                    if (in_array($st, ['VALID', 'VALIDATED'], true)) { $row = $candidate; break; }
+                    if ($row === null) { $row = $candidate; }
+                }
+            } elseif (!empty($body['tran_id'])) {
+                $row = $body;
+            }
+
+            if (!$row) {
+                $out['error'] = $body['errorReason'] ?? 'No transaction found for this ID.';
+                Log::info('SSLCommerz query: no transaction found', ['tran_id' => $tranId]);
+                return $out;
+            }
+
+            $status = strtoupper((string) ($row['status'] ?? ''));
+
+            $out['found']        = true;
+            $out['status']       = $status;
+            $out['valid']        = in_array($status, ['VALID', 'VALIDATED'], true);
+            $out['amount']       = (float) ($row['currency_amount'] ?? $row['amount'] ?? 0);
+            $out['currency']     = (string) ($row['currency_type'] ?? $row['currency'] ?? '');
+            $out['value_a']      = (string) ($row['value_a'] ?? '');
+            $out['value_b']      = (string) ($row['value_b'] ?? '');
+            $out['tran_date']    = (string) ($row['tran_date'] ?? '');
+            $out['bank_tran_id'] = (string) ($row['bank_tran_id'] ?? '');
+            $out['card_type']    = (string) ($row['card_type'] ?? '');
+
+            Log::info('SSLCommerz query result', [
+                'tran_id' => $tranId, 'status' => $status, 'value_a' => $out['value_a'],
+            ]);
+
+            return $out;
+        } catch (\Throwable $e) {
+            $out['error'] = 'Query failed: ' . $e->getMessage();
+            Log::error('SSLCommerz query error: ' . $e->getMessage(), ['tran_id' => $tranId]);
+            return $out;
+        }
+    }
+
+    /**
      * Validate callback by calling the SSLCommerz validation API with val_id.
      * Returns the remote JSON on success or false.
      */

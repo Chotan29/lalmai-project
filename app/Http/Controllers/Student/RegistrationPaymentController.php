@@ -547,7 +547,9 @@ class RegistrationPaymentController extends Controller
     /**
      * Create student record and fee collection entry
      */
-    private function createStudentAndFeeRecord($paymentData, $transactionRef, $gateway)
+    /* Made public so the admin Payment Recovery screen can finish a paid-but-unfinished
+       registration using the exact same creation logic (it already guards duplicates). */
+    public function createStudentAndFeeRecord($paymentData, $transactionRef, $gateway)
     {
         DB::beginTransaction();
         try {

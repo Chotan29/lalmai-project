@@ -21,6 +21,8 @@ class SSLCommerz
     const INITIATE_URL_SANDBOX = "https://sandbox.sslcommerz.com/gwprocess/v4/api.php";
     const VALIDATION_URL_LIVE = "https://securepay.sslcommerz.com/validator/api/validationserverAPI.php";
     const VALIDATION_URL_SANDBOX = "https://sandbox.sslcommerz.com/validator/api/validationserverAPI.php";
+    const TRANSACTION_QUERY_URL_LIVE = "https://securepay.sslcommerz.com/validator/api/merchantTransIDvalidationAPI.php";
+    const TRANSACTION_QUERY_URL_SANDBOX = "https://sandbox.sslcommerz.com/validator/api/merchantTransIDvalidationAPI.php";
 
     /**
      * Constructor for SSLCommerz class.
@@ -54,6 +56,113 @@ class SSLCommerz
     private function getValidationURL()
     {
         return $this->is_live ? self::VALIDATION_URL_LIVE : self::VALIDATION_URL_SANDBOX;
+    }
+
+    /**
+     * Get the transaction-query API URL (search by tran_id, no val_id needed).
+     *
+     * @return string
+     */
+    private function getTransactionQueryURL()
+    {
+        return $this->is_live ? self::TRANSACTION_QUERY_URL_LIVE : self::TRANSACTION_QUERY_URL_SANDBOX;
+    }
+
+    /**
+     * Query SSLCommerz by transaction id only.
+     *
+     * Used by payment recovery: when the browser callback is lost, the session
+     * and the REG-xxxx reference are gone, so the only key left is tran_id.
+     * This returns the gateway's own record - including value_a (our REG ref),
+     * status and amount - so a paid-but-unfinished registration can be completed.
+     *
+     * @param string $tran_id
+     * @return array ['found' => bool, 'valid' => bool, 'status' => string, 'amount' => float,
+     *                'currency' => string, 'value_a' => string, 'value_b' => string,
+     *                'tran_date' => string, 'bank_tran_id' => string, 'card_type' => string,
+     *                'raw' => array, 'error' => string|null]
+     */
+    public function queryByTransactionId($tran_id)
+    {
+        $out = [
+            'found' => false, 'valid' => false, 'status' => '', 'amount' => 0.0,
+            'currency' => '', 'value_a' => '', 'value_b' => '', 'tran_date' => '',
+            'bank_tran_id' => '', 'card_type' => '', 'raw' => [], 'error' => null,
+        ];
+
+        if (!function_exists('curl_init')) {
+            $out['error'] = 'cURL is not available on the server.';
+            return $out;
+        }
+
+        $tran_id = trim((string) $tran_id);
+        if ($tran_id === '') {
+            $out['error'] = 'Transaction ID is empty.';
+            return $out;
+        }
+
+        $url = $this->getTransactionQueryURL()
+            . '?tran_id=' . urlencode($tran_id)
+            . '&store_id=' . urlencode($this->store_id)
+            . '&store_passwd=' . urlencode($this->store_passwd)
+            . '&v=1&format=json';
+
+        $ch = curl_init();
+        curl_setopt($ch, CURLOPT_URL, $url);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 30);
+        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+        curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 2);
+
+        $response = curl_exec($ch);
+        if (curl_errno($ch)) {
+            $out['error'] = 'cURL Error: ' . curl_error($ch);
+            curl_close($ch);
+            return $out;
+        }
+        curl_close($ch);
+
+        $result = json_decode($response, true);
+        if (!is_array($result)) {
+            $out['error'] = 'Unreadable response from SSLCommerz.';
+            return $out;
+        }
+
+        $out['raw'] = $result;
+
+        /* The API returns matching transactions under element_data (may hold more
+           than one attempt for the same tran_id); fall back to the top level. */
+        $row = null;
+        if (!empty($result['element_data']) && is_array($result['element_data'])) {
+            foreach ($result['element_data'] as $candidate) {
+                if (!is_array($candidate)) { continue; }
+                $st = strtoupper((string) ($candidate['status'] ?? ''));
+                if (in_array($st, ['VALID', 'VALIDATED'], true)) { $row = $candidate; break; }
+                if ($row === null) { $row = $candidate; }
+            }
+        } elseif (!empty($result['tran_id'])) {
+            $row = $result;
+        }
+
+        if (!$row) {
+            $out['error'] = $result['errorReason'] ?? 'No transaction found for this ID.';
+            return $out;
+        }
+
+        $status = strtoupper((string) ($row['status'] ?? ''));
+
+        $out['found'] = true;
+        $out['status'] = $status;
+        $out['valid'] = in_array($status, ['VALID', 'VALIDATED'], true);
+        $out['amount'] = (float) ($row['currency_amount'] ?? $row['amount'] ?? 0);
+        $out['currency'] = (string) ($row['currency_type'] ?? $row['currency'] ?? '');
+        $out['value_a'] = (string) ($row['value_a'] ?? '');
+        $out['value_b'] = (string) ($row['value_b'] ?? '');
+        $out['tran_date'] = (string) ($row['tran_date'] ?? '');
+        $out['bank_tran_id'] = (string) ($row['bank_tran_id'] ?? '');
+        $out['card_type'] = (string) ($row['card_type'] ?? '');
+
+        return $out;
     }
 
     /**

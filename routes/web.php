@@ -453,6 +453,14 @@ Route::group(['prefix' => 'registration-payment', 'as' => 'registration-payment.
     Route::match(['get', 'post'], 'ucb-cancel',  ['as' => 'ucb-cancel',  'uses' => 'Student\RegistrationPaymentController@sslCancel']);
 });
 
+/*Admin-only: recover a registration that was paid at SSLCommerz but never finished
+  (lost callback / expired session). Verifies against the gateway before creating anything.*/
+Route::group(['prefix' => 'registration-payment-recovery', 'as' => 'registration-payment-recovery', 'middleware' => ['auth', 'ability:super-admin,fees-online-payment-verify']], function () {
+    Route::get('',          ['as' => '',         'uses' => 'Student\RegistrationPaymentRecoveryController@index']);
+    Route::post('verify',   ['as' => '.verify',  'uses' => 'Student\RegistrationPaymentRecoveryController@verify']);
+    Route::post('complete', ['as' => '.complete','uses' => 'Student\RegistrationPaymentRecoveryController@complete']);
+});
+
 //certificate verification
 Route::get('certificate-verification',              ['as' => 'verification.certificate',         'uses' => 'VerificationController@certificate']);
 
