@@ -188,10 +188,16 @@ return [
     | take place, and can be used to mitigate CSRF attacks. By default, we
     | do not enable this as other CSRF protection services are in place.
     |
-    | Supported: "lax", "strict"
+    | Supported: "lax", "strict", "none"
+    |
+    | Kept as "lax" by default. Payment gateways (SSLCommerz) return by cross-site
+    | POST, and "lax" makes the browser drop the session cookie on that request, so
+    | the session is empty when the callback arrives. Setting SESSION_SAME_SITE=none
+    | together with SESSION_SECURE_COOKIE=true on an HTTPS site keeps the session
+    | across that return. Left env-driven so local (http) keeps working unchanged.
     |
     */
 
-    'same_site' => 'lax',
+    'same_site' => env('SESSION_SAME_SITE', 'lax'),
 
 ];

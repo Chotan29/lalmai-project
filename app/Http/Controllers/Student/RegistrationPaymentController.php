@@ -135,7 +135,9 @@ class RegistrationPaymentController extends Controller
             ];
 
             $request->session()->put('registration_payment_ref', $tempPaymentRef);
-            Cache::put('registration_payment_data:' . $tempPaymentRef, $paymentPayload, now()->addHours(6));
+            /* Kept for days, not hours: if a callback is lost the payload is the only way to
+               finish the registration later from the admin Payment Recovery screen. */
+            Cache::put('registration_payment_data:' . $tempPaymentRef, $paymentPayload, now()->addDays(30));
 
             // File-based fallback storage (survives across PHP processes regardless of cache driver)
             try {
@@ -275,7 +277,9 @@ class RegistrationPaymentController extends Controller
 
                 return $this->redirectToRegistrationPaymentTab(
                     'message_danger',
-                    'Payment received but registration data expired. Please contact admin with transaction ID: ' . ($tranId ?? 'N/A'),
+                    'Your payment was received (Transaction ID: ' . ($tranId ?: 'N/A') . '), but your '
+                    . 'registration details could not be matched automatically. Please do NOT pay again. '
+                    . 'Contact the college office with this Transaction ID to complete your registration.',
                     ['student_type' => $callbackStudentType]
                 );
             }
@@ -340,9 +344,20 @@ class RegistrationPaymentController extends Controller
             ]);
 
             if (!$result['success']) {
+                /* The money was taken but the record could not be created. Never imply the
+                   payment was lost and never delete the stored payload here - it is what the
+                   admin Payment Recovery screen uses to finish this registration later. */
+                \Log::error('[PAYMENT_TRACE] Paid but creation failed - payload kept for recovery', [
+                    'tran_id' => $tranId,
+                    'reason' => $result['message'] ?? null,
+                ]);
+
                 return $this->redirectToRegistrationPaymentTab(
                     'message_danger',
-                    $result['message'],
+                    'Your payment was received (Transaction ID: ' . ($tranId ?: 'N/A') . '), but the '
+                    . 'registration could not be completed automatically. Please do NOT pay again. '
+                    . 'Contact the college office with this Transaction ID and your registration '
+                    . 'will be completed. [' . ($result['message'] ?? '') . ']',
                     ['student_type' => $paymentData['student_type'] ?? null]
                 );
             }
