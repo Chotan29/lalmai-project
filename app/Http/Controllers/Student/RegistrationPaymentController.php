@@ -797,9 +797,38 @@ class RegistrationPaymentController extends Controller
                     ->value('id');
             }
 
+            /* Still nothing usable: an install with no (active) fee head would make
+               fee_masters.fee_head null and abort the whole registration - the student
+               pays, creation rolls back, and the flow bounces back to the payment tab.
+               Reuse an inactive ADMISSION head if one exists, otherwise create the head
+               once so registration can always complete. */
+            if (!$admissionFeeHeadId) {
+                $admissionFeeHeadId = DB::table('fee_heads')
+                    ->where('fee_head_title', 'like', '%ADMISSION%')
+                    ->orderBy('id', 'asc')
+                    ->value('id');
+            }
+
+            if (!$admissionFeeHeadId) {
+                $admissionFeeHeadId = DB::table('fee_heads')->insertGetId([
+                    'created_by' => 0,
+                    'fee_head_title' => 'ADMISSION FEE',
+                    'fee_head_amount' => 0,
+                    'status' => 1,
+                    'created_at' => Carbon::now(),
+                    'updated_at' => Carbon::now(),
+                ]);
+
+                \Log::warning('[PAYMENT_TRACE] No fee head existed - created "ADMISSION FEE"', [
+                    'fee_head_id' => $admissionFeeHeadId,
+                ]);
+            }
+
+            $feeSemester = $student->semester ?: ($regData['semester'] ?? 1);
+
             $feeMaster = FeeMaster::create([
                 'students_id' => $student->id,
-                'semester' => $student->semester ?? ($regData['semester'] ?? 1),
+                'semester' => $feeSemester,
                 'fee_head' => $admissionFeeHeadId,
                 'fee_due_date' => Carbon::today()->toDateString(),
                 'fee_due_date2' => Carbon::today()->toDateString(),
