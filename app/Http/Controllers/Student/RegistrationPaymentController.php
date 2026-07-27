@@ -884,7 +884,10 @@ class RegistrationPaymentController extends Controller
                 'ref_no' => $transactionRef,
                 'invoice_id' => $feeCollection->id,
                 'payment_status' => 'completed',
-                'status' => 'active',
+                /* status is the verify-status shown on Account > Fees > Online Payment.
+                   A registration payment stays un-verified so the office checks it against
+                   the gateway and verifies it manually, like every other online payment. */
+                'status' => 'in-active',
                 'note' => 'Online Registration Payment',
                 'created_by' => 0
             ]);
