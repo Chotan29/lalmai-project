@@ -265,9 +265,9 @@
                         <div class="b-row"><span class="lb">E-mail</span><span class="cl">:</span><span class="vl">{{ $student->email }}</span></div>
                     @endif
                 </div>
-                @if($parentMobile !== '')
-                    <div class="b-parentmob">Parent Mob : {{ $parentMobile }}</div>
-                @endif
+                {{-- Always printed, so every card keeps the same layout even when the
+                     student has no parent/guardian number saved yet. --}}
+                <div class="b-parentmob">Parent Mob : {{ $parentMobile !== '' ? $parentMobile : 'N/A' }}</div>
                 @if($expiry !== '')
                     <div class="b-expiry">Expiry Date : {{ $expiry }}</div>
                 @endif
