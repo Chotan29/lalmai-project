@@ -453,6 +453,11 @@ Route::group(['prefix' => 'registration-payment', 'as' => 'registration-payment.
     Route::match(['get', 'post'], 'ucb-cancel',  ['as' => 'ucb-cancel',  'uses' => 'Student\RegistrationPaymentController@sslCancel']);
 });
 
+/*Public self-service: a student who paid but never got the form/receipt fixes it themselves.
+  Nothing is created unless SSLCommerz confirms the payment.*/
+Route::get('paid-but-no-form',  ['as' => 'registration-self-recovery',          'uses' => 'Student\RegistrationSelfRecoveryController@index']);
+Route::post('paid-but-no-form', ['as' => 'registration-self-recovery.recover',  'uses' => 'Student\RegistrationSelfRecoveryController@recover']);
+
 /*Admission Dashboard: every admission number and shortcut on one screen.*/
 Route::get('admission-dashboard', ['as' => 'admission-dashboard', 'middleware' => ['auth', 'ability:super-admin,student-index'], 'uses' => 'Student\AdmissionDashboardController@index']);
 

@@ -18,6 +18,7 @@ class Kernel extends ConsoleKernel
         Commands\AttendanceMinutePipeline::class, // <-- add this
         Commands\GenerateRecurringBills::class,   // recurring billing auto-generator
         Commands\SmsTest::class,                  // local SMS testing
+        Commands\ReconcileRegistrationPayments::class, // finishes paid-but-stuck registrations
     ];
 
     protected function schedule(Schedule $schedule)
@@ -44,6 +45,16 @@ class Kernel extends ConsoleKernel
         // Sweep any rows that skipped events
         $schedule->command('attendance:dispatch-missing')
             ->everyFiveMinutes()
+            ->timezone($tz)
+            ->withoutOverlapping();
+
+        /**
+         * Self-healing registration payments.
+         * If a student paid but the callback was lost, this finishes the registration
+         * automatically within minutes instead of leaving the student stranded.
+         */
+        $schedule->command('registration:reconcile')
+            ->everyTenMinutes()
             ->timezone($tz)
             ->withoutOverlapping();
 

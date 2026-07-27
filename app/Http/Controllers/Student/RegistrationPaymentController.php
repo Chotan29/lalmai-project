@@ -119,6 +119,23 @@ class RegistrationPaymentController extends Controller
                 ], 422);
             }
 
+            /* PRE-FLIGHT CHECK - never take money the system cannot turn into a
+               registration. Everything the completion step needs is verified here, while
+               the student can still be told to wait, instead of failing after payment. */
+            $blocker = $this->preflightBlocker($registrationData, $validated['student_type']);
+            if ($blocker !== null) {
+                \Log::warning('[PAYMENT_TRACE] Payment refused by pre-flight check', ['reason' => $blocker]);
+                return response()->json([
+                    'success' => false,
+                    'message' => $blocker,
+                ], 422);
+            }
+
+            /* A student who retries within 30 minutes reuses the same reference instead of
+               creating another pending record, so one applicant never fills the recovery
+               list with a dozen half-finished attempts. */
+            $existingRef = $this->reusableReference($registrationData);
+
             // Store registration data and payment info in session
             $request->session()->put('registration_payment_data', [
                 'student_type' => $validated['student_type'],
@@ -134,8 +151,8 @@ class RegistrationPaymentController extends Controller
                 'registration_payment_transaction'
             ]);
 
-            // Create temporary payment reference
-            $tempPaymentRef = 'REG-' . Str::random(10) . '-' . time();
+            // Create temporary payment reference (or reuse the student's recent one)
+            $tempPaymentRef = $existingRef ?: ('REG-' . Str::random(10) . '-' . time());
             $paymentPayload = [
                 'student_type' => $validated['student_type'],
                 /* Store the server-resolved department fee - this is what is actually charged. */
@@ -285,8 +302,9 @@ class RegistrationPaymentController extends Controller
                 return $this->redirectToRegistrationPaymentTab(
                     'message_danger',
                     'Your payment was received (Transaction ID: ' . ($tranId ?: 'N/A') . '), but your '
-                    . 'registration details could not be matched automatically. Please do NOT pay again. '
-                    . 'Contact the college office with this Transaction ID to complete your registration.',
+                    . 'registration details could not be matched automatically. Please do NOT pay again - '
+                    . 'finish it yourself at ' . route('registration-self-recovery')
+                    . ' using your e-mail or this Transaction ID.',
                     ['student_type' => $callbackStudentType]
                 );
             }
@@ -362,9 +380,9 @@ class RegistrationPaymentController extends Controller
                 return $this->redirectToRegistrationPaymentTab(
                     'message_danger',
                     'Your payment was received (Transaction ID: ' . ($tranId ?: 'N/A') . '), but the '
-                    . 'registration could not be completed automatically. Please do NOT pay again. '
-                    . 'Contact the college office with this Transaction ID and your registration '
-                    . 'will be completed. [' . ($result['message'] ?? '') . ']',
+                    . 'registration could not be completed automatically. Please do NOT pay again - '
+                    . 'it will be completed for you within a few minutes. You can also finish it now at '
+                    . route('registration-self-recovery') . ' using your e-mail or this Transaction ID.',
                     ['student_type' => $paymentData['student_type'] ?? null]
                 );
             }
@@ -423,10 +441,156 @@ class RegistrationPaymentController extends Controller
     }
 
     /**
+     * Everything the completion step will need, checked BEFORE the student pays.
+     *
+     * Returns a message to show the student when payment must not start, or null when
+     * it is safe to proceed. This is what stops "money taken but registration failed":
+     * the conditions that used to break after payment now block payment up front.
+     *
+     * @return string|null
+     */
+    protected function preflightBlocker(array $registrationData, $studentType)
+    {
+        try {
+            /* 1. A fee head must exist, otherwise fee_masters cannot be written and the
+                  whole student creation rolls back (this was the original outage). */
+            $feeHead = DB::table('fee_heads')->where('status', 1)->exists()
+                || DB::table('fee_heads')->exists();
+            if (!$feeHead) {
+                /* Create it now rather than refusing - it is our own setup data. */
+                DB::table('fee_heads')->insert([
+                    'created_by' => 0,
+                    'fee_head_title' => 'ADMISSION FEE',
+                    'fee_head_amount' => 0,
+                    'status' => 1,
+                    'created_at' => Carbon::now(),
+                    'updated_at' => Carbon::now(),
+                ]);
+                \Log::warning('[PAYMENT_TRACE] Pre-flight created the missing ADMISSION FEE head');
+            }
+
+            /* 2. The student role must exist, or the login cannot be created. */
+            if (!DB::table('roles')->where('id', 6)->exists()
+                && !DB::table('roles')->where('name', 'like', '%student%')->exists()) {
+                return 'Registration is temporarily unavailable (student role is not configured). '
+                     . 'Please contact the college office before paying.';
+            }
+
+            /* 3. The batch used for the registration number must exist. */
+            $batch = $registrationData['batch'] ?? ($registrationData['batch_id'] ?? null);
+            if (!$batch || !DB::table('student_batches')->where('id', $batch)->exists()) {
+                return 'Registration session is not configured correctly. '
+                     . 'Please contact the college office before paying.';
+            }
+
+            /* 4. Faculty and semester must be real, they decide fee and class. */
+            $faculty = $registrationData['faculty'] ?? ($registrationData['faculty_id'] ?? null);
+            if (!$faculty || !DB::table('faculties')->where('id', $faculty)->exists()) {
+                return 'Please select a valid Faculty/Program before paying.';
+            }
+
+            /* 5. Required personal fields - a missing one aborts creation after payment. */
+            foreach (['first_name' => 'name', 'date_of_birth' => 'date of birth'] as $field => $label) {
+                if (empty($registrationData[$field])) {
+                    return 'Your ' . $label . ' is missing. Please complete the form before paying.';
+                }
+            }
+
+            /* 6. The e-mail must still be free, otherwise the student row cannot be created. */
+            $email = trim((string) ($registrationData['email'] ?? ''));
+            if ($email !== '' && DB::table('students')->whereRaw('LOWER(TRIM(email)) = ?', [strtolower($email)])->exists()) {
+                return 'This e-mail is already registered. Please log in instead of paying again, '
+                     . 'or contact the college office.';
+            }
+
+            /* 7. Old student: the typed Student ID must not already exist. */
+            if ($studentType === 'old') {
+                $oldId = trim((string) ($registrationData['old_student_id'] ?? ''));
+                if ($oldId !== '' && DB::table('students')->where('reg_no', $oldId)->exists()) {
+                    return 'This Student ID is already registered. Please contact the college office '
+                         . 'instead of paying again.';
+                }
+            }
+
+            return null;
+        } catch (\Exception $e) {
+            \Log::error('[PAYMENT_TRACE] Pre-flight check crashed', ['error' => $e->getMessage()]);
+            /* Never block a payment because our own check failed. */
+            return null;
+        }
+    }
+
+    /**
+     * A reference this applicant started very recently and never finished.
+     *
+     * Reusing it means a student who presses "Proceed to Pay" several times produces one
+     * pending record instead of many, so the recovery list stays meaningful.
+     *
+     * @return string|null
+     */
+    protected function reusableReference(array $registrationData)
+    {
+        $email = strtolower(trim((string) ($registrationData['email'] ?? '')));
+        if ($email === '') {
+            return null;
+        }
+
+        try {
+            $dir = storage_path('app/pending_payments');
+            if (!is_dir($dir)) {
+                return null;
+            }
+
+            $cutoff = time() - 1800; // 30 minutes
+            foreach (glob($dir . DIRECTORY_SEPARATOR . '*.json') as $file) {
+                if (@filemtime($file) < $cutoff) {
+                    continue;
+                }
+                $payload = json_decode(@file_get_contents($file), true);
+                $existingEmail = strtolower(trim((string) ($payload['registration_data']['email'] ?? '')));
+                if ($existingEmail !== '' && $existingEmail === $email) {
+                    return basename($file, '.json');
+                }
+            }
+        } catch (\Exception $e) {
+            \Log::warning('[PAYMENT_TRACE] Reference reuse check failed', ['error' => $e->getMessage()]);
+        }
+
+        return null;
+    }
+
+    /**
+     * Forget an attempt that the gateway told us will never be paid, so abandoned and
+     * cancelled attempts stop accumulating as "unfinished applications".
+     */
+    protected function discardAttempt(Request $request, $reason)
+    {
+        $refs = array_filter([
+            $request->input('value_a'),
+            $request->input('tran_id'),
+            $request->session()->get('registration_payment_ref'),
+        ]);
+
+        foreach ($refs as $ref) {
+            Cache::forget('registration_payment_data:' . $ref);
+            Cache::forget('reg_recovery_verify:' . $ref);
+            $file = storage_path('app/pending_payments/' . $ref . '.json');
+            if (is_file($file)) {
+                @unlink($file);
+                \Log::info('[PAYMENT_TRACE] Discarded unpaid attempt', ['ref' => $ref, 'reason' => $reason]);
+            }
+        }
+
+        $request->session()->forget(['registration_payment_data', 'registration_payment_ref']);
+    }
+
+    /**
      * SSL Commerz payment fail callback
      */
     public function sslFail(Request $request)
     {
+        $this->discardAttempt($request, 'gateway reported FAILED');
+
         return $this->redirectToRegistrationPaymentTab('message_danger', 'Payment failed. Please try again.');
     }
 
@@ -435,6 +599,8 @@ class RegistrationPaymentController extends Controller
      */
     public function sslCancel(Request $request)
     {
+        $this->discardAttempt($request, 'cancelled by student');
+
         return $this->redirectToRegistrationPaymentTab(
             'message_warning',
             'Payment cancelled. Please try again if you want to continue.'
