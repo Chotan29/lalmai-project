@@ -1,4 +1,22 @@
 <div class="dashboard-metrics">
+    <!-- Admission Card: opens the Admission Dashboard (all admission info in one place) -->
+    <div class="metric-card admission-card">
+        <a href="{{ route('admission-dashboard') }}" class="metric-link">
+            <div class="metric-content">
+                <div class="metric-icon">
+                    <i class="fas fa-graduation-cap"></i>
+                </div>
+                <div class="metric-info">
+                    <h3 class="metric-value">Admission</h3>
+                    <p class="metric-label">Dashboard</p>
+                </div>
+                <div class="metric-badge">
+                    <span class="badge-admission">Open &rarr;</span>
+                </div>
+            </div>
+        </a>
+    </div>
+
     <!-- Student Card -->
     <div class="metric-card student-card">
         <a href="{{ route('student') }}" class="metric-link">
@@ -227,7 +245,8 @@
     .badge-active,
     .badge-available,
     .badge-upcoming,
-    .badge-occupied {
+    .badge-occupied,
+    .badge-admission {
         display: inline-block;
         /* padding: 4px 8px; */
         border-radius: 4px;
@@ -236,6 +255,23 @@
     }
 
     /* Card Specific Colors */
+    .admission-card {
+        border-left: 4px solid #6f42c1;
+    }
+
+    .admission-card .metric-icon {
+        color: #6f42c1;
+    }
+
+    .admission-card .metric-value {
+        font-size: 22px;
+    }
+
+    .admission-card .badge-admission {
+        background-color: rgba(111, 66, 193, 0.1);
+        color: #6f42c1;
+    }
+
     .student-card {
         border-left: 4px solid #4e73df;
     }
