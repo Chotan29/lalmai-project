@@ -89,6 +89,36 @@ class RegistrationPaymentController extends Controller
                 }
             }
 
+            // Get the amount from settings
+            $registrationSetting = OnlineRegistrationSetting::where('status', 'active')
+                ->orWhere('status', 1)
+                ->first() ?? OnlineRegistrationSetting::first();
+
+            if (!$registrationSetting) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Registration settings not found. Please contact admin.'
+                ], 422);
+            }
+
+            /* Fee follows the department the student applied to. The amount posted by the
+               browser is never trusted for charging - the server resolves it from the
+               Faculty/Program row. Resolved before anything is stored, because the session
+               payload and the gateway must both carry this same amount. */
+            $registrationFee = \App\Models\OnlineRegistrationProgram::resolveFee(
+                $registrationData['faculty'] ?? ($registrationData['faculty_id'] ?? null),
+                $registrationData['semester'] ?? ($registrationData['semester_id'] ?? null),
+                $validated['student_type']
+            );
+
+            if ($registrationFee <= 0) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Registration fee is not configured for this department. '
+                        . 'Please contact the college office.'
+                ], 422);
+            }
+
             // Store registration data and payment info in session
             $request->session()->put('registration_payment_data', [
                 'student_type' => $validated['student_type'],
@@ -103,35 +133,6 @@ class RegistrationPaymentController extends Controller
                 'registration_payment_gateway',
                 'registration_payment_transaction'
             ]);
-
-            // Get the amount from settings
-            $registrationSetting = OnlineRegistrationSetting::where('status', 'active')
-                ->orWhere('status', 1)
-                ->first() ?? OnlineRegistrationSetting::first();
-
-            if (!$registrationSetting) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Registration settings not found. Please contact admin.'
-                ], 422);
-            }
-            /* Fee follows the department the student applied to. The amount posted by the
-               browser is never trusted for charging - the server resolves it from the
-               Faculty/Program row (empty program fee = global default). */
-            $registrationFee = \App\Models\OnlineRegistrationProgram::resolveFee(
-                $registrationData['faculty'] ?? ($registrationData['faculty_id'] ?? null),
-                $registrationData['semester'] ?? ($registrationData['semester_id'] ?? null),
-                $validated['student_type'],
-                $registrationSetting
-            );
-
-            if ($registrationFee <= 0) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Registration fee is not configured for this department. '
-                        . 'Please contact the college office.'
-                ], 422);
-            }
 
             // Create temporary payment reference
             $tempPaymentRef = 'REG-' . Str::random(10) . '-' . time();
