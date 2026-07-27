@@ -101,6 +101,16 @@
         .print-modal-box button.cancel { background: #999; }
 
         @media print {
+            /* Force every coloured fill (badge, roll, borders, footer strip) to print.
+               Without this the browser drops backgrounds unless the user ticks
+               "Background graphics", which is off by default - that is why the A4 demo
+               sheet came out black and white. */
+            *, *::before, *::after {
+                -webkit-print-color-adjust: exact !important;
+                color-adjust: exact !important;
+                print-color-adjust: exact !important;
+            }
+
             .toolbar, .print-modal { display: none !important; }
             html, body { background: #fff; }
             .sheet { display: block; padding: 0; }
