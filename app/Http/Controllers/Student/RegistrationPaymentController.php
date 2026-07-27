@@ -127,7 +127,8 @@ class RegistrationPaymentController extends Controller
             if ($registrationFee <= 0) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Registration fee is not configured for this student type.'
+                    'message' => 'Registration fee is not configured for this department. '
+                        . 'Please contact the college office.'
                 ], 422);
             }
 

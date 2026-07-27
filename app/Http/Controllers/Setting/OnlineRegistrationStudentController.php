@@ -124,15 +124,18 @@ class OnlineRegistrationStudentController extends CollegeBaseController
             ], 422);
         }
 
-        // Get the appropriate fee
-        $fee = $student->student_type === 'new' 
-            ? $setting->new_student_registration_fee 
-            : $setting->old_student_registration_fee;
+        /* Fee comes from the student's department (Faculty/Program row). */
+        $fee = \App\Models\OnlineRegistrationProgram::resolveFee(
+            $student->faculty,
+            $student->semester,
+            $student->student_type === 'old' ? 'old' : 'new'
+        );
 
         if(!$fee || $fee <= 0) {
             return response()->json([
                 'success' => false,
-                'message' => 'Registration fee is not configured for this student type.'
+                'message' => 'Registration fee is not configured for this department. '
+                    . 'Please set it in Online Registration Setting > Program Management.'
             ], 422);
         }
 

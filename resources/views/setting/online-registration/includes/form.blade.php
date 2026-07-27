@@ -80,18 +80,16 @@
 
 <div class="space-4"></div>
 
-<!-- Registration Fee Settings -->
+<!-- Registration fee is set per department in Program Management below -->
 <div class="form-group">
-    {!! Form::label('new_student_registration_fee', 'New Student Registration Fee (৳)', ['class' => 'col-sm-2 control-label']) !!}
-    <div class="col-sm-4">
-        {!! Form::number('new_student_registration_fee', null, ["placeholder" => "0.00", "class" => "form-control border-form", "step" => "0.01", "min" => "0"]) !!}
-        @include('includes.form_fields_validation_message', ['name' => 'new_student_registration_fee'])
-    </div>
-
-    {!! Form::label('old_student_registration_fee', 'Old Student Registration Fee (৳)', ['class' => 'col-sm-2 control-label']) !!}
-    <div class="col-sm-4">
-        {!! Form::number('old_student_registration_fee', null, ["placeholder" => "0.00", "class" => "form-control border-form", "step" => "0.01", "min" => "0"]) !!}
-        @include('includes.form_fields_validation_message', ['name' => 'old_student_registration_fee'])
+    <div class="col-sm-offset-2 col-sm-8">
+        <div class="alert alert-info" style="margin-bottom:0;">
+            <i class="ace-icon fa fa-info-circle"></i>
+            <b>Registration fee is set per department.</b>
+            Set the New/Old Student Fee for each Faculty/Program row in
+            <b>Program Management</b> below. A department with no fee cannot accept
+            online registration payment.
+        </div>
     </div>
 </div>
 

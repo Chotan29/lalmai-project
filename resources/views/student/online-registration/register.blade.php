@@ -3176,10 +3176,6 @@
            an empty one falls back to the global default. The server re-resolves the fee
            before charging, so this is only what the applicant sees. */
         var PROGRAM_FEES = {!! json_encode($data['program_fees'] ?? []) !!};
-        var DEFAULT_FEES = {
-            'new': {{ (float) ($data['registration_setting']->new_student_registration_fee ?? 0) }},
-            'old': {{ (float) ($data['registration_setting']->old_student_registration_fee ?? 0) }}
-        };
 
         function resolveRegistrationFee(studentType) {
             var faculty = $('select[name="faculty"]').val();
@@ -3202,8 +3198,10 @@
                 }
             }
 
-            if (fee === null || fee === undefined || fee === '' || Number(fee) <= 0) {
-                fee = DEFAULT_FEES[studentType] || 0;
+            /* No global fee any more: an unconfigured department simply shows 0 and
+               the server refuses to start a payment for it. */
+            if (fee === null || fee === undefined || fee === '') {
+                fee = 0;
             }
 
             return Number(fee).toFixed(2).replace(/\.00$/, '');

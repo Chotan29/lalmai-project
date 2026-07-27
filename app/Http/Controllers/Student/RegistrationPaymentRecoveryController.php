@@ -169,7 +169,7 @@ class RegistrationPaymentRecoveryController extends CollegeBaseController
         }
 
         /* 4. Amount sanity check against the configured fee. */
-        $expectedFee = $this->expectedFee($paymentData['student_type'] ?? null);
+        $expectedFee = $this->expectedFee($paymentData['student_type'] ?? null, $paymentData);
         if ($expectedFee > 0 && $gateway['amount'] > 0
             && round((float) $gateway['amount'], 2) < round((float) $expectedFee, 2)) {
             $response['message'] = 'Paid amount (' . $gateway['amount'] . ') is less than the required fee ('
@@ -350,20 +350,18 @@ class RegistrationPaymentRecoveryController extends CollegeBaseController
     }
 
     /**
-     * Configured registration fee for the given student type.
+     * Expected fee for a stored payload: the fee configured on the department the
+     * student applied to. Returns 0 when the department has no fee set, in which case
+     * the amount check is skipped rather than blocking a genuine recovery.
      */
-    protected function expectedFee($studentType)
+    protected function expectedFee($studentType, array $paymentData = [])
     {
-        $setting = OnlineRegistrationSetting::where('status', 'active')
-            ->orWhere('status', 1)
-            ->first() ?? OnlineRegistrationSetting::first();
+        $reg = $paymentData['registration_data'] ?? [];
 
-        if (!$setting) {
-            return 0;
-        }
-
-        return $studentType === 'old'
-            ? (float) $setting->old_student_registration_fee
-            : (float) $setting->new_student_registration_fee;
+        return (float) \App\Models\OnlineRegistrationProgram::resolveFee(
+            $reg['faculty'] ?? ($reg['faculty_id'] ?? null),
+            $reg['semester'] ?? ($reg['semester_id'] ?? null),
+            $studentType
+        );
     }
 }

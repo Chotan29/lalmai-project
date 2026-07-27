@@ -10,56 +10,43 @@ class OnlineRegistrationProgram extends BaseModel
         'new_student_fee', 'old_student_fee', 'status'];
 
     /**
-     * Registration fee for this program, falling back to the global setting when the
-     * program row leaves the fee empty.
+     * Registration fee for this program.
+     *
+     * The fee lives only on the department (Faculty/Program) row - there is no global
+     * fallback fee any more, so each department charges exactly what is configured for it.
      *
      * @param string $studentType 'new' or 'old'
-     * @param \App\Models\OnlineRegistrationSetting|null $setting
      * @return float
      */
-    public function feeFor($studentType, $setting = null)
+    public function feeFor($studentType)
     {
         $programFee = $studentType === 'old' ? $this->old_student_fee : $this->new_student_fee;
 
-        if ($programFee !== null && $programFee !== '' && (float) $programFee > 0) {
-            return (float) $programFee;
-        }
-
-        if (!$setting) {
-            return 0.0;
-        }
-
-        return $studentType === 'old'
-            ? (float) $setting->old_student_registration_fee
-            : (float) $setting->new_student_registration_fee;
+        return ($programFee === null || $programFee === '') ? 0.0 : (float) $programFee;
     }
 
     /**
      * Resolve the fee for a faculty (optionally a specific semester).
-     * Used by the registration + payment flow so each department can charge its own fee.
+     * Returns 0 when the department has no fee configured - the caller then refuses
+     * to start a payment instead of silently charging some other amount.
      */
     public static function resolveFee($facultyId, $semesterId, $studentType, $setting = null)
     {
-        $fallback = $setting
-            ? ($studentType === 'old'
-                ? (float) $setting->old_student_registration_fee
-                : (float) $setting->new_student_registration_fee)
-            : 0.0;
-
         if (!$facultyId) {
-            return $fallback;
+            return 0.0;
         }
 
         $query = static::where('faculties_id', $facultyId);
+
         if ($semesterId) {
             $exact = (clone $query)->where('semesters_id', $semesterId)->first();
             if ($exact) {
-                return $exact->feeFor($studentType, $setting);
+                return $exact->feeFor($studentType);
             }
         }
 
         $program = $query->first();
 
-        return $program ? $program->feeFor($studentType, $setting) : $fallback;
+        return $program ? $program->feeFor($studentType) : 0.0;
     }
 }

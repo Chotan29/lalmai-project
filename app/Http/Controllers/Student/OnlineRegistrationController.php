@@ -164,19 +164,19 @@ class OnlineRegistrationController extends CollegeBaseController
                 ], 422);
             }
 
-            /* Fee follows the department: a Faculty/Program row in Online Registration
-               Setting can carry its own fee; an empty one falls back to the global fee. */
+            /* Fee comes from the department: each Faculty/Program row in Online
+               Registration Setting carries its own new/old student fee. */
             $fee = OnlineRegistrationProgram::resolveFee(
                 $request->input('faculty') ?: $request->input('faculty_id'),
                 $request->input('semester') ?: $request->input('semester_id'),
-                $studentType,
-                $registrationSetting
+                $studentType
             );
 
             if ($registrationSetting->payment_required && $fee <= 0) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Registration fee not configured. Please contact admin.'
+                    'message' => 'Registration fee is not configured for the selected department. '
+                        . 'Please contact the college office.'
                 ], 422);
             }
 
