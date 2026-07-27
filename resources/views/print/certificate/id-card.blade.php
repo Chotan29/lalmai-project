@@ -174,7 +174,15 @@
                     $expiry = '31 December '.((int) max($ym[1]) + 1);
                 }
                 $studentMobile = trim((string) $student->mobile_1) ?: trim((string) $student->home_phone);
-                $parentMobile = trim((string) $student->father_mobile_1) ?: trim((string) $student->mother_mobile_1);
+                /* Father/mother mobile are optional on the registration form while the guardian
+                   number is mandatory, so fall back through all of them before giving up. */
+                $parentMobile = trim((string) $student->father_mobile_1)
+                    ?: trim((string) $student->mother_mobile_1)
+                    ?: trim((string) $student->guardian_mobile_1)
+                    ?: trim((string) $student->guardian_mobile_2)
+                    ?: trim((string) $student->home_phone);
+                /* Never print the student's own number twice under a different label. */
+                if ($parentMobile !== '' && $parentMobile === $studentMobile) { $parentMobile = ''; }
                 $photo = $student->student_image
                     ? asset('images/studentProfile/'.$student->student_image)
                     : asset('assets/images/avatars/profile-pic.jpg');

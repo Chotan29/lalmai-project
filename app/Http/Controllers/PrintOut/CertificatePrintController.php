@@ -165,13 +165,18 @@ class CertificatePrintController extends CollegeBaseController
             'f.faculty as faculty_name', 'b.title as batch_title', 'sem.semester as semester_name',
             'ai.address', 'ai.state', 'ai.mobile_1', 'ai.home_phone',
             'pd.father_first_name', 'pd.father_middle_name', 'pd.father_last_name', 'pd.father_mobile_1',
-            'pd.mother_first_name', 'pd.mother_middle_name', 'pd.mother_last_name', 'pd.mother_mobile_1')
+            'pd.mother_first_name', 'pd.mother_middle_name', 'pd.mother_last_name', 'pd.mother_mobile_1',
+            /* Guardian number is the one the public registration form makes mandatory, so it is
+               the reliable fallback when father/mother mobile was left blank. */
+            'gd.guardian_mobile_1', 'gd.guardian_mobile_2')
             ->whereIn('students.id', $studIds)
             ->leftJoin('faculties as f', 'f.id', '=', 'students.faculty')
             ->leftJoin('student_batches as b', 'b.id', '=', 'students.batch')
             ->leftJoin('semesters as sem', 'sem.id', '=', 'students.semester')
             ->leftJoin('addressinfos as ai', 'ai.students_id', '=', 'students.id')
             ->leftJoin('parent_details as pd', 'pd.students_id', '=', 'students.id')
+            ->leftJoin('student_guardians as sg', 'sg.students_id', '=', 'students.id')
+            ->leftJoin('guardian_details as gd', 'gd.id', '=', 'sg.guardians_id')
             ->orderBy('students.reg_no', 'asc')
             ->get();
 
