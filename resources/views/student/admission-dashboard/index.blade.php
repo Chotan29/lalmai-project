@@ -142,11 +142,11 @@
                         <div class="vl">&#2547;{{ number_format($data['payment']['total'], 0) }}</div>
                         <div class="ex">{{ $data['payment']['count'] }} online payment(s)</div>
                     </div>
-                    <div class="adm-card dang">
+                    <a href="#stuck-payments" class="adm-card dang" style="text-decoration:none; display:block;">
                         <div class="lb">Stuck Payments</div>
                         <div class="vl">{{ number_format($data['pending_payments']) }}</div>
-                        <div class="ex">paid, not completed</div>
-                    </div>
+                        <div class="ex">paid, not completed &mdash; see list &darr;</div>
+                    </a>
                 </div>
 
                 {{-- Quick actions --}}
@@ -250,7 +250,7 @@
                                     <tr><td>Payments received</td><td style="text-align:right;">{{ $data['payment']['count'] }}</td></tr>
                                     <tr><td>Verified</td><td style="text-align:right;"><span class="adm-badge b-green">{{ $data['payment']['verified'] }}</span></td></tr>
                                     <tr><td>Waiting verification</td><td style="text-align:right;"><span class="adm-badge b-amber">{{ $data['payment']['unverified'] }}</span></td></tr>
-                                    <tr><td>Paid but not completed</td><td style="text-align:right;"><span class="adm-badge b-red">{{ $data['pending_payments'] }}</span></td></tr>
+                                    <tr><td><a href="#stuck-payments" style="color:#1f2e44;">Paid but not completed</a></td><td style="text-align:right;"><a href="#stuck-payments"><span class="adm-badge b-red">{{ $data['pending_payments'] }}</span></a></td></tr>
                                 </table>
                             </div>
                         </div>
@@ -318,28 +318,72 @@
                         </div>
 
                         <div class="adm-box">
-                            <div class="hd">Stuck Payments <a href="{{ route('registration-payment-recovery') }}">Recover</a></div>
-                            <div class="bd" style="padding:0;">
+                            <div class="hd">Locked Student Logins</div>
+                            <div class="bd">
+                                <div style="font-size:26px; font-weight:700; color:#1f2e44;">{{ number_format($data['inactive_logins']) }}</div>
+                                <div style="font-size:12px; color:#8a94a3;">
+                                    Students who cannot log in until the office activates them.
+                                    Setting a password from the student profile activates the login automatically.
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                {{-- Full list of paid-but-unfinished applications --}}
+                <div class="adm-box" id="stuck-payments">
+                    <div class="hd">
+                        Paid but Not Completed &mdash; {{ count($data['recent_pending']) }} application(s)
+                        <a href="{{ route('registration-payment-recovery') }}">Open Payment Recovery &rarr;</a>
+                    </div>
+                    <div class="bd" style="padding:0;">
+                        @if(count($data['recent_pending']) > 0)
+                            <div style="padding:10px 16px; font-size:12px; color:#8a6100; background:#fff8e5; border-bottom:1px solid #f0d9a0;">
+                                These students paid at SSLCommerz but no student record was created.
+                                Take the transaction ID from SSLCommerz and complete each one from Payment Recovery.
+                            </div>
+                            <div style="max-height:420px; overflow-y:auto;">
                                 <table class="table">
+                                    <thead>
+                                    <tr>
+                                        <th style="width:40px;">#</th>
+                                        <th>Student</th>
+                                        <th>Reference</th>
+                                        <th style="text-align:center; width:80px;">Type</th>
+                                        <th style="text-align:right; width:90px;">Amount</th>
+                                        <th style="width:130px;">Started</th>
+                                        <th style="width:90px;"></th>
+                                    </tr>
+                                    </thead>
                                     <tbody>
-                                    @forelse($data['recent_pending'] as $p)
+                                    @foreach($data['recent_pending'] as $i => $p)
                                         <tr>
+                                            <td>{{ $i + 1 }}</td>
                                             <td>
                                                 <b>{{ $p->name }}</b>
-                                                <div style="font-family:monospace; font-size:10.5px; color:#98a1ad;">{{ $p->ref }}</div>
+                                                <div style="font-size:11px;color:#98a1ad;">
+                                                    {{ $p->email }}{{ $p->mobile ? ' · '.$p->mobile : '' }}
+                                                </div>
                                             </td>
-                                            <td style="text-align:right;">
-                                                &#2547;{{ number_format((float) $p->amount, 0) }}
-                                                <div style="font-size:11px;color:#98a1ad;">{{ \Carbon\Carbon::parse($p->at)->format('d M') }}</div>
+                                            <td style="font-family:monospace; font-size:10.5px; color:#6c757d;">{{ $p->ref }}</td>
+                                            <td style="text-align:center;">
+                                                <span class="adm-badge {{ $p->type === 'old' ? 'b-gray' : 'b-blue' }}">{{ ucfirst($p->type ?: 'new') }}</span>
+                                            </td>
+                                            <td style="text-align:right;">&#2547;{{ number_format((float) $p->amount, 0) }}</td>
+                                            <td style="font-size:11.5px; color:#8a94a3;">{{ \Carbon\Carbon::parse($p->at)->format('d M Y, h:i A') }}</td>
+                                            <td>
+                                                <a href="{{ route('registration-payment-recovery') }}" class="btn btn-xs btn-success">Recover</a>
                                             </td>
                                         </tr>
-                                    @empty
-                                        <tr><td style="text-align:center; color:#1c7a43;">No stuck payment.</td></tr>
-                                    @endforelse
+                                    @endforeach
                                     </tbody>
                                 </table>
                             </div>
-                        </div>
+                        @else
+                            <div style="padding:18px; text-align:center; color:#1c7a43;">
+                                <i class="fa fa-check-circle"></i> No stuck payment. Every paid application was completed.
+                            </div>
+                        @endif
                     </div>
                 </div>
 

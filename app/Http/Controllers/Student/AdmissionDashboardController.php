@@ -95,17 +95,22 @@ class AdmissionDashboardController extends CollegeBaseController
         $pendingFiles = is_dir($dir) ? glob($dir . DIRECTORY_SEPARATOR . '*.json') : [];
         $data['pending_payments'] = count($pendingFiles);
 
+        /* The full stuck list is shown on the dashboard (newest first) so the office can
+           see exactly who paid without finishing, not just a count. */
         $data['recent_pending'] = [];
         usort($pendingFiles, function ($a, $b) { return filemtime($b) - filemtime($a); });
-        foreach (array_slice($pendingFiles, 0, 5) as $file) {
+        foreach ($pendingFiles as $file) {
             $payload = json_decode(@file_get_contents($file), true);
             if (!is_array($payload)) { continue; }
             $reg = $payload['registration_data'] ?? [];
             $data['recent_pending'][] = (object) [
-                'ref'   => basename($file, '.json'),
-                'name'  => trim(($reg['first_name'] ?? '') . ' ' . ($reg['last_name'] ?? '')) ?: 'Unknown',
+                'ref'    => basename($file, '.json'),
+                'name'   => trim(($reg['first_name'] ?? '') . ' ' . ($reg['last_name'] ?? '')) ?: 'Unknown',
+                'email'  => $reg['email'] ?? '',
+                'mobile' => $reg['mobile_1'] ?? '',
+                'type'   => $payload['student_type'] ?? '',
                 'amount' => $payload['amount'] ?? 0,
-                'at'    => $payload['initiated_at'] ?? date('Y-m-d H:i', @filemtime($file)),
+                'at'     => $payload['initiated_at'] ?? date('Y-m-d H:i', @filemtime($file)),
             ];
         }
 
