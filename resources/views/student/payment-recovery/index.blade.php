@@ -133,7 +133,10 @@
                                                 <tbody>
                                                 @foreach($data['rows'] as $i => $row)
                                                     @php $v = $row->verified; @endphp
+                                                    {{-- data-paid / data-done are rendered here too, so a page
+                                                         reload keeps the verified state and the filter keeps working --}}
                                                     <tr data-ref="{{ $row->ref }}"
+                                                        @if($v) data-paid="{{ !empty($v['paid']) ? 1 : 0 }}" data-done="{{ !empty($v['already_done']) ? 1 : 0 }}" @endif
                                                         class="{{ $v ? (!empty($v['paid']) ? 'is-paid' : 'is-unpaid') : '' }}">
                                                         <td>{{ $i + 1 }}</td>
                                                         <td>
@@ -278,7 +281,9 @@
         if (data.paid && data.amount) { html += '<div style="font-size:11px;color:#777;">&#2547;' + data.amount + '</div>'; }
         $tr.find('.pay-cell').html(html);
         $tr.removeClass('is-paid is-unpaid').addClass(data.paid ? 'is-paid' : 'is-unpaid');
-        $tr.data('paid', data.paid ? 1 : 0).data('done', data.already_done ? 1 : 0);
+        /* Written as attributes (not just .data) so filtering and counting read the same
+           value whether the verdict came from this check or from the page render. */
+        $tr.attr('data-paid', data.paid ? 1 : 0).attr('data-done', data.already_done ? 1 : 0);
 
         if (data.already_done && data.receipt_url) {
             $tr.find('.rec-row-msg').html('<a href="' + data.receipt_url + '" target="_blank">Open receipt</a>');
@@ -289,10 +294,11 @@
         var paid = 0, unpaid = 0, done = 0, checked = 0;
         $('#recTable tbody tr').each(function () {
             var $t = $(this);
-            if ($t.data('paid') === undefined) { return; }
+            /* Unchecked rows carry no verdict at all - skip them. */
+            if ($t.attr('data-paid') === undefined && !$t.hasClass('is-paid') && !$t.hasClass('is-unpaid')) { return; }
             checked++;
-            if ($t.data('done')) { done++; }
-            else if ($t.data('paid')) { paid++; }
+            if (String($t.attr('data-done')) === '1') { done++; }
+            else if (rowIsPaid($t)) { paid++; }
             else { unpaid++; }
         });
         $('#cPaid').text(paid); $('#cUnpaid').text(unpaid);
@@ -328,7 +334,7 @@
             if (res.form_url) { html += ' | <a href="' + res.form_url + '" target="_blank">Form</a>'; }
             $msg.html(html);
             $tr.find('.pay-cell').html('<span class="rec-badge done">COMPLETED</span>');
-            $tr.data('done', 1); updateCounts();
+            $tr.attr('data-done', 1); updateCounts();
         }).fail(function () { $msg.html('<span style="color:#a3271f;">Request failed.</span>'); });
     });
 
@@ -351,9 +357,12 @@
     /* Complete every row that the gateway confirmed as paid. */
     $('#completePaidBtn').click(function () {
         var $rows = $('#recTable tbody tr').filter(function () {
-            return $(this).data('paid') === 1 && $(this).data('done') !== 1;
+            return rowIsPaid($(this)) && String($(this).attr('data-done')) !== '1';
         });
-        if (!$rows.length) { return; }
+        if (!$rows.length) {
+            show($('#bulkResult'), 'warn', 'No paid row to complete. Press <b>Check All with SSLCommerz</b> first.');
+            return;
+        }
         if (!confirm('Complete registration for ' + $rows.length + ' paid application(s)?')) { return; }
 
         var i = 0, okCount = 0, failCount = 0;
@@ -379,19 +388,36 @@
                     if (res.form_url) { html += ' | <a href="' + res.form_url + '" target="_blank">Form</a>'; }
                     $msg.html(html);
                     $tr.find('.pay-cell').html('<span class="rec-badge done">COMPLETED</span>');
-                    $tr.data('done', 1);
+                    $tr.attr('data-done', 1);
                 }
                 updateCounts(); next();
             }).fail(function () { failCount++; $msg.html('<span style="color:#a3271f;">Request failed.</span>'); next(); });
         })();
     });
 
+    /* A row counts as paid if the gateway said so (data-paid) or it is marked paid
+       visually (server-rendered from the cached check). */
+    function rowIsPaid($tr) {
+        if (String($tr.attr('data-paid')) === '1') { return true; }
+        return $tr.hasClass('is-paid');
+    }
+
     $('#onlyPaid').change(function () {
-        var on = $(this).is(':checked');
+        var on = $(this).is(':checked'), shown = 0;
         $('#recTable tbody tr').each(function () {
-            var $t = $(this);
-            $t.toggle(!on || $t.data('paid') === 1);
+            var $t = $(this), keep = !on || rowIsPaid($t);
+            $t.toggle(keep);
+            if (keep) { shown++; }
         });
+
+        if (on && shown === 0) {
+            show($('#bulkResult'), 'warn',
+                'No row is marked PAID yet. Press <b>Check All with SSLCommerz</b> first, then tick this box again.');
+        } else if (on) {
+            show($('#bulkResult'), 'ok', 'Showing <b>' + shown + '</b> paid application(s). Use <b>Complete All Paid</b> to finish them.');
+        } else {
+            $('#bulkResult').hide();
+        }
     });
 
     $('#cleanupBtn').click(function () {
