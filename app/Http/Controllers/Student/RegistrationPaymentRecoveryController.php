@@ -168,13 +168,27 @@ class RegistrationPaymentRecoveryController extends CollegeBaseController
             return response()->json($response);
         }
 
-        /* 4. Amount sanity check against the configured fee. */
-        $expectedFee = $this->expectedFee($paymentData['student_type'] ?? null, $paymentData);
+        /* 4. Amount sanity check.
+              Compared against the amount that was charged AT THE TIME (stored in the
+              payload), not today's configured fee - the fee may have been changed since,
+              and an old payment of the old fee is perfectly valid. Today's fee is only
+              used as a fallback when the payload carries no amount. */
+        $chargedAmount = (float) ($paymentData['amount'] ?? 0);
+        $expectedFee = $chargedAmount > 0
+            ? $chargedAmount
+            : $this->expectedFee($paymentData['student_type'] ?? null, $paymentData);
+
         if ($expectedFee > 0 && $gateway['amount'] > 0
             && round((float) $gateway['amount'], 2) < round((float) $expectedFee, 2)) {
-            $response['message'] = 'Paid amount (' . $gateway['amount'] . ') is less than the required fee ('
-                . $expectedFee . '). Recovery stopped - please check this payment manually.';
+            $response['message'] = 'Paid amount (' . $gateway['amount'] . ') is less than the amount this '
+                . 'application was charged (' . $expectedFee . '). Recovery stopped - please check this payment manually.';
             return response()->json($response);
+        }
+
+        /* The student paid the fee that applied on the day they registered, so the fee
+           record must be created with that amount even if the fee has changed since. */
+        if ($gateway['amount'] > 0) {
+            $paymentData['amount'] = (float) $gateway['amount'];
         }
 
         /* 5. Create the student + payment exactly like a normal successful callback. */
