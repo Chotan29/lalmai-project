@@ -767,19 +767,41 @@ class RegistrationPaymentController extends Controller
             }
 
             $regData = $paymentData['registration_data'];
-            
-            // Generate registration number
-            $oldStudent = Student::where('batch', $regData['batch'])->orderBy('id', 'desc')->first();
-            if (!$oldStudent) {
-                $sn = 1;
-            } else {
-                $oldReg = intval(substr($oldStudent->reg_no, -4));
-                $sn = $oldReg + 1;
+
+            /* Registration number.
+               The serial is taken from the HIGHEST number already used in this batch, not
+               from the most recently created student: a manually entered or returning
+               student can carry a lower number, and "last created + 1" then produced a
+               duplicate reg_no and killed the whole registration. The generated number is
+               also re-checked against the table until it is genuinely free, so two
+               registrations finishing at the same moment cannot collide either. */
+            $batchTitle = StudentBatch::find($regData['batch'])->title;
+            $regPrefix = Str::slug($batchTitle);
+
+            $maxSerial = 0;
+            foreach (Student::where('batch', $regData['batch'])->whereNotNull('reg_no')->pluck('reg_no') as $existingRegNo) {
+                if (strpos((string) $existingRegNo, $regPrefix) !== 0) {
+                    continue;
+                }
+                if (preg_match('/(\d{1,4})$/', (string) $existingRegNo, $m)) {
+                    $maxSerial = max($maxSerial, (int) $m[1]);
+                }
             }
 
-            $batchTitle = StudentBatch::find($regData['batch'])->title;
-            $sn = substr("00000{$sn}", -4);
-            $regNum = $batchTitle . '/' . $sn;
+            $sn = $maxSerial + 1;
+            $guard = 0;
+            do {
+                $serial = substr('00000' . $sn, -4);
+                $regNum = $batchTitle . '/' . $serial;
+                $sluggedRegNum = Str::slug($regNum);
+                $taken = Student::where('reg_no', $sluggedRegNum)->exists();
+                $sn++;
+                $guard++;
+            } while ($taken && $guard < 500);
+
+            if ($taken) {
+                throw new \Exception('Could not allocate a free registration number for this batch.');
+            }
 
             // Handle student image
             $student_image_name = "";
