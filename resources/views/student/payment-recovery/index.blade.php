@@ -58,6 +58,9 @@
                                                     <button class="btn btn-info btn-sm" type="button" id="verifyBtn">
                                                         <i class="ace-icon fa fa-search"></i> Verify
                                                     </button>
+                                                    <button class="btn btn-success btn-sm" type="button" id="completeBtn">
+                                                        <i class="ace-icon fa fa-check"></i> Complete Registration
+                                                    </button>
                                                 </span>
                                             </div>
                                             <div style="font-size:12px;color:#888;margin-top:6px;">
@@ -164,7 +167,10 @@
         if (d.already_done) {
             html += '<br><b>Already completed.</b> <a href="' + d.existing_receipt + '" target="_blank">Open receipt</a>';
         } else if (g.valid && d.has_data) {
-            html += '<br><b>Ready to recover</b> — registration data found on the server. Click Complete.';
+            html += '<br><b>Ready to recover</b> — registration data found on the server.'
+                 + '<br><button type="button" class="btn btn-success btn-sm inline-complete" style="margin-top:8px;"'
+                 + ' data-tran="' + (d.tran_id || '') + '" data-ref="' + (g.value_a || '') + '">'
+                 + 'Complete Registration Now</button>';
         } else if (g.valid && !d.has_data) {
             html += '<br><b>Payment is valid, but the saved form data is gone.</b> Register this student manually and treat the fee as already paid.';
         }
@@ -201,6 +207,20 @@
 
     $('#verifyBtn').click(function () {
         verify($.trim($('#tranIdInput').val()), '', $('#verifyResult'));
+    });
+
+    /* Type a transaction id and complete that one registration directly. */
+    $('#completeBtn').click(function () {
+        complete($.trim($('#tranIdInput').val()), '', $('#verifyResult'));
+    });
+
+    $('#tranIdInput').keypress(function (e) {
+        if (e.which === 13) { e.preventDefault(); $('#verifyBtn').click(); }
+    });
+
+    /* Complete button rendered inside a verify result. */
+    $(document).on('click', '.inline-complete', function () {
+        complete($(this).data('tran'), $(this).data('ref'), $('#verifyResult'));
     });
 
     $('.row-verify').click(function () {
