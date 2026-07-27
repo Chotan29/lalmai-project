@@ -49,7 +49,8 @@ class RegistrationPaymentController extends Controller
             // Validate input
             $validated = $request->validate([
                 'student_type' => 'required|in:new,old',
-                'payment_method' => 'required|in:ssl,ucb',
+                /* SSLCommerz is the only supported gateway. */
+                'payment_method' => 'required|in:ssl',
                 'amount' => 'required|numeric|min:1',
                 'registration_data' => 'required',
                 'student_main_image' => 'nullable',
@@ -159,12 +160,8 @@ class RegistrationPaymentController extends Controller
                 \Log::warning('[PAYMENT_TRACE] File storage failed (non-critical)', ['error' => $fileEx->getMessage()]);
             }
 
-            // Initiate payment based on selected method
-            if ($validated['payment_method'] === 'ssl') {
-                $paymentResponse = $this->initiateSslPayment($registrationFee, $tempPaymentRef, $validated['student_type']);
-            } else {
-                $paymentResponse = $this->initiateUcbPayment($registrationFee, $tempPaymentRef, $validated['student_type']);
-            }
+            /* Only SSLCommerz is offered for registration payments. */
+            $paymentResponse = $this->initiateSslPayment($registrationFee, $tempPaymentRef, $validated['student_type']);
 
             return response()->json($paymentResponse);
 

@@ -53,7 +53,7 @@ class AddValidation extends FormRequest
             'guardian_last_name'              => 'max:25',
             'guardian_mobile_1'               => 'max:25',
             'guardian_email'                  => 'max:100',
-            'student_main_image'            => ['required','mimes:jpeg,jpg,png','max:5120', new AttendanceProfilePhotoRule()],
+            'student_main_image'            => ['required','mimes:jpeg,jpg,png','max:1024', new AttendanceProfilePhotoRule()],
         ];
 
     }
@@ -64,7 +64,7 @@ class AddValidation extends FormRequest
         return [
             'reg_no.unique'                          => 'Enter Unique Reg.No.',
             'student_main_image.required'            => 'Image Required, Please Upload Image',
-            'student_main_image.max'                 => 'Photo must be within 5MB before processing.',
+            'student_main_image.max'                 => 'Photo must be within 1MB. Please upload a passport-size photo not larger than 1MB.',
             'blood_group.required'                  => 'Please select blood group.',
             'religion.required'                     => 'Please select religion.',
         ];

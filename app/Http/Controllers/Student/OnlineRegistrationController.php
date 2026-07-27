@@ -184,7 +184,7 @@ class OnlineRegistrationController extends CollegeBaseController
                 'success' => true,
                 'payment_required' => $registrationSetting->payment_required,
                 'amount' => $fee,
-                'payment_method_options' => ['ssl', 'ucb']
+                'payment_method_options' => ['ssl']
             ]);
 
         } catch (\Exception $e) {

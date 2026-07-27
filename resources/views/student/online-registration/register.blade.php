@@ -573,9 +573,11 @@
 
 <body>
     @php
+        /* Passport photo rules - kept in step with the student profile edit form
+           (App\Rules\AttendanceProfilePhotoRule + PublicRegistration\EditValidation). */
         $passportPhotoMinWidth = 300;
         $passportPhotoMinHeight = 400;
-        $passportPhotoMaxSizeMb = 5;
+        $passportPhotoMaxSizeMb = 1;
         $passportPhotoRatio = 35 / 45;
         $passportPhotoRatioTolerance = 0.08;
     @endphp
@@ -1602,37 +1604,46 @@
                         <div class="modal fade" id="paymentMethodModal" tabindex="-1" aria-labelledby="paymentMethodModalLabel" aria-hidden="true">
                             <div class="modal-dialog modal-dialog-centered">
                                 <div class="modal-content">
-                                    <div class="modal-header">
-                                        <h5 class="modal-title" id="paymentMethodModalLabel">Choose Payment Method</h5>
+                                    <div class="modal-header" style="border-bottom:1px solid #eef0f3; padding:18px 22px;">
+                                        <h5 class="modal-title" id="paymentMethodModalLabel" style="font-weight:600; color:#1f2e44;">
+                                            <i class="fa fa-lock" style="color:#1f5aa6; margin-right:8px;"></i>Confirm Payment
+                                        </h5>
                                         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                                     </div>
-                                    <div class="modal-body">
-                                        <div class="d-grid gap-3">
-                                            <button type="button" class="btn btn-outline-primary text-start p-3" onclick="choosePaymentMethod('ssl')">
-                                                <div class="d-flex align-items-center justify-content-between">
-                                                    <div class="d-flex align-items-center">
-                                                        <span class="badge bg-primary me-3" style="font-size:12px;">SSL</span>
-                                                        <div>
-                                                            <div class="fw-bold">SSL Commerz</div>
-                                                            <small class="text-muted">Card, Mobile Banking, Internet Banking</small>
-                                                        </div>
-                                                    </div>
-                                                    <i class="fa fa-chevron-right"></i>
-                                                </div>
-                                            </button>
+                                    <div class="modal-body" style="padding:22px;">
+                                        <div style="text-align:center; margin-bottom:18px;">
+                                            <div style="font-size:13px; color:#6c757d;">Registration Fee</div>
+                                            <div style="font-size:30px; font-weight:700; color:#1f5aa6; line-height:1.2;">
+                                                ৳<span id="modalFeeAmount">0</span>
+                                            </div>
+                                        </div>
 
-                                            <button type="button" class="btn btn-outline-success text-start p-3" onclick="choosePaymentMethod('ucb')">
-                                                <div class="d-flex align-items-center justify-content-between">
-                                                    <div class="d-flex align-items-center">
-                                                        <span class="badge bg-success me-3" style="font-size:12px;">UCB</span>
-                                                        <div>
-                                                            <div class="fw-bold">United Commercial Bank</div>
-                                                            <small class="text-muted">UCB Secure Online Payment</small>
-                                                        </div>
-                                                    </div>
-                                                    <i class="fa fa-chevron-right"></i>
+                                        <div style="border:1px solid #e3e8ef; border-radius:8px; padding:14px 16px; background:#f8fafc;">
+                                            <div style="display:flex; align-items:center;">
+                                                <span class="badge bg-primary" style="font-size:12px; margin-right:12px;">SSL</span>
+                                                <div style="flex:1;">
+                                                    <div style="font-weight:600; color:#1f2e44;">SSLCommerz Secure Payment</div>
+                                                    <small style="color:#6c757d;">Card &middot; Mobile Banking &middot; Internet Banking</small>
                                                 </div>
+                                                <i class="fa fa-check-circle" style="color:#2e9f6f; font-size:18px;"></i>
+                                            </div>
+                                        </div>
+
+                                        <div style="font-size:12px; color:#6c757d; margin-top:14px; text-align:center;">
+                                            <i class="fa fa-shield"></i>
+                                            You will be redirected to the secure SSLCommerz gateway.
+                                            Please do not close or refresh the page during payment.
+                                        </div>
+
+                                        <div class="d-grid" style="margin-top:20px;">
+                                            <button type="button" class="btn btn-primary btn-lg" onclick="choosePaymentMethod('ssl')"
+                                                    style="font-weight:600; border-radius:8px;">
+                                                <i class="fa fa-credit-card" style="margin-right:8px;"></i>Proceed to Pay
                                             </button>
+                                        </div>
+                                        <div class="d-grid" style="margin-top:8px;">
+                                            <button type="button" class="btn btn-link btn-sm" data-bs-dismiss="modal"
+                                                    style="color:#6c757d; text-decoration:none;">Cancel</button>
                                         </div>
                                     </div>
                                 </div>
@@ -3333,6 +3344,10 @@
                 toastr.error('Payment modal is unavailable right now. Please refresh and try again.', 'Payment Error');
                 return;
             }
+
+            /* Show the exact department fee the applicant is about to pay. */
+            const feeText = $('#registrationFeeAmount').text().replace('৳', '').trim();
+            $('#modalFeeAmount').text(feeText || '0');
 
             if (typeof bootstrap !== 'undefined' && bootstrap.Modal) {
                 const paymentModal = bootstrap.Modal.getOrCreateInstance(modalEl);
