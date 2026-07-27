@@ -460,8 +460,10 @@ Route::get('admission-dashboard', ['as' => 'admission-dashboard', 'middleware' =
   (lost callback / expired session). Verifies against the gateway before creating anything.*/
 Route::group(['prefix' => 'registration-payment-recovery', 'as' => 'registration-payment-recovery', 'middleware' => ['auth', 'ability:super-admin,fees-online-payment-verify']], function () {
     Route::get('',          ['as' => '',         'uses' => 'Student\RegistrationPaymentRecoveryController@index']);
-    Route::post('verify',   ['as' => '.verify',  'uses' => 'Student\RegistrationPaymentRecoveryController@verify']);
-    Route::post('complete', ['as' => '.complete','uses' => 'Student\RegistrationPaymentRecoveryController@complete']);
+    Route::post('verify',      ['as' => '.verify',      'uses' => 'Student\RegistrationPaymentRecoveryController@verify']);
+    Route::post('auto-verify', ['as' => '.auto-verify', 'uses' => 'Student\RegistrationPaymentRecoveryController@autoVerify']);
+    Route::post('complete',    ['as' => '.complete',    'uses' => 'Student\RegistrationPaymentRecoveryController@complete']);
+    Route::post('cleanup',     ['as' => '.cleanup',     'uses' => 'Student\RegistrationPaymentRecoveryController@cleanup']);
 });
 
 //certificate verification

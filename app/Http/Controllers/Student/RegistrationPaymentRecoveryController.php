@@ -89,6 +89,108 @@ class RegistrationPaymentRecoveryController extends CollegeBaseController
     }
 
     /**
+     * Auto-verify one pending application against SSLCommerz.
+     *
+     * The reference we send to the gateway (REG-xxxx) IS the transaction id, so a
+     * pending application can be checked without anybody typing anything. The result
+     * is cached so the list can be re-opened without hitting the gateway again.
+     */
+    public function autoVerify(Request $request)
+    {
+        $response = ['error' => true, 'message' => ''];
+
+        $ref = trim((string) $request->get('ref'));
+        if ($ref === '') {
+            $response['message'] = 'Reference is required.';
+            return response()->json($response);
+        }
+
+        $cacheKey = 'reg_recovery_verify:' . $ref;
+        if (!$request->get('force') && ($cached = Cache::get($cacheKey))) {
+            $response['error'] = false;
+            $response['data'] = $cached;
+            $response['cached'] = true;
+            return response()->json($response);
+        }
+
+        $gateway = $this->sslCommerz->queryByTransactionId($ref);
+
+        $existing = OnlinePayment::where('ref_no', $ref)
+            ->where('payment_gateway', 'SSLCommerz')->latest()->first();
+
+        $result = [
+            'ref'          => $ref,
+            'paid'         => (bool) $gateway['valid'],
+            'status'       => $gateway['status'] ?: ($gateway['found'] ? 'UNKNOWN' : 'NOT FOUND'),
+            'amount'       => $gateway['amount'],
+            'tran_date'    => $gateway['tran_date'],
+            'error'        => $gateway['error'],
+            'already_done' => (bool) ($existing && $existing->students_id),
+            'receipt_url'  => ($existing && $existing->students_id)
+                ? route('print-out.fees.online-payment-receipt', ['id' => encrypt($existing->id)])
+                : null,
+        ];
+
+        /* A verified payment is worth remembering for a day; a "not paid" answer only
+           briefly, because the student may still be paying right now. */
+        Cache::put($cacheKey, $result, $result['paid'] ? now()->addDay() : now()->addMinutes(30));
+
+        $response['error'] = false;
+        $response['data'] = $result;
+
+        return response()->json($response);
+    }
+
+    /**
+     * Housekeeping: drop unfinished applications that were never paid and are older
+     * than the retention window (30 days). Applications the gateway confirmed as paid
+     * are always kept, so no money is ever lost from this screen.
+     */
+    public function cleanup(Request $request)
+    {
+        $response = ['error' => true, 'message' => ''];
+
+        $days = 30;
+        $cutoff = time() - ($days * 86400);
+        $deleted = 0;
+        $keptPaid = 0;
+
+        foreach ($this->pendingPayloads() as $row) {
+            if (@filemtime($row->file) > $cutoff) {
+                continue;
+            }
+
+            /* Never delete something the gateway says was paid. */
+            $verify = Cache::get('reg_recovery_verify:' . $row->ref);
+            if (!$verify) {
+                $gateway = $this->sslCommerz->queryByTransactionId($row->ref);
+                $verify = ['paid' => (bool) $gateway['valid']];
+            }
+
+            if (!empty($verify['paid'])) {
+                $keptPaid++;
+                continue;
+            }
+
+            if (is_file($row->file) && @unlink($row->file)) {
+                $deleted++;
+                Cache::forget('registration_payment_data:' . $row->ref);
+                Cache::forget('reg_recovery_verify:' . $row->ref);
+            }
+        }
+
+        \Log::info('[PAYMENT_RECOVERY] Cleanup run', [
+            'deleted' => $deleted, 'kept_paid' => $keptPaid, 'by' => auth()->user()->id ?? null,
+        ]);
+
+        $response['error'] = false;
+        $response['message'] = $deleted . ' unpaid application(s) older than ' . $days . ' days removed. '
+            . $keptPaid . ' paid application(s) kept.';
+
+        return response()->json($response);
+    }
+
+    /**
      * Complete a paid-but-unfinished registration.
      *
      * Guards, in order:
@@ -103,6 +205,12 @@ class RegistrationPaymentRecoveryController extends CollegeBaseController
 
         $tranId = trim((string) $request->get('tran_id'));
         $ref    = trim((string) $request->get('ref'));
+
+        /* The reference we sent to the gateway is the transaction id, so a pending
+           application can be completed from the list without typing anything. */
+        if ($tranId === '' && $ref !== '') {
+            $tranId = $ref;
+        }
 
         if ($tranId === '') {
             $response['message'] = 'Transaction ID is required to complete a registration.';
@@ -269,15 +377,23 @@ class RegistrationPaymentRecoveryController extends CollegeBaseController
                 $reg['last_name'] ?? '',
             ])));
 
+            $ref = basename($file, '.json');
+            $startedAt = $payload['initiated_at'] ?? date('Y-m-d H:i:s', @filemtime($file));
+            $ageDays = (int) floor((time() - strtotime($startedAt)) / 86400);
+
             $rows[] = (object) [
-                'ref'          => basename($file, '.json'),
+                'ref'          => $ref,
                 'file'         => $file,
                 'name'         => $name ?: 'Unknown',
                 'email'        => $reg['email'] ?? '',
                 'mobile'       => $reg['mobile_1'] ?? '',
                 'student_type' => $payload['student_type'] ?? '',
                 'amount'       => $payload['amount'] ?? 0,
-                'initiated_at' => $payload['initiated_at'] ?? date('Y-m-d H:i:s', @filemtime($file)),
+                'initiated_at' => $startedAt,
+                'age_days'     => $ageDays,
+                'days_left'    => max(0, 30 - $ageDays),
+                /* Verification result if this row was checked before (kept in cache). */
+                'verified'     => Cache::get('reg_recovery_verify:' . $ref),
             ];
         }
 
