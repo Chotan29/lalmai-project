@@ -735,22 +735,74 @@
                         <div class="tab-pane fade show active" id="studentType" role="tabpanel">
                             <div class="form-section">
                                 <h3 class="section-title"><i class="fa fa-id-card"></i> Select Your Student Type</h3>
-                                <div class="row">
-                                    <div class="col-md-6">
-                                        <div class="form-group">
-                                            <label>Student Type <span class="text-danger">*</span></label>
-                                            <select name="student_type" id="studentTypeSelect" class="form-control" required>
-                                                <option value="">Select Student Type</option>
-                                                @if($data['registration_setting']->new_student_enabled)
-                                                    <option value="new">New Student</option>
-                                                @endif
-                                                @if($data['registration_setting']->old_student_enabled)
-                                                    <option value="old">Old Student (Returning)</option>
-                                                @endif
-                                            </select>
+                                {{-- Student type is picked from cards; the select below is kept
+                                     hidden so every existing script keeps reading the same value. --}}
+                                {{-- No `required` here: a visually hidden required control makes the
+                                     browser refuse to submit ("not focusable"). The Next button stays
+                                     disabled until a card is chosen, which enforces the same rule. --}}
+                                <select name="student_type" id="studentTypeSelect"
+                                        style="position:absolute; opacity:0; width:0; height:0; padding:0; border:0;">
+                                    <option value="">Select Student Type</option>
+                                    @if($data['registration_setting']->new_student_enabled)
+                                        <option value="new">New Student</option>
+                                    @endif
+                                    @if($data['registration_setting']->old_student_enabled)
+                                        <option value="old">Old Student (Returning)</option>
+                                    @endif
+                                </select>
+
+                                <div class="row student-type-cards">
+                                    @if($data['registration_setting']->new_student_enabled)
+                                    <div class="col-md-5">
+                                        <div class="student-type-card" data-type="new" tabindex="0" role="button" aria-pressed="false">
+                                            <div class="stc-icon"><i class="fa fa-user-plus"></i></div>
+                                            <div class="stc-body">
+                                                <div class="stc-title">New Admission</div>
+                                                <div class="stc-sub">Applying to this college for the first time</div>
+                                            </div>
+                                            <i class="fa fa-check-circle stc-check"></i>
                                         </div>
                                     </div>
+                                    @endif
+
+                                    @if($data['registration_setting']->old_student_enabled)
+                                    <div class="col-md-5">
+                                        <div class="student-type-card" data-type="old" tabindex="0" role="button" aria-pressed="false">
+                                            <div class="stc-icon"><i class="fa fa-id-badge"></i></div>
+                                            <div class="stc-body">
+                                                <div class="stc-title">Old Student</div>
+                                                <div class="stc-sub">Returning student with an existing Student ID</div>
+                                            </div>
+                                            <i class="fa fa-check-circle stc-check"></i>
+                                        </div>
+                                    </div>
+                                    @endif
                                 </div>
+                                <style>
+                                    .student-type-cards { margin-top: 6px; }
+                                    .student-type-card {
+                                        display: flex; align-items: center; gap: 14px;
+                                        border: 2px solid #e3e8ef; border-radius: 10px;
+                                        padding: 18px 18px; background: #fff; cursor: pointer;
+                                        transition: border-color .18s ease, box-shadow .18s ease, background .18s ease;
+                                        margin-bottom: 14px; position: relative; min-height: 92px;
+                                    }
+                                    .student-type-card:hover { border-color: #b9cdea; box-shadow: 0 4px 14px rgba(31,90,166,.10); }
+                                    .student-type-card:focus { outline: none; border-color: #1f5aa6; }
+                                    .student-type-card.selected { border-color: #1f5aa6; background: #f5f9ff; box-shadow: 0 6px 18px rgba(31,90,166,.14); }
+                                    .student-type-card .stc-icon {
+                                        width: 46px; height: 46px; flex: none; border-radius: 50%;
+                                        background: #eef4fd; color: #1f5aa6; display: flex;
+                                        align-items: center; justify-content: center; font-size: 19px;
+                                    }
+                                    .student-type-card.selected .stc-icon { background: #1f5aa6; color: #fff; }
+                                    .student-type-card .stc-body { flex: 1; min-width: 0; }
+                                    .student-type-card .stc-title { font-weight: 600; font-size: 16px; color: #1f2e44; }
+                                    .student-type-card .stc-sub { font-size: 12.5px; color: #6c757d; margin-top: 2px; }
+                                    .student-type-card .stc-check { color: #2e9f6f; font-size: 20px; opacity: 0; transition: opacity .18s ease; }
+                                    .student-type-card.selected .stc-check { opacity: 1; }
+                                </style>
+
                                 <div id="studentTypeInfo" style="display:none; margin-top:20px;">
                                     <div class="alert alert-info">
                                         <strong id="studentTypeInfoText"></strong>
@@ -2748,6 +2800,32 @@
                 cacheCurrentStudentTypeSnapshot(lastStudentTypeSelection);
             }
             $studentTypeSelect.on('change', handleStudentTypeChange);
+
+            /* Student type is chosen from the two cards. Clicking a card sets the hidden
+               select and fires its change event, so every existing handler still runs. */
+            function syncStudentTypeCards() {
+                var current = $('#studentTypeSelect').val();
+                $('.student-type-card').each(function () {
+                    var isSelected = $(this).data('type') === current;
+                    $(this).toggleClass('selected', isSelected)
+                           .attr('aria-pressed', isSelected ? 'true' : 'false');
+                });
+            }
+
+            $(document).on('click', '.student-type-card', function () {
+                var type = $(this).data('type');
+                if ($('#studentTypeSelect').val() === type) { return; }
+                $('#studentTypeSelect').val(type).trigger('change');
+                syncStudentTypeCards();
+            });
+
+            $(document).on('keydown', '.student-type-card', function (e) {
+                if (e.which === 13 || e.which === 32) { e.preventDefault(); $(this).trigger('click'); }
+            });
+
+            $('#studentTypeSelect').on('change', syncStudentTypeCards);
+            syncStudentTypeCards();
+
             updatePaymentInfo();
 
             const queryParams = new URLSearchParams(window.location.search);
