@@ -415,7 +415,10 @@ class OnlineRegistrationController extends CollegeBaseController
                     'name' => $name,
                     'email' => $emailIds,
                     'password' => Hash::make($password),
-                    'status' => 'active'
+                    /* Login stays locked until the office activates the student manually.
+                       Activating the student (or setting a password from the profile)
+                       turns this on - see UserScope::updateUser(). */
+                    'status' => 'in-active'
                 ]);
                 $roles = [];
                 $roles[] = [

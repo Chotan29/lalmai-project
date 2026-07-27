@@ -641,7 +641,9 @@ class RegistrationPaymentController extends Controller
                 'mobile_2' => $regData['mobile_2'] ?? null,
                 'email' => $regData['email'] ?? ($regData['student_email'] ?? null),
                 'student_image' => $student_image_name,
-                'status' => 1,
+                /* A newly admitted student stays in-active until the office verifies the
+                   admission and activates the profile manually. */
+                'status' => 0,
                 'national_id_1' => $regData['national_id'] ?? null,
                 'national_id_2' => $regData['national_id_2'] ?? null,
                 'national_id_3' => $regData['national_id_3'] ?? null,
@@ -794,7 +796,10 @@ class RegistrationPaymentController extends Controller
                 'name' => $regData['first_name'] . ' ' . ($regData['last_name'] ?? ''),
                 'email' => $emailIds,
                 'password' => Hash::make($password),
-                'status' => 'active'
+                /* Login stays locked until the office activates the student manually.
+                   Activating the student (or setting a password from the profile) turns
+                   this on - see UserScope::updateUser(). */
+                'status' => 'in-active'
             ]);
 
             $user->userRole()->sync([['user_id' => $user->id, 'role_id' => $rolesId]]);
