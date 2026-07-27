@@ -55,7 +55,8 @@ class AttendanceProfilePhotoRule implements Rule
         $bgCheck = $this->hasLightBackground($image, $width, $height);
         if (!$bgCheck) {
             imagedestroy($image);
-            $this->messageText = 'Background must be white or very light.';
+            $this->messageText = 'Background must be plain white or very light. '
+                . 'Please take the photo against a white wall with even lighting (no shadow, no dark or patterned background).';
             return false;
         }
 
@@ -93,24 +94,29 @@ class AttendanceProfilePhotoRule implements Rule
         return $img ?: null;
     }
 
+    /**
+     * Background check.
+     *
+     * Only the region that is really background in a passport photo is sampled: the
+     * top band and the left/right strips of the upper part of the frame. The bottom
+     * edge is deliberately skipped - in a correct passport photo the shoulders and
+     * clothing touch the bottom, so counting it made genuine white-background photos
+     * fail the check.
+     */
     protected function hasLightBackground($img, $w, $h)
     {
         $marginX = max(6, (int) round($w * 0.08));
-        $marginY = max(6, (int) round($h * 0.08));
+        $topBand = max(6, (int) round($h * 0.12));
+        /* Side strips are sampled beside the head only, above the shoulder line. */
+        $sideBottom = (int) round($h * 0.55);
         $step = max(2, (int) floor(min($w, $h) / 120));
 
         $light = 0;
         $total = 0;
 
-        // Top and bottom borders
+        // Top band (always background in a portrait)
         for ($x = 0; $x < $w; $x += $step) {
-            for ($y = 0; $y < $marginY; $y += $step) {
-                if ($this->isLightPixel($img, $x, $y)) {
-                    $light++;
-                }
-                $total++;
-            }
-            for ($y = max(0, $h - $marginY); $y < $h; $y += $step) {
+            for ($y = 0; $y < $topBand; $y += $step) {
                 if ($this->isLightPixel($img, $x, $y)) {
                     $light++;
                 }
@@ -118,8 +124,8 @@ class AttendanceProfilePhotoRule implements Rule
             }
         }
 
-        // Left and right borders
-        for ($y = $marginY; $y < max($marginY, $h - $marginY); $y += $step) {
+        // Left and right strips beside the head
+        for ($y = $topBand; $y < max($topBand, $sideBottom); $y += $step) {
             for ($x = 0; $x < $marginX; $x += $step) {
                 if ($this->isLightPixel($img, $x, $y)) {
                     $light++;
@@ -138,14 +144,16 @@ class AttendanceProfilePhotoRule implements Rule
             return false;
         }
 
-        return ($light / $total) >= 0.58;
+        return ($light / $total) >= 0.55;
     }
 
     protected function hasSideMargins($img, $w, $h)
     {
         $strip = max(8, (int) round($w * 0.10));
-        $top = (int) round($h * 0.18);
-        $bottom = (int) round($h * 0.88);
+        /* Sampled beside the head only. Going further down reaches the shoulders,
+           which are never background and made valid photos fail. */
+        $top = (int) round($h * 0.15);
+        $bottom = (int) round($h * 0.55);
         $step = max(2, (int) floor(min($w, $h) / 120));
 
         $leftLight = 0;
@@ -177,8 +185,9 @@ class AttendanceProfilePhotoRule implements Rule
         $leftRatio = $leftLight / $leftTotal;
         $rightRatio = $rightLight / $rightTotal;
 
-        // Require some clear side background on both sides to avoid over-zoomed/cropped face.
-        return $leftRatio >= 0.22 && $rightRatio >= 0.22;
+        // Some clear background beside the head on both sides, so an over-zoomed or
+        // cropped face is still rejected without failing normal passport framing.
+        return $leftRatio >= 0.15 && $rightRatio >= 0.15;
     }
 
     protected function isReasonablyStraight($img, $w, $h)
@@ -228,11 +237,19 @@ class AttendanceProfilePhotoRule implements Rule
         $angleRad = 0.5 * atan2(2.0 * $covXY, ($covXX - $covYY));
         $angleDeg = abs(rad2deg($angleRad));
 
-        // Accept if dominant axis is close to vertical (about 90 degree from x-axis).
+        /* Accept if the dominant axis is roughly vertical. Kept generous so normal
+           head-and-shoulders framing is never mistaken for a tilted photo. */
         $tiltFromVertical = abs(90.0 - $angleDeg);
-        return $tiltFromVertical <= 28.0;
+        return $tiltFromVertical <= 40.0;
     }
 
+    /**
+     * A "background" pixel: bright and not strongly coloured.
+     *
+     * Thresholds are deliberately tolerant - studio white walls photograph as light
+     * grey, cream or faintly blue depending on lighting and camera white balance, and
+     * the earlier strict values rejected those genuine white backgrounds.
+     */
     protected function isLightPixel($img, $x, $y)
     {
         $rgb = imagecolorat($img, $x, $y);
@@ -245,6 +262,6 @@ class AttendanceProfilePhotoRule implements Rule
         $brightness = ($r + $g + $b) / 3.0;
         $delta = $max - $min;
 
-        return $brightness >= 190 && $delta <= 38;
+        return $brightness >= 165 && $delta <= 60;
     }
 }
