@@ -453,6 +453,9 @@ Route::group(['prefix' => 'registration-payment', 'as' => 'registration-payment.
     Route::match(['get', 'post'], 'ucb-cancel',  ['as' => 'ucb-cancel',  'uses' => 'Student\RegistrationPaymentController@sslCancel']);
 });
 
+/*Admission Dashboard: every admission number and shortcut on one screen.*/
+Route::get('admission-dashboard', ['as' => 'admission-dashboard', 'middleware' => ['auth', 'ability:super-admin,student-index'], 'uses' => 'Student\AdmissionDashboardController@index']);
+
 /*Admin-only: recover a registration that was paid at SSLCommerz but never finished
   (lost callback / expired session). Verifies against the gateway before creating anything.*/
 Route::group(['prefix' => 'registration-payment-recovery', 'as' => 'registration-payment-recovery', 'middleware' => ['auth', 'ability:super-admin,fees-online-payment-verify']], function () {

@@ -120,6 +120,15 @@
                             </a>
                             <b class="arrow"></b>
                             <ul class="submenu">
+                                {{-- Everything about admission (numbers, fees, payments, activation) on one screen --}}
+                                <li class="{!! request()->is('admission-dashboard*') ? 'active' : '' !!} hover">
+                                    <a href="{{ route('admission-dashboard') }}">
+                                        <i class="fa fa-caret-right"></i>
+                                        Admission Dashboard
+                                    </a>
+                                    <b class="arrow"></b>
+                                </li>
+
                                 <li class="{!! request()->is('student') ? 'active' : '' !!} hover">
                                     <a href="{{ route('student') }}">
                                         <i class="fa fa-caret-right"></i>
