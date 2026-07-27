@@ -2393,6 +2393,7 @@
             let isValid = true;
             let firstInvalidField = null;
             let toastShown = false;
+            let lastDuplicateMobileField = null;
 
             const canShowToast = function() {
                 if (!config.showToast || toastShown) {
@@ -2402,6 +2403,45 @@
                 toastShown = true;
                 return true;
             };
+
+            /* Student, father and mother must each have their own mobile number.
+               Guardian is deliberately excluded: the form lets a guardian reuse a
+               father/mother/student number on purpose. */
+            function validateParentMobileUniqueness(showToastFn) {
+                const digits = function (v) { return (v || '').toString().replace(/\D/g, ''); };
+
+                const $student = $('input[name="mobile_1"]');
+                const $father  = $('input[name="father_mobile_1"]');
+                const $mother  = $('input[name="mother_mobile_1"]');
+
+                const student = digits($student.val());
+                const father  = digits($father.val());
+                const mother  = digits($mother.val());
+
+                clearFieldInvalid($father);
+                clearFieldInvalid($mother);
+                lastDuplicateMobileField = null;
+
+                if (father && student && father === student) {
+                    setFieldInvalid($father, "Father's mobile number cannot be the same as the student's mobile number.", showToastFn());
+                    lastDuplicateMobileField = $father;
+                    return false;
+                }
+
+                if (mother && student && mother === student) {
+                    setFieldInvalid($mother, "Mother's mobile number cannot be the same as the student's mobile number.", showToastFn());
+                    lastDuplicateMobileField = $mother;
+                    return false;
+                }
+
+                if (mother && father && mother === father) {
+                    setFieldInvalid($mother, "Mother's mobile number cannot be the same as the father's mobile number.", showToastFn());
+                    lastDuplicateMobileField = $mother;
+                    return false;
+                }
+
+                return true;
+            }
 
             switch (tabName) {
                 case 'generalInfo':
@@ -2451,6 +2491,14 @@
                         guardianFieldRules.forEach(function(rule) {
                             clearFieldInvalid($(rule.field));
                         });
+                    }
+
+                    /* A parent must be reachable on a different number than the student. */
+                    if (!validateParentMobileUniqueness(canShowToast)) {
+                        if (!firstInvalidField) {
+                            firstInvalidField = lastDuplicateMobileField;
+                        }
+                        isValid = false;
                     }
                     break;
 
@@ -2825,6 +2873,29 @@
 
             $('#studentTypeSelect').on('change', syncStudentTypeCards);
             syncStudentTypeCards();
+
+            /* Warn as soon as a parent number is typed that matches the student's. */
+            $(document).on('blur', 'input[name="mobile_1"], input[name="father_mobile_1"], input[name="mother_mobile_1"]', function () {
+                var digits = function (v) { return (v || '').toString().replace(/\D/g, ''); };
+                var student = digits($('input[name="mobile_1"]').val());
+                var father  = digits($('input[name="father_mobile_1"]').val());
+                var mother  = digits($('input[name="mother_mobile_1"]').val());
+
+                var $father = $('input[name="father_mobile_1"]');
+                var $mother = $('input[name="mother_mobile_1"]');
+
+                clearFieldInvalid($father);
+                clearFieldInvalid($mother);
+
+                if (father && student && father === student) {
+                    setFieldInvalid($father, "Father's mobile number cannot be the same as the student's mobile number.", false);
+                }
+                if (mother && student && mother === student) {
+                    setFieldInvalid($mother, "Mother's mobile number cannot be the same as the student's mobile number.", false);
+                } else if (mother && father && mother === father) {
+                    setFieldInvalid($mother, "Mother's mobile number cannot be the same as the father's mobile number.", false);
+                }
+            });
 
             updatePaymentInfo();
 
