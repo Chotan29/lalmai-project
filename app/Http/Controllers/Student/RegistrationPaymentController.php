@@ -91,7 +91,8 @@ class RegistrationPaymentController extends Controller
             // Store registration data and payment info in session
             $request->session()->put('registration_payment_data', [
                 'student_type' => $validated['student_type'],
-                'amount' => $validated['amount'],
+                /* Store the server-resolved department fee - this is what is actually charged. */
+                'amount' => $registrationFee,
                 'registration_data' => $registrationData,
                 'payment_method' => $validated['payment_method'],
                 'initiated_at' => Carbon::now()->toDateTimeString()
@@ -113,9 +114,15 @@ class RegistrationPaymentController extends Controller
                     'message' => 'Registration settings not found. Please contact admin.'
                 ], 422);
             }
-            $registrationFee = $validated['student_type'] === 'new' 
-                ? $registrationSetting->new_student_registration_fee 
-                : $registrationSetting->old_student_registration_fee;
+            /* Fee follows the department the student applied to. The amount posted by the
+               browser is never trusted for charging - the server resolves it from the
+               Faculty/Program row (empty program fee = global default). */
+            $registrationFee = \App\Models\OnlineRegistrationProgram::resolveFee(
+                $registrationData['faculty'] ?? ($registrationData['faculty_id'] ?? null),
+                $registrationData['semester'] ?? ($registrationData['semester_id'] ?? null),
+                $validated['student_type'],
+                $registrationSetting
+            );
 
             if ($registrationFee <= 0) {
                 return response()->json([
@@ -128,7 +135,8 @@ class RegistrationPaymentController extends Controller
             $tempPaymentRef = 'REG-' . Str::random(10) . '-' . time();
             $paymentPayload = [
                 'student_type' => $validated['student_type'],
-                'amount' => $validated['amount'],
+                /* Store the server-resolved department fee - this is what is actually charged. */
+                'amount' => $registrationFee,
                 'registration_data' => $registrationData,
                 'payment_method' => $validated['payment_method'],
                 'initiated_at' => Carbon::now()->toDateTimeString()

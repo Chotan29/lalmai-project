@@ -37,6 +37,7 @@ class OnlineRegistrationSettingController extends CollegeBaseController
         $data['exist_program'] = OnlineRegistrationProgram::select('online_registration_programs.id',
             'online_registration_programs.faculties_id','online_registration_programs.semesters_id',
             'online_registration_programs.start_date', 'online_registration_programs.end_date',
+            'online_registration_programs.new_student_fee', 'online_registration_programs.old_student_fee',
             'online_registration_programs.status','f.faculty','s.semester','s.slug')
             ->join('faculties as f','f.id','=','online_registration_programs.faculties_id')
             ->join('semesters as s','s.id','=','online_registration_programs.semesters_id')
@@ -97,11 +98,17 @@ class OnlineRegistrationSettingController extends CollegeBaseController
         if ($request->has('faculties_id')) {
             foreach ($request->get('faculties_id') as $key => $program) {
 
+                /* Per-department fee: an empty box means "use the global default fee". */
+                $newFeeInput = $request->get('program_new_fee')[$key] ?? null;
+                $oldFeeInput = $request->get('program_old_fee')[$key] ?? null;
+
                 OnlineRegistrationProgram::create([
                     'faculties_id' => $program,
                     'semesters_id' => isset($request->get('semester_select')[$key])?$request->get('semester_select')[$key]:'',
                     'start_date' => $request->get('program_start_date')[$key],
                     'end_date' => $request->get('program_end_date')[$key],
+                    'new_student_fee' => ($newFeeInput === null || $newFeeInput === '') ? null : $newFeeInput,
+                    'old_student_fee' => ($oldFeeInput === null || $oldFeeInput === '') ? null : $oldFeeInput,
                     'status' => $request->get('program_status')[$key],
                     'created_by' => auth()->user()->id
                 ]);
@@ -140,12 +147,20 @@ class OnlineRegistrationSettingController extends CollegeBaseController
             foreach ($request->get('faculties_id') as $key => $program) {
                 $existProgram = OnlineRegistrationProgram::where(['faculties_id'=>$program, 'semesters_id'=> $request->get('semester_select')[$key]])->first();
                 //dd($request->get('semester_select')[$key]);
+                /* Per-department fee: an empty box means "use the global default fee". */
+                $newFeeInput = $request->get('program_new_fee')[$key] ?? null;
+                $oldFeeInput = $request->get('program_old_fee')[$key] ?? null;
+                $newFee = ($newFeeInput === null || $newFeeInput === '') ? null : $newFeeInput;
+                $oldFee = ($oldFeeInput === null || $oldFeeInput === '') ? null : $oldFeeInput;
+
                 if($existProgram){
                     $existProgram->update([
                         'faculties_id' => $program,
                         'semesters_id' => $request->get('semester_select')[$key],
                         'start_date' => $request->get('program_start_date')[$key],
                         'end_date' => $request->get('program_end_date')[$key],
+                        'new_student_fee' => $newFee,
+                        'old_student_fee' => $oldFee,
                         'status' => $request->get('program_status')[$key],
                         'updated_by' => auth()->user()->id
                     ]);
@@ -155,6 +170,8 @@ class OnlineRegistrationSettingController extends CollegeBaseController
                         'semesters_id' => $request->get('semester_select')[$key],
                         'start_date' => $request->get('program_start_date')[$key],
                         'end_date' => $request->get('program_end_date')[$key],
+                        'new_student_fee' => $newFee,
+                        'old_student_fee' => $oldFee,
                         'status' => $request->get('program_status')[$key],
                         'created_by' => auth()->user()->id
                     ]);

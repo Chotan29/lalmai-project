@@ -3171,6 +3171,49 @@
             }
         }
 
+        /* Department-wise registration fee.
+           Each Faculty/Program row in Online Registration Setting may carry its own fee;
+           an empty one falls back to the global default. The server re-resolves the fee
+           before charging, so this is only what the applicant sees. */
+        var PROGRAM_FEES = {!! json_encode($data['program_fees'] ?? []) !!};
+        var DEFAULT_FEES = {
+            'new': {{ (float) ($data['registration_setting']->new_student_registration_fee ?? 0) }},
+            'old': {{ (float) ($data['registration_setting']->old_student_registration_fee ?? 0) }}
+        };
+
+        function resolveRegistrationFee(studentType) {
+            var faculty = $('select[name="faculty"]').val();
+            var semester = $('select[name="semester"]').val();
+            var fee = null;
+
+            if (faculty && PROGRAM_FEES[faculty]) {
+                if (semester && PROGRAM_FEES[faculty][semester] !== undefined) {
+                    fee = PROGRAM_FEES[faculty][semester][studentType];
+                }
+                if (fee === null || fee === undefined) {
+                    /* No exact semester row: use the first configured row of this faculty. */
+                    for (var key in PROGRAM_FEES[faculty]) {
+                        if (PROGRAM_FEES[faculty][key][studentType] !== null &&
+                            PROGRAM_FEES[faculty][key][studentType] !== undefined) {
+                            fee = PROGRAM_FEES[faculty][key][studentType];
+                            break;
+                        }
+                    }
+                }
+            }
+
+            if (fee === null || fee === undefined || fee === '' || Number(fee) <= 0) {
+                fee = DEFAULT_FEES[studentType] || 0;
+            }
+
+            return Number(fee).toFixed(2).replace(/\.00$/, '');
+        }
+
+        /* Selecting a department (or its semester) re-prices the registration. */
+        $(document).on('change', 'select[name="faculty"], select[name="semester"]', function () {
+            updatePaymentInfo();
+        });
+
         function updatePaymentInfo() {
             const studentType = $('#studentTypeSelect').val();
             const studentTypeNextBtn = $('#studentTypeNextBtn');
@@ -3202,13 +3245,13 @@
                 studentTypeInfoText.text('As a new student, you will need to complete all required information and pay the registration fee.');
                 studentTypeInfoDiv.show();
                 studentTypeNextBtn.prop('disabled', false);
-                $('#registrationFeeAmount').text('৳{{ $data['registration_setting']->new_student_registration_fee ?? 0 }}');
+                $('#registrationFeeAmount').text('৳' + resolveRegistrationFee('new'));
                 setPaymentButtonState(true);
             } else if (studentType === 'old') {
                 studentTypeInfoText.text('As a returning student, please enter your existing Student ID and Registration Number in the General Information tab.');
                 studentTypeInfoDiv.show();
                 studentTypeNextBtn.prop('disabled', false);
-                $('#registrationFeeAmount').text('৳{{ $data['registration_setting']->old_student_registration_fee ?? 0 }}');
+                $('#registrationFeeAmount').text('৳' + resolveRegistrationFee('old'));
                 // No payment needed for old student when admin enables the hide setting
                 setPaymentButtonState(!hidePaymentForOldStudent);
             } else {

@@ -21,6 +21,12 @@
         </div>
     </td>
     <td>
+        {!! Form::number('program_new_fee[]', $program->new_student_fee, ["placeholder" => "Default", "class" => "form-control", "min" => "0", "step" => "0.01", "title" => "Leave empty to use the default fee"]) !!}
+    </td>
+    <td>
+        {!! Form::number('program_old_fee[]', $program->old_student_fee, ["placeholder" => "Default", "class" => "form-control", "min" => "0", "step" => "0.01", "title" => "Leave empty to use the default fee"]) !!}
+    </td>
+    <td>
         {!! Form::select('program_status[]', ['active' => 'Active', 'in-active' => 'In-Active'], $program->status, ['class' => 'form-control select2']) !!}
     </td>
     <td class="text-center">

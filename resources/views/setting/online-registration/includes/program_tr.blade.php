@@ -19,6 +19,12 @@
         </div>
     </td>
     <td>
+        {!! Form::number('program_new_fee[]', null, ["placeholder" => "Default", "class" => "form-control", "min" => "0", "step" => "0.01", "title" => "Leave empty to use the default fee"]) !!}
+    </td>
+    <td>
+        {!! Form::number('program_old_fee[]', null, ["placeholder" => "Default", "class" => "form-control", "min" => "0", "step" => "0.01", "title" => "Leave empty to use the default fee"]) !!}
+    </td>
+    <td>
         {!! Form::select('program_status[]', ['active' => 'Active', 'in-active' => 'In-Active'], request('status'), ['class' => 'form-control select2']) !!}
     </td>
     <td class="text-center">

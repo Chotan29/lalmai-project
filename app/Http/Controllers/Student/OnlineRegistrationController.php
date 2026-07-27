@@ -104,6 +104,16 @@ class OnlineRegistrationController extends CollegeBaseController
             $data['state'] = $this->activeState();
             $data['annexures'] = Annexure::select('id', 'title')->Active()->get();
 
+            /* Department-wise fee map for the form: faculty => semester => [new, old].
+               A null value means "use the global default fee". */
+            $data['program_fees'] = [];
+            foreach (OnlineRegistrationProgram::select('faculties_id', 'semesters_id', 'new_student_fee', 'old_student_fee')->get() as $programRow) {
+                $data['program_fees'][$programRow->faculties_id][$programRow->semesters_id] = [
+                    'new' => $programRow->new_student_fee !== null ? (float) $programRow->new_student_fee : null,
+                    'old' => $programRow->old_student_fee !== null ? (float) $programRow->old_student_fee : null,
+                ];
+            }
+
 
         }else{
             request()->session()->flash($this->message_warning, 'Public Registration Closed.');
@@ -154,10 +164,14 @@ class OnlineRegistrationController extends CollegeBaseController
                 ], 422);
             }
 
-            // Get the applicable fee
-            $fee = $studentType === 'new' 
-                ? $registrationSetting->new_student_registration_fee 
-                : $registrationSetting->old_student_registration_fee;
+            /* Fee follows the department: a Faculty/Program row in Online Registration
+               Setting can carry its own fee; an empty one falls back to the global fee. */
+            $fee = OnlineRegistrationProgram::resolveFee(
+                $request->input('faculty') ?: $request->input('faculty_id'),
+                $request->input('semester') ?: $request->input('semester_id'),
+                $studentType,
+                $registrationSetting
+            );
 
             if ($registrationSetting->payment_required && $fee <= 0) {
                 return response()->json([
