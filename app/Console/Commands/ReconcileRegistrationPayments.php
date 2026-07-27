@@ -25,16 +25,22 @@ class ReconcileRegistrationPayments extends Command
 {
     protected $signature = 'registration:reconcile
                             {--minutes=5 : Only look at attempts older than this}
-                            {--keep-days=30 : Delete unpaid attempts older than this}
+                            {--unpaid-minutes=30 : Drop attempts the gateway says were never paid after this}
+                            {--keep-days=7 : Drop attempts of unknown status after this}
                             {--dry-run : Report what would happen without changing anything}';
 
     protected $description = 'Complete registrations whose payment succeeded but whose callback was lost';
 
     public function handle()
     {
-        $olderThan = (int) $this->option('minutes') * 60;
-        $keepDays  = (int) $this->option('keep-days');
-        $dryRun    = (bool) $this->option('dry-run');
+        $olderThan     = (int) $this->option('minutes') * 60;
+        $unpaidSeconds = (int) $this->option('unpaid-minutes') * 60;
+        $keepDays      = (int) $this->option('keep-days');
+        $dryRun        = (bool) $this->option('dry-run');
+
+        /* Statuses that mean the money will never arrive for this attempt. Nothing is
+           kept for these - a cancelled or abandoned attempt leaves no data behind. */
+        $deadStatuses = ['CANCELLED', 'CANCELED', 'FAILED', 'EXPIRED', 'UNATTEMPTED'];
 
         $dir = storage_path('app/pending_payments');
         if (!is_dir($dir)) {
@@ -89,15 +95,25 @@ class ReconcileRegistrationPayments extends Command
             if (!$gateway['valid']) {
                 $unpaid++;
 
-                /* Not paid and past the retention window - stop carrying it forever. */
-                if (($now - $startedAt) > ($keepDays * 86400)) {
+                $status = strtoupper((string) $gateway['status']);
+                $age = $now - $startedAt;
+
+                /* The gateway gave a final answer: this attempt was cancelled, failed,
+                   expired or never even started. Keep nothing for it. */
+                $definitelyDead = in_array($status, $deadStatuses, true) && $age > $unpaidSeconds;
+
+                /* No answer at all (transaction unknown to the gateway) - hold it a few
+                   days in case of a temporary lookup problem, then drop it too. */
+                $staleUnknown = $age > ($keepDays * 86400);
+
+                if ($definitelyDead || $staleUnknown) {
                     if (!$dryRun) {
                         @unlink($file);
                         Cache::forget('registration_payment_data:' . $ref);
                         Cache::forget('reg_recovery_verify:' . $ref);
                     }
                     $removed++;
-                    $this->line("  dropped (never paid, expired): {$ref}");
+                    $this->line('  dropped (' . ($status ?: 'no record') . '): ' . $ref);
                 }
                 continue;
             }

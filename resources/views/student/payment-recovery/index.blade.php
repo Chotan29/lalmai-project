@@ -48,7 +48,8 @@
                             <b>What this page does:</b> a student may pay at SSLCommerz and still not get the
                             registration form or receipt. Press <b>Check All with SSLCommerz</b> below: every
                             unfinished application is verified against the gateway, and the ones that were really
-                            paid can be completed with one click. Applications are kept for <b>30 days</b>.
+                            paid can be completed with one click.
+                            <br>Cancelled or unpaid attempts are removed automatically, so only real payments stay here.
                         </div>
 
                         {{-- Lookup by transaction id --}}
@@ -102,8 +103,8 @@
                                                 <input type="checkbox" id="onlyPaid"> show paid only
                                             </label>
                                             <button class="btn btn-white btn-sm" type="button" id="cleanupBtn"
-                                                    style="margin-left:auto;" title="Remove unpaid applications older than 30 days">
-                                                <i class="ace-icon fa fa-trash-o"></i> Remove unpaid older than 30 days
+                                                    style="margin-left:auto;" title="Remove every cancelled / unpaid attempt (paid ones are always kept)">
+                                                <i class="ace-icon fa fa-trash-o"></i> Remove cancelled &amp; unpaid
                                             </button>
                                         </div>
 
@@ -394,7 +395,7 @@
     });
 
     $('#cleanupBtn').click(function () {
-        if (!confirm('Remove unpaid applications older than 30 days? Paid ones are always kept.')) { return; }
+        if (!confirm('Remove every cancelled / unpaid attempt? Paid applications are always kept, and attempts started in the last 30 minutes are left alone.')) { return; }
         var $btn = $(this).prop('disabled', true);
         show($('#bulkResult'), 'warn', 'Cleaning up…');
         $.post(CLEANUP_URL, { _token: TOKEN }, function (res) {

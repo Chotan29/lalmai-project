@@ -150,25 +150,37 @@ class RegistrationPaymentRecoveryController extends CollegeBaseController
     {
         $response = ['error' => true, 'message' => ''];
 
-        $days = 30;
-        $cutoff = time() - ($days * 86400);
+        /* Anything the gateway confirms was never paid is removed straight away - a
+           cancelled or abandoned attempt should not leave data behind. Only attempts
+           the gateway has not answered for yet get a short grace period, and a paid
+           attempt is never touched. */
+        $graceSeconds = 30 * 60;
+        $now = time();
         $deleted = 0;
         $keptPaid = 0;
+        $keptRecent = 0;
 
         foreach ($this->pendingPayloads() as $row) {
-            if (@filemtime($row->file) > $cutoff) {
-                continue;
-            }
-
-            /* Never delete something the gateway says was paid. */
             $verify = Cache::get('reg_recovery_verify:' . $row->ref);
             if (!$verify) {
                 $gateway = $this->sslCommerz->queryByTransactionId($row->ref);
-                $verify = ['paid' => (bool) $gateway['valid']];
+                $verify = [
+                    'paid' => (bool) $gateway['valid'],
+                    'status' => strtoupper((string) $gateway['status']),
+                ];
+                Cache::put('reg_recovery_verify:' . $row->ref, $verify,
+                    $verify['paid'] ? now()->addDay() : now()->addMinutes(30));
             }
 
+            /* Never delete something the gateway says was paid. */
             if (!empty($verify['paid'])) {
                 $keptPaid++;
+                continue;
+            }
+
+            /* Give a very new attempt time to finish paying. */
+            if (($now - (int) @filemtime($row->file)) < $graceSeconds) {
+                $keptRecent++;
                 continue;
             }
 
@@ -180,12 +192,13 @@ class RegistrationPaymentRecoveryController extends CollegeBaseController
         }
 
         \Log::info('[PAYMENT_RECOVERY] Cleanup run', [
-            'deleted' => $deleted, 'kept_paid' => $keptPaid, 'by' => auth()->user()->id ?? null,
+            'deleted' => $deleted, 'kept_paid' => $keptPaid, 'kept_recent' => $keptRecent,
+            'by' => auth()->user()->id ?? null,
         ]);
 
         $response['error'] = false;
-        $response['message'] = $deleted . ' unpaid application(s) older than ' . $days . ' days removed. '
-            . $keptPaid . ' paid application(s) kept.';
+        $response['message'] = $deleted . ' unpaid/cancelled application(s) removed. '
+            . $keptPaid . ' paid kept, ' . $keptRecent . ' still in progress (last 30 minutes).';
 
         return response()->json($response);
     }
