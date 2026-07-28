@@ -294,10 +294,9 @@
         var paid = 0, unpaid = 0, done = 0, checked = 0;
         $('#recTable tbody tr').each(function () {
             var $t = $(this);
-            /* Unchecked rows carry no verdict at all - skip them. */
-            if ($t.attr('data-paid') === undefined && !$t.hasClass('is-paid') && !$t.hasClass('is-unpaid')) { return; }
+            if (!rowIsChecked($t)) { return; }   // no verdict yet
             checked++;
-            if (String($t.attr('data-done')) === '1') { done++; }
+            if (rowIsDone($t)) { done++; }
             else if (rowIsPaid($t)) { paid++; }
             else { unpaid++; }
         });
@@ -313,6 +312,7 @@
             if (!res.error) { setPayCell($tr, res.data); }
             else { $tr.find('.pay-cell').html('<span class="rec-badge unknown">error</span>'); }
             updateCounts();
+            if ($('#onlyPaid').is(':checked')) { $tr.toggle(rowIsPaid($tr)); }
             if (done) { done(); }
         }).fail(function () {
             $tr.find('.pay-cell').html('<span class="rec-badge unknown">error</span>');
@@ -357,7 +357,7 @@
     /* Complete every row that the gateway confirmed as paid. */
     $('#completePaidBtn').click(function () {
         var $rows = $('#recTable tbody tr').filter(function () {
-            return rowIsPaid($(this)) && String($(this).attr('data-done')) !== '1';
+            return rowIsPaid($(this)) && !rowIsDone($(this));
         });
         if (!$rows.length) {
             show($('#bulkResult'), 'warn', 'No paid row to complete. Press <b>Check All with SSLCommerz</b> first.');
@@ -395,29 +395,66 @@
         })();
     });
 
-    /* A row counts as paid if the gateway said so (data-paid) or it is marked paid
-       visually (server-rendered from the cached check). */
+    /* A row counts as paid when its Payment column actually says PAID or COMPLETED.
+       Reading the visible badge is the one signal that is always correct, whether the
+       verdict was rendered by the server or written by a check a moment ago. */
     function rowIsPaid($tr) {
+        var txt = ($tr.find('.pay-cell').text() || '').toUpperCase();
+        if (txt.indexOf('NOT PAID') !== -1) { return false; }
+        if (txt.indexOf('PAID') !== -1 || txt.indexOf('COMPLETED') !== -1) { return true; }
         if (String($tr.attr('data-paid')) === '1') { return true; }
         return $tr.hasClass('is-paid');
     }
 
-    $('#onlyPaid').change(function () {
-        var on = $(this).is(':checked'), shown = 0;
+    function rowIsChecked($tr) {
+        var txt = ($tr.find('.pay-cell').text() || '').toLowerCase();
+        return txt.indexOf('not checked') === -1 && txt.indexOf('checking') === -1;
+    }
+
+    function rowIsDone($tr) {
+        return ($tr.find('.pay-cell').text() || '').toUpperCase().indexOf('COMPLETED') !== -1
+            || String($tr.attr('data-done')) === '1';
+    }
+
+    function applyPaidFilter() {
+        var on = $('#onlyPaid').is(':checked'), shown = 0;
         $('#recTable tbody tr').each(function () {
             var $t = $(this), keep = !on || rowIsPaid($t);
             $t.toggle(keep);
             if (keep) { shown++; }
         });
+        return shown;
+    }
 
-        if (on && shown === 0) {
-            show($('#bulkResult'), 'warn',
-                'No row is marked PAID yet. Press <b>Check All with SSLCommerz</b> first, then tick this box again.');
-        } else if (on) {
-            show($('#bulkResult'), 'ok', 'Showing <b>' + shown + '</b> paid application(s). Use <b>Complete All Paid</b> to finish them.');
-        } else {
-            $('#bulkResult').hide();
+    $('#onlyPaid').change(function () {
+        var on = $(this).is(':checked');
+
+        if (!on) { applyPaidFilter(); $('#bulkResult').hide(); return; }
+
+        /* Rows that were never verified cannot be judged - check them first, then filter,
+           so ticking the box works even without pressing "Check All" beforehand. */
+        var $pending = $('#recTable tbody tr').filter(function () { return !rowIsChecked($(this)); });
+
+        if ($pending.length) {
+            show($('#bulkResult'), 'warn', 'Checking ' + $pending.length + ' application(s) with SSLCommerz first…');
+            var i = 0;
+            (function next() {
+                if (i >= $pending.length) {
+                    var shown = applyPaidFilter();
+                    show($('#bulkResult'), shown ? 'ok' : 'warn', shown
+                        ? 'Showing <b>' + shown + '</b> paid application(s). Use <b>Complete All Paid</b> to finish them.'
+                        : 'None of these applications were actually paid at SSLCommerz.');
+                    return;
+                }
+                checkRow($pending.eq(i++), false, next);
+            })();
+            return;
         }
+
+        var shown = applyPaidFilter();
+        show($('#bulkResult'), shown ? 'ok' : 'warn', shown
+            ? 'Showing <b>' + shown + '</b> paid application(s). Use <b>Complete All Paid</b> to finish them.'
+            : 'None of the checked applications were actually paid at SSLCommerz.');
     });
 
     $('#cleanupBtn').click(function () {
