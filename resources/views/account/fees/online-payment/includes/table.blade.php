@@ -47,6 +47,9 @@
                                 <td>
                                     @if($student->verify_status == 0)
                                         <span class="label label-danger">Not Verify</span>
+                                    @elseif(stripos((string) $student->payment_gateway, 'ssl') !== false)
+                                        {{-- Collected and verified the moment the gateway confirmed it --}}
+                                        <span class="label label-success" title="Confirmed by SSLCommerz and already collected">Auto-verified</span>
                                     @else
                                         <span class="label label-success">Verified</span>
                                     @endif

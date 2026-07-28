@@ -478,6 +478,25 @@ class OnlinePaymentController extends CollegeBaseController
                 return redirect()->back();
             }
 
+            /* Registration payments are collected the moment SSLCommerz confirms them, so
+               the fee is already in fee_collections. Re-posting it would be a duplicate and
+               used to fail with a confusing "already processed" warning. Here we simply
+               mark the payment verified and point to the existing receipt. */
+            $alreadyCollected = \App\Models\FeeCollection::where('external_ref_no', $onlinePaymentDetail->ref_no)->first();
+            if ($alreadyCollected) {
+                if ((string) $onlinePaymentDetail->status !== 'active') {
+                    $onlinePaymentDetail->status = 'active';
+                    $onlinePaymentDetail->last_updated_by = auth()->user()->id ?? null;
+                    $onlinePaymentDetail->save();
+                }
+
+                $request->session()->flash($this->message_success,
+                    'This payment was already collected and verified automatically when SSLCommerz confirmed it '
+                    . '(Ref: ' . $onlinePaymentDetail->ref_no . '). Nothing further is needed.');
+
+                return redirect()->back();
+            }
+
             // Use payment gateway name if available, otherwise default to 'Online'
             $paymentMethod = $onlinePaymentDetail->payment_gateway ?? 'Online';
 

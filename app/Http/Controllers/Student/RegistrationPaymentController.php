@@ -1079,11 +1079,13 @@ class RegistrationPaymentController extends Controller
                 'ref_no' => $transactionRef,
                 'invoice_id' => $feeCollection->id,
                 'payment_status' => 'completed',
-                /* status is the verify-status shown on Account > Fees > Online Payment.
-                   A registration payment stays un-verified so the office checks it against
-                   the gateway and verifies it manually, like every other online payment. */
-                'status' => 'in-active',
-                'note' => 'Online Registration Payment',
+                /* Auto-verified: the gateway already confirmed this payment and the fee was
+                   collected in the same transaction above, so there is nothing left for the
+                   office to check. Marking it verified here avoids the "already processed"
+                   warning that appeared when someone pressed Verify on a fee that was
+                   already collected. */
+                'status' => 'active',
+                'note' => 'Online Registration Payment (auto-verified by SSLCommerz)',
                 'created_by' => 0
             ]);
 
