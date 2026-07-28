@@ -197,9 +197,47 @@ class StudentController extends CollegeBaseController
         }
     }
 
+    /**
+     * How many students to put on one page.
+     *
+     * Filtered lists (a semester, a faculty, a batch, a search) are meant to be read as a
+     * whole - a semester of 200-300 students must fit on one page - so they get a large
+     * limit. The unfiltered list of every student in the college is only ever browsed, so
+     * it stays small: rendering all of them produced a 9 MB page and made the app crawl.
+     */
+    protected function studentPageSize(Request $request)
+    {
+        $filterKeys = ['faculty', 'semester', 'batch', 'academic_status', 'status',
+                       'fast_finder', 'name', 'reg_no', 'gender', 'blood_group', 'religion'];
+
+        $hasFilter = false;
+        foreach ($filterKeys as $key) {
+            if ($request->filled($key)) {
+                $hasFilter = true;
+                break;
+            }
+        }
+
+        /* Admin can still override per request, e.g. ?per_page=500 */
+        if ($request->filled('per_page')) {
+            return max(10, min(1000, (int) $request->get('per_page')));
+        }
+
+        $configured = (int) env('PAGINATION_LIMIT', $this->pagination_limit);
+
+        if ($hasFilter) {
+            /* Whole semester on one page, but never an unbounded dump. */
+            return max(100, min($configured > 0 ? $configured : 500, 500));
+        }
+
+        return 100;
+    }
+
     public function index(Request $request)
     {
         $data = [];
+        $perPage = $this->studentPageSize($request);
+
         if($request->all()) {
             $data['student'] = Student::select('students.id', 'students.reg_no', 'students.reg_date',
                 'students.faculty', 'students.semester', 'students.batch', 'students.academic_status',
@@ -234,7 +272,7 @@ class StudentController extends CollegeBaseController
                 ->join('semesters as s','s.id','=','students.semester')
                 ->join('student_statuses as ss','ss.id','=','students.academic_status')
                 //->get();
-                ->paginate(env('PAGINATION_LIMIT',$this->pagination_limit));
+                ->paginate($perPage);
         }else{
             $data['student'] = Student::select('students.id', 'students.reg_no', 'students.faculty', 'students.semester',
                 'students.academic_status', 'students.first_name', 'students.middle_name', 'students.last_name', 'students.status',
@@ -243,9 +281,8 @@ class StudentController extends CollegeBaseController
                 ->join('faculties as f','f.id','=','students.faculty')
                 ->join('semesters as s','s.id','=','students.semester')
                 ->join('student_statuses as ss','ss.id','=','students.academic_status')
-                ->limit($this->defaultDataFetch)
                 //->get();
-                ->paginate(env('PAGINATION_LIMIT',$this->pagination_limit));
+                ->paginate($perPage);
 
         }
 
