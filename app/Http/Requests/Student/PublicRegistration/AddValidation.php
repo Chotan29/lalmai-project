@@ -46,12 +46,13 @@ class AddValidation extends FormRequest
             'father_middle_name'            => 'max:25',
             'father_last_name'              => 'max:25',
             /* A parent must be reachable on a different number than the student, so the
-               college can always contact the guardian separately. */
+               college can always contact a guardian separately. Father and mother may
+               share one number - many families have only one phone. */
             'father_mobile_1'               => 'nullable | max:25 | different:mobile_1',
             'mother_first_name'             => 'max:25',
             'mother_middle_name'            => 'max:25',
             'mother_last_name'              => 'max:25',
-            'mother_mobile_1'               => 'nullable | max:25 | different:mobile_1 | different:father_mobile_1',
+            'mother_mobile_1'               => 'nullable | max:25 | different:mobile_1',
             'guardian_first_name'             => 'max:25',
             'guardian_middle_name'            => 'max:25',
             'guardian_last_name'              => 'max:25',
@@ -68,7 +69,7 @@ class AddValidation extends FormRequest
         return [
             'reg_no.unique'                          => 'Enter Unique Reg.No.',
             'father_mobile_1.different'              => "Father's mobile number cannot be the same as the student's mobile number.",
-            'mother_mobile_1.different'              => "Mother's mobile number must be different from the student's and father's mobile number.",
+            'mother_mobile_1.different'              => "Mother's mobile number cannot be the same as the student's mobile number.",
             'student_main_image.required'            => 'Image Required, Please Upload Image',
             'student_main_image.max'                 => 'Photo must be within 1MB. Please upload a passport-size photo not larger than 1MB.',
             'blood_group.required'                  => 'Please select blood group.',

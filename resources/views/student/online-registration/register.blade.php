@@ -2404,9 +2404,9 @@
                 return true;
             };
 
-            /* Student, father and mother must each have their own mobile number.
-               Guardian is deliberately excluded: the form lets a guardian reuse a
-               father/mother/student number on purpose. */
+            /* A parent's number must differ from the student's own number. Father and
+               mother may share one number - many families have a single phone - and the
+               guardian may reuse any of them (the form has "same as" buttons for that). */
             function validateParentMobileUniqueness(showToastFn) {
                 const digits = function (v) { return (v || '').toString().replace(/\D/g, ''); };
 
@@ -2430,12 +2430,6 @@
 
                 if (mother && student && mother === student) {
                     setFieldInvalid($mother, "Mother's mobile number cannot be the same as the student's mobile number.", showToastFn());
-                    lastDuplicateMobileField = $mother;
-                    return false;
-                }
-
-                if (mother && father && mother === father) {
-                    setFieldInvalid($mother, "Mother's mobile number cannot be the same as the father's mobile number.", showToastFn());
                     lastDuplicateMobileField = $mother;
                     return false;
                 }
@@ -2603,7 +2597,8 @@
             }
 
             if (file.size > passportPhotoRules.maxSizeBytes) {
-                resetPhotoInput(input, 'Student photo size must not be greater than 5 MB.');
+                resetPhotoInput(input, 'Photo is still larger than {{ $passportPhotoMaxSizeMb }} MB after processing. '
+                    + 'Please choose a smaller photo.');
                 return;
             }
 
@@ -2725,23 +2720,112 @@
             });
         });
 
+        /**
+         * Make almost any photo usable instead of rejecting it.
+         *
+         * A phone camera produces a 3-6 MB image in the wrong shape, which used to fail
+         * the size and the passport-ratio check. Here the picture is centre-cropped to the
+         * 35x45 passport shape and compressed under 1 MB in the browser, so the applicant
+         * simply picks their photo and it works. The strict checks (resolution, ratio,
+         * white background, tilt) still run afterwards on the corrected image.
+         */
+        function preparePassportPhoto(file, callback) {
+            var TARGET_RATIO = passportPhotoRules.ratio;      // 35/45
+            var MAX_BYTES    = passportPhotoRules.maxSizeBytes;
+            var TARGET_H     = 1000;                          // plenty for printing an ID card
+
+            if (!window.FileReader || !window.HTMLCanvasElement || !window.DataTransfer) {
+                callback(file);                                // very old browser: send as is
+                return;
+            }
+            if (!/^image\/(jpeg|jpg|png|bmp)$/i.test(file.type)) {
+                callback(file);                                // let the normal check reject it
+                return;
+            }
+
+            var reader = new FileReader();
+            reader.onload = function (e) {
+                var img = new Image();
+                img.onload = function () {
+                    try {
+                        /* Centre-crop to the passport shape. */
+                        var srcW = img.naturalWidth, srcH = img.naturalHeight;
+                        var cropW = srcW, cropH = Math.round(srcW / TARGET_RATIO);
+                        if (cropH > srcH) { cropH = srcH; cropW = Math.round(srcH * TARGET_RATIO); }
+                        var sx = Math.round((srcW - cropW) / 2);
+                        var sy = Math.round((srcH - cropH) / 2 * 0.6);   // keep the head, not the chin
+                        if (sy < 0) { sy = 0; }
+                        if (sy + cropH > srcH) { sy = srcH - cropH; }
+
+                        var outH = Math.min(TARGET_H, cropH);
+                        var outW = Math.round(outH * TARGET_RATIO);
+
+                        var canvas = document.createElement('canvas');
+                        canvas.width = outW; canvas.height = outH;
+                        var ctx = canvas.getContext('2d');
+                        ctx.fillStyle = '#ffffff';
+                        ctx.fillRect(0, 0, outW, outH);
+                        ctx.drawImage(img, sx, sy, cropW, cropH, 0, 0, outW, outH);
+
+                        /* Compress until it fits comfortably under the limit. */
+                        var quality = 0.9, dataUrl = canvas.toDataURL('image/jpeg', quality);
+                        var guard = 0;
+                        function bytesOf(u) { return Math.ceil((u.length - (u.indexOf(',') + 1)) * 3 / 4); }
+                        while (bytesOf(dataUrl) > (MAX_BYTES * 0.9) && quality > 0.4 && guard < 10) {
+                            quality -= 0.1;
+                            dataUrl = canvas.toDataURL('image/jpeg', quality);
+                            guard++;
+                        }
+
+                        var parts = dataUrl.split(',');
+                        var binary = atob(parts[1]);
+                        var bytes = new Uint8Array(binary.length);
+                        for (var i = 0; i < binary.length; i++) { bytes[i] = binary.charCodeAt(i); }
+                        var newName = (file.name || 'photo').replace(/\.[^.]+$/, '') + '.jpg';
+                        var newFile = new File([bytes], newName, { type: 'image/jpeg' });
+
+                        callback(newFile, dataUrl);
+                    } catch (err) {
+                        callback(file);                        // anything unexpected: keep original
+                    }
+                };
+                img.onerror = function () { callback(file); };
+                img.src = e.target.result;
+            };
+            reader.onerror = function () { callback(file); };
+            reader.readAsDataURL(file);
+        }
+
         // Image preview function
         function previewImage(input) {
             if (input.files && input.files[0]) {
-                var reader = new FileReader();
-                var file = input.files[0];
+                var original = input.files[0];
 
                 clearFieldInvalid($(input));
                 profileImageValidationError = '';
+                profileImageValidationInProgress = true;
 
-                reader.onload = function(e) {
-                    validateSelectedPhoto(file, input, e.target.result);
-                }
+                preparePassportPhoto(original, function (file, dataUrl) {
+                    /* Put the corrected image back into the file input so it is what gets
+                       uploaded, then run the usual checks on it. */
+                    if (file !== original && window.DataTransfer) {
+                        try {
+                            var dt = new DataTransfer();
+                            dt.items.add(file);
+                            input.files = dt.files;
+                        } catch (e) { /* keep the original selection */ }
+                    }
 
-                reader.readAsDataURL(file);
+                    $(input).next('.custom-file-label').addClass('selected').html(file.name);
 
-                var fileName = file.name;
-                $(input).next('.custom-file-label').addClass("selected").html(fileName);
+                    if (dataUrl) {
+                        validateSelectedPhoto(file, input, dataUrl);
+                    } else {
+                        var reader = new FileReader();
+                        reader.onload = function (e) { validateSelectedPhoto(file, input, e.target.result); };
+                        reader.readAsDataURL(file);
+                    }
+                });
             } else {
                 profileImageValidationInProgress = false;
                 profileImageValidationError = '';
@@ -2892,8 +2976,6 @@
                 }
                 if (mother && student && mother === student) {
                     setFieldInvalid($mother, "Mother's mobile number cannot be the same as the student's mobile number.", false);
-                } else if (mother && father && mother === father) {
-                    setFieldInvalid($mother, "Mother's mobile number cannot be the same as the father's mobile number.", false);
                 }
             });
 
