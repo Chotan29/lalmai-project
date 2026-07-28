@@ -308,15 +308,28 @@
 
     function checkRow($tr, force, done) {
         $tr.find('.pay-cell').html('<span class="rec-badge checking">checking…</span>');
-        $.post(AUTO_URL, { _token: TOKEN, ref: $tr.data('ref'), force: force ? 1 : 0 }, function (res) {
-            if (!res.error) { setPayCell($tr, res.data); }
-            else { $tr.find('.pay-cell').html('<span class="rec-badge unknown">error</span>'); }
-            updateCounts();
-            if ($('#onlyPaid').is(':checked')) { $tr.toggle(rowIsPaid($tr)); }
-            if (done) { done(); }
-        }).fail(function () {
-            $tr.find('.pay-cell').html('<span class="rec-badge unknown">error</span>');
-            if (done) { done(); }
+
+        /* One slow answer from the gateway must not stall the whole queue. */
+        var finished = false;
+        function finish() { if (!finished) { finished = true; if (done) { done(); } } }
+
+        $.ajax({
+            type: 'POST',
+            url: AUTO_URL,
+            timeout: 30000,
+            data: { _token: TOKEN, ref: $tr.data('ref'), force: force ? 1 : 0 },
+            success: function (res) {
+                if (!res.error) { setPayCell($tr, res.data); }
+                else { $tr.find('.pay-cell').html('<span class="rec-badge unknown">error</span>'); }
+                updateCounts();
+                if ($('#onlyPaid').is(':checked')) { $tr.toggle(rowIsPaid($tr)); }
+                finish();
+            },
+            error: function (xhr, status) {
+                $tr.find('.pay-cell').html('<span class="rec-badge unknown">'
+                    + (status === 'timeout' ? 'slow - retry' : 'error') + '</span>');
+                finish();
+            }
         });
     }
 

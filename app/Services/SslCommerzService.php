@@ -174,7 +174,14 @@ class SslCommerzService
         ];
 
         try {
-            $res  = $this->http->get($endpoint, ['query' => $query]);
+            /* Hard limits: a slow gateway must never hang the recovery screen. The caller
+               shows "check again" for a timed-out row instead of freezing the whole list. */
+            $res  = $this->http->get($endpoint, [
+                'query'           => $query,
+                'connect_timeout' => 8,
+                'timeout'         => 15,
+                'http_errors'     => false,
+            ]);
             $body = json_decode((string) $res->getBody(), true) ?? [];
             $out['raw'] = $body;
 
