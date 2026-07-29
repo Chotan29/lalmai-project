@@ -5,8 +5,40 @@
        science paper -> Theory | MCQ | Practical | Total | LG
        English       ->                            Total | LG --}}
 
+@php
+    $tabGs = $generalSetting ?? null;
+
+    /* Embed the logo as base64 so it survives both the browser print dialog and the
+       dompdf PDF renderer - a plain <img src="/images/..."> is dropped by dompdf when the
+       app isn't reachable from the PDF worker. */
+    $tabLogoSrc = '';
+    if (isset($tabGs->logo) && $tabGs->logo) {
+        $tabLogoFile = public_path('images/setting/general/'.$tabGs->logo);
+        if (is_file($tabLogoFile)) {
+            $tabLogoExt = strtolower(pathinfo($tabLogoFile, PATHINFO_EXTENSION));
+            $tabLogoMime = ($tabLogoExt === 'jpg' || $tabLogoExt === 'jpeg') ? 'jpeg' : $tabLogoExt;
+            $tabLogoSrc = 'data:image/'.$tabLogoMime.';base64,'.base64_encode(file_get_contents($tabLogoFile));
+        }
+    }
+@endphp
+
 <table class="tab-sheet-head">
     <tr>
+        <td class="tab-head-logo-cell">
+            @if($tabLogoSrc)
+                <img src="{{ $tabLogoSrc }}" alt="Logo" class="tab-head-logo">
+            @endif
+        </td>
+        <td>
+            <div class="tab-title">
+                <h2>{{ $generalSetting->institute ?? 'Lalmai Govt. College' }}</h2>
+                <h4>Results of {{ ViewHelper::getSemesterTitle($data['semester']) }} {{ ViewHelper::getExamById($data['exam']) }} - {{ ViewHelper::getYearById($data['year']) }}</h4>
+            </div>
+            <div class="tab-meta">
+                <span class="group-box">Group-{{ ViewHelper::getFacultyTitle($data['faculty']) }}</span>
+                <span style="float:right;">Date: {{ \Carbon\Carbon::now()->format('d.m.Y') }}</span>
+            </div>
+        </td>
         <td style="width:180px;">
             <table class="tab-scale-table">
                 <tr><th>Marks</th><th>GPA</th></tr>
@@ -19,16 +51,6 @@
                     @endif
                 @endforeach
             </table>
-        </td>
-        <td>
-            <div class="tab-title">
-                <h2>{{ $generalSetting->institute ?? 'Lalmai Govt. College' }}</h2>
-                <h4>Results of {{ ViewHelper::getSemesterTitle($data['semester']) }} {{ ViewHelper::getExamById($data['exam']) }} - {{ ViewHelper::getYearById($data['year']) }}</h4>
-            </div>
-            <div class="tab-meta">
-                <span class="group-box">Group-{{ ViewHelper::getFacultyTitle($data['faculty']) }}</span>
-                <span style="float:right;">Date: {{ \Carbon\Carbon::now()->format('d.m.Y') }}</span>
-            </div>
         </td>
     </tr>
 </table>
@@ -65,7 +87,7 @@
     </thead>
     <tbody>
         @foreach($data['student'] as $student)
-            <tr>
+            <tr class="{{ $loop->even ? 'tab-row-even' : '' }}">
                 <td>{{ $student->reg_no }}</td>
                 <td class="text-left">{{ trim($student->first_name.' '.$student->middle_name.' '.$student->last_name) }}</td>
                 @foreach($data['subject_columns'] as $column)

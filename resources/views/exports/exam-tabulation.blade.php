@@ -4,7 +4,7 @@
 <table>
     <thead>
         <tr>
-            <th colspan="{{ $width }}" style="font-weight:bold; font-size:16px; text-align:center;">
+            <th colspan="{{ $width }}" style="font-weight:bold; font-size:16px; text-align:center; background-color:#0f5132; color:#ffffff;">
                 {{ $generalSetting->institute ?? 'Lalmai Govt. College' }}
             </th>
         </tr>
@@ -18,23 +18,23 @@
             <th colspan="{{ $width - 2 }}" style="text-align:right;">Date: {{ \Carbon\Carbon::now()->format('d.m.Y') }}</th>
         </tr>
         <tr>
-            <th style="font-weight:bold; border:1px solid #333;">Roll</th>
-            <th style="font-weight:bold; border:1px solid #333;">Name</th>
+            <th style="font-weight:bold; border:1px solid #333; background-color:#0f5132; color:#ffffff;">Roll</th>
+            <th style="font-weight:bold; border:1px solid #333; background-color:#0f5132; color:#ffffff;">Name</th>
             @foreach($data['subject_columns'] as $column)
-                <th colspan="{{ $column->span }}" style="font-weight:bold; border:1px solid #333; text-align:center;">{{ $column->short_name ?? $column->title }}</th>
+                <th colspan="{{ $column->span }}" style="font-weight:bold; border:1px solid #333; text-align:center; background-color:#0f5132; color:#ffffff;">{{ $column->short_name ?? $column->title }}</th>
             @endforeach
-            <th style="font-weight:bold; border:1px solid #333;">GPA</th>
-            <th style="font-weight:bold; border:1px solid #333;">L.G</th>
+            <th style="font-weight:bold; border:1px solid #333; background-color:#0f5132; color:#ffffff;">GPA</th>
+            <th style="font-weight:bold; border:1px solid #333; background-color:#0f5132; color:#ffffff;">L.G</th>
         </tr>
         <tr>
             <th style="border:1px solid #333;"></th>
             <th style="border:1px solid #333;"></th>
             @foreach($data['subject_columns'] as $column)
-                @if($column->has_theory)<th style="font-weight:bold; border:1px solid #333; text-align:center;">T</th>@endif
-                @if($column->has_mcq)<th style="font-weight:bold; border:1px solid #333; text-align:center;">M</th>@endif
-                @if($column->has_practical)<th style="font-weight:bold; border:1px solid #333; text-align:center;">P</th>@endif
-                <th style="font-weight:bold; border:1px solid #333; text-align:center;">Tot</th>
-                <th style="font-weight:bold; border:1px solid #333; text-align:center;">LG</th>
+                @if($column->has_theory)<th style="font-weight:bold; border:1px solid #333; text-align:center; background-color:#e7f3ec;">T</th>@endif
+                @if($column->has_mcq)<th style="font-weight:bold; border:1px solid #333; text-align:center; background-color:#e7f3ec;">M</th>@endif
+                @if($column->has_practical)<th style="font-weight:bold; border:1px solid #333; text-align:center; background-color:#e7f3ec;">P</th>@endif
+                <th style="font-weight:bold; border:1px solid #333; text-align:center; background-color:#e7f3ec;">Tot</th>
+                <th style="font-weight:bold; border:1px solid #333; text-align:center; background-color:#e7f3ec;">LG</th>
             @endforeach
             <th style="border:1px solid #333;"></th>
             <th style="border:1px solid #333;"></th>
@@ -55,31 +55,32 @@
     </thead>
     <tbody>
         @foreach($data['student'] as $student)
+            @php($rowBg = $loop->even ? 'background-color:#f4f9f6;' : '')
             <tr>
-                <td style="border:1px solid #333;">{{ $student->reg_no }}</td>
-                <td style="border:1px solid #333;">{{ trim($student->first_name.' '.$student->middle_name.' '.$student->last_name) }}</td>
+                <td style="border:1px solid #333; {{ $rowBg }}">{{ $student->reg_no }}</td>
+                <td style="border:1px solid #333; {{ $rowBg }}">{{ trim($student->first_name.' '.$student->middle_name.' '.$student->last_name) }}</td>
                 @foreach($data['subject_columns'] as $column)
                     @php($subject = $student->subjects->firstWhere('subjects_id', $column->subjects_id))
                     @if($subject)
                         @if($column->has_theory)
-                            <td style="border:1px solid #333; text-align:center;">{{ is_numeric($subject->obtain_mark_theory) ? $subject->obtain_mark_theory + 0 : $subject->obtain_mark_theory }}</td>
+                            <td style="border:1px solid #333; text-align:center; {{ $subject->th_remark ? 'background-color:#fdecea;color:#c0392b;font-weight:bold;' : $rowBg }}">{{ is_numeric($subject->obtain_mark_theory) ? $subject->obtain_mark_theory + 0 : $subject->obtain_mark_theory }}</td>
                         @endif
                         @if($column->has_mcq)
-                            <td style="border:1px solid #333; text-align:center;">{{ is_numeric($subject->obtain_mark_mcq) ? $subject->obtain_mark_mcq + 0 : $subject->obtain_mark_mcq }}</td>
+                            <td style="border:1px solid #333; text-align:center; {{ $subject->mcq_remark ? 'background-color:#fdecea;color:#c0392b;font-weight:bold;' : $rowBg }}">{{ is_numeric($subject->obtain_mark_mcq) ? $subject->obtain_mark_mcq + 0 : $subject->obtain_mark_mcq }}</td>
                         @endif
                         @if($column->has_practical)
-                            <td style="border:1px solid #333; text-align:center;">{{ is_numeric($subject->obtain_mark_practical) ? $subject->obtain_mark_practical + 0 : $subject->obtain_mark_practical }}</td>
+                            <td style="border:1px solid #333; text-align:center; {{ $subject->pr_remark ? 'background-color:#fdecea;color:#c0392b;font-weight:bold;' : $rowBg }}">{{ is_numeric($subject->obtain_mark_practical) ? $subject->obtain_mark_practical + 0 : $subject->obtain_mark_practical }}</td>
                         @endif
-                        <td style="border:1px solid #333; text-align:center;">{{ is_numeric($subject->total_obtain_mark) ? $subject->total_obtain_mark + 0 : $subject->total_obtain_mark }}</td>
-                        <td style="border:1px solid #333; text-align:center;">{{ $subject->final_grade }}</td>
+                        <td style="border:1px solid #333; text-align:center; {{ $rowBg }}">{{ is_numeric($subject->total_obtain_mark) ? $subject->total_obtain_mark + 0 : $subject->total_obtain_mark }}</td>
+                        <td style="border:1px solid #333; text-align:center; {{ $subject->final_grade == 'F' ? 'background-color:#fdecea;color:#c0392b;font-weight:bold;' : $rowBg }}">{{ $subject->final_grade }}</td>
                     @else
                         @for($i = 0; $i < $column->span; $i++)
-                            <td style="border:1px solid #333; text-align:center;">-</td>
+                            <td style="border:1px solid #333; text-align:center; {{ $rowBg }}">-</td>
                         @endfor
                     @endif
                 @endforeach
-                <td style="border:1px solid #333; text-align:center; font-weight:bold;">{{ $student->gpa_average }}</td>
-                <td style="border:1px solid #333; text-align:center; font-weight:bold;">{{ $student->gpa_grade }}</td>
+                <td style="border:1px solid #333; text-align:center; font-weight:bold; {{ $rowBg }}">{{ $student->gpa_average }}</td>
+                <td style="border:1px solid #333; text-align:center; font-weight:bold; {{ $student->gpa_grade == 'F' ? 'background-color:#fdecea;color:#c0392b;' : $rowBg }}">{{ $student->gpa_grade }}</td>
             </tr>
         @endforeach
         <tr><td colspan="{{ $width }}"></td></tr>
