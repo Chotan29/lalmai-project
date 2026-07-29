@@ -22,10 +22,13 @@ use App\Models\GradingType;
 use App\Models\Semester;
 use App\Models\Student;
 use App\Models\Subject;
+use App\Exports\ExamTabulationExport;
 use App\Traits\ExaminationScope;
+use Barryvdh\DomPDF\Facade as PDF;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Maatwebsite\Excel\Facades\Excel;
 use view, URL;
 use ViewHelper;
 class ExamPrintController extends CollegeBaseController
@@ -583,6 +586,9 @@ class ExamPrintController extends CollegeBaseController
                 $data = $this->examMarkLedger($request);
                 return view(parent::loadDataToView($this->view_path.'.mark-ledger'), compact('data'));
             }
+            elseif($request->get('result-type') =='tabulation'){
+                return $this->examTabulationSheet($request);
+            }
             else{
                 return back();
             }
@@ -590,6 +596,87 @@ class ExamPrintController extends CollegeBaseController
             return back();
         }
 
+    }
+
+    /**
+     * Class-wide tabulation / result sheet (one row per student).
+     * Reuses hscGradingSystem() for all mark & grade calculations.
+     * output: web (default) | pdf | excel
+     */
+    public function examTabulationSheet(Request $request)
+    {
+        $data = $this->hscGradingSystem($request);
+
+        /* trait returns a redirect when no student rows were checked */
+        if (!is_array($data)) {
+            return $data;
+        }
+
+        /* Every subject SCHEDULED for this exam gets a column - not only the ones that
+           happen to have marks - so the sheet always mirrors the exam routine. Anything a
+           student did not sit simply shows a dash. */
+        $scheduleIds = array_filter(explode(',', (string) $request->get('exam_schedule_id')));
+
+        $subjectColumns = [];
+
+        foreach (ExamSchedule::whereIn('exam_schedules.id', $scheduleIds)
+                    ->join('subjects as sub', 'sub.id', '=', 'exam_schedules.subjects_id')
+                    ->select('sub.id as subjects_id', 'sub.title', 'sub.code', 'sub.short_name',
+                        'exam_schedules.sorting_order')
+                    ->orderBy('exam_schedules.sorting_order')
+                    ->get() as $row) {
+            if (isset($subjectColumns[$row->subjects_id])) {
+                continue;
+            }
+            $subjectColumns[$row->subjects_id] = (object) [
+                'subjects_id'   => $row->subjects_id,
+                'title'         => $row->title,
+                'code'          => $row->code,
+                'short_name'    => Subject::shortLabel($row),
+                'sorting_order' => $row->sorting_order,
+            ];
+        }
+
+        /* Safety net: a subject a student has marks for but which is no longer scheduled
+           must still be printed rather than silently dropped. */
+        foreach ($data['student'] as $student) {
+            foreach ($student->subjects as $subject) {
+                if (isset($subjectColumns[$subject->subjects_id])) {
+                    continue;
+                }
+                $subjectColumns[$subject->subjects_id] = (object) [
+                    'subjects_id'   => $subject->subjects_id,
+                    'title'         => $subject->title,
+                    'code'          => $subject->code,
+                    'short_name'    => Subject::shortLabelFromTitle($subject->title),
+                    'sorting_order' => $subject->sorting_order,
+                ];
+            }
+        }
+
+        $data['subject_columns'] = collect($subjectColumns)->sortBy('sorting_order')->values();
+
+        /* roll (reg_no) ascending, like a physical tabulation sheet */
+        $data['student'] = $data['student']->sortBy('reg_no')->values();
+
+        $fileName = 'Tabulation_Sheet_'
+            . str_replace(' ', '_', ViewHelper::getExamById($data['exam']))
+            . '_' . Carbon::now()->format('d-m-Y');
+
+        if ($request->get('output') == 'pdf') {
+            $pdf = PDF::loadView($this->view_path.'.tabulation-sheet-pdf', compact('data'))
+                ->setPaper('a4', 'landscape');
+            return $pdf->download($fileName.'.pdf');
+        }
+
+        if ($request->get('output') == 'excel') {
+            return Excel::download(new ExamTabulationExport($data), $fileName.'.xlsx');
+        }
+
+        /* keep original request inputs so the web view can re-post for pdf/excel */
+        $data['request_inputs'] = $request->except(['output', '_token']);
+
+        return view(parent::loadDataToView($this->view_path.'.tabulation-sheet'), compact('data'));
     }
 
 }

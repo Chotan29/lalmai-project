@@ -16,6 +16,22 @@
 </div>
 
 <div class="form-group">
+    {!! Form::label('short_name', 'Short Name', ['class' => 'col-sm-3 control-label']) !!}
+    <div class="col-sm-9">
+        {!! Form::text('short_name', null, ["placeholder" => "e.g. ICT — used in the tabulation sheet columns", "class" => "form-control border-form", 'maxlength' => 20]) !!}
+        <span class="help-block" style="margin-bottom:0;">
+            Leave empty and a short form is generated automatically
+            @if(isset($data['row']) && $data['row'])
+                (now: <strong>{{ \App\Models\Subject::shortLabelFromTitle($data['row']->title) }}</strong>)
+            @else
+                (e.g. "Information and Communication Technology -I" &rarr; <strong>ICT-I</strong>)
+            @endif
+        </span>
+        @include('includes.form_fields_validation_message', ['name' => 'short_name'])
+    </div>
+</div>
+
+<div class="form-group">
     {!! Form::label('full_mark_theory', 'FM (T)', ['class' => 'col-sm-3 control-label']) !!}
     <div class="col-sm-3">
         {!! Form::number('full_mark_theory', null, ["class" => "form-control border-form",'min'=>'0','step'=>'any']) !!}
