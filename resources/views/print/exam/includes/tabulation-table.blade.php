@@ -1,5 +1,9 @@
 {{-- Shared tabulation sheet markup: header + grade scale + class-wide result table.
-     Used by tabulation-sheet.blade.php (web/print) and tabulation-sheet-pdf.blade.php (dompdf). --}}
+     Used by tabulation-sheet.blade.php (web/print) and tabulation-sheet-pdf.blade.php (dompdf).
+
+     Each subject shows only the components it actually has:
+       science paper -> Theory | MCQ | Practical | Total | LG
+       English       ->                            Total | LG --}}
 
 <table class="tab-sheet-head">
     <tr>
@@ -32,18 +36,30 @@
 <table class="tab-main-table">
     <thead>
         <tr>
-            <th rowspan="2" style="width:70px;">Roll</th>
-            <th rowspan="2" class="text-left" style="min-width:120px;">Name</th>
+            <th rowspan="3" class="col-roll">Roll</th>
+            <th rowspan="3" class="text-left col-name">Name</th>
             @foreach($data['subject_columns'] as $column)
-                <th colspan="2" class="tab-subject-head" title="{{ $column->title }}">{{ $column->short_name ?? $column->title }}</th>
+                <th colspan="{{ $column->span }}" class="tab-subject-head" title="{{ $column->title }}">{{ $column->short_name ?? $column->title }}</th>
             @endforeach
-            <th rowspan="2">GPA</th>
-            <th rowspan="2">L.G</th>
+            <th rowspan="3" class="col-gpa">GPA</th>
+            <th rowspan="3" class="col-gpa">L.G</th>
         </tr>
         <tr>
             @foreach($data['subject_columns'] as $column)
-                <th>Mark</th>
+                @if($column->has_theory)<th>T</th>@endif
+                @if($column->has_mcq)<th>M</th>@endif
+                @if($column->has_practical)<th>P</th>@endif
+                <th>Tot</th>
                 <th>LG</th>
+            @endforeach
+        </tr>
+        <tr class="tab-fullmark-row">
+            @foreach($data['subject_columns'] as $column)
+                @if($column->has_theory)<th>{{ $column->full_theory + 0 }}</th>@endif
+                @if($column->has_mcq)<th>{{ $column->full_mcq + 0 }}</th>@endif
+                @if($column->has_practical)<th>{{ $column->full_practical + 0 }}</th>@endif
+                <th>{{ $column->full_total + 0 }}</th>
+                <th>&mdash;</th>
             @endforeach
         </tr>
     </thead>
@@ -55,11 +71,21 @@
                 @foreach($data['subject_columns'] as $column)
                     @php($subject = $student->subjects->firstWhere('subjects_id', $column->subjects_id))
                     @if($subject)
+                        @if($column->has_theory)
+                            <td class="{{ $subject->th_remark ? 'tab-fail' : '' }}">{{ is_numeric($subject->obtain_mark_theory) ? $subject->obtain_mark_theory + 0 : $subject->obtain_mark_theory }}</td>
+                        @endif
+                        @if($column->has_mcq)
+                            <td class="{{ $subject->mcq_remark ? 'tab-fail' : '' }}">{{ is_numeric($subject->obtain_mark_mcq) ? $subject->obtain_mark_mcq + 0 : $subject->obtain_mark_mcq }}</td>
+                        @endif
+                        @if($column->has_practical)
+                            <td class="{{ $subject->pr_remark ? 'tab-fail' : '' }}">{{ is_numeric($subject->obtain_mark_practical) ? $subject->obtain_mark_practical + 0 : $subject->obtain_mark_practical }}</td>
+                        @endif
                         <td>{{ is_numeric($subject->total_obtain_mark) ? $subject->total_obtain_mark + 0 : $subject->total_obtain_mark }}</td>
                         <td class="{{ $subject->final_grade == 'F' ? 'tab-fail' : '' }}">{{ $subject->final_grade }}</td>
                     @else
-                        <td>-</td>
-                        <td>-</td>
+                        @for($i = 0; $i < $column->span; $i++)
+                            <td>-</td>
+                        @endfor
                     @endif
                 @endforeach
                 <td><strong>{{ rtrim(rtrim(number_format((float) $student->gpa_average, 2), '0'), '.') }}</strong></td>
@@ -71,8 +97,10 @@
 
 {{-- The columns carry short names to keep the sheet on one page; this spells them out. --}}
 <div class="tab-subject-legend">
-    <strong>Subjects:</strong>
-    @foreach($data['subject_columns'] as $column)
-        <span><b>{{ $column->short_name ?? $column->title }}</b> = {{ $column->title }}</span>@if(!$loop->last) &nbsp;|&nbsp; @endif
-    @endforeach
+    <div><strong>T</strong> = Theory &nbsp;|&nbsp; <strong>M</strong> = MCQ &nbsp;|&nbsp; <strong>P</strong> = Practical &nbsp;|&nbsp; <strong>Tot</strong> = Total &nbsp;|&nbsp; <strong>LG</strong> = Letter Grade &nbsp;|&nbsp; <strong>AB</strong> = Absent &nbsp;|&nbsp; the third heading row shows full marks.</div>
+    <div><strong>Subjects:</strong>
+        @foreach($data['subject_columns'] as $column)
+            <span><b>{{ $column->short_name ?? $column->title }}</b> = {{ $column->title }}</span>@if(!$loop->last) &nbsp;|&nbsp; @endif
+        @endforeach
+    </div>
 </div>

@@ -599,6 +599,43 @@ class ExamPrintController extends CollegeBaseController
     }
 
     /**
+     * One tabulation column group for a subject.
+     * A subject only gets the component sub-columns it really has: an English paper with
+     * no MCQ and no practical takes 2 cells (Total, LG), a science paper takes 5
+     * (Theory, MCQ, Practical, Total, LG). That keeps the sheet as narrow as the data
+     * allows instead of printing a forest of dashes.
+     */
+    private function tabulationColumn($subject, $sortingOrder)
+    {
+        $fullTheory = (float) ($subject->full_mark_theory ?? 0);
+        $fullMcq = (float) ($subject->mcq_number_theory ?? 0);
+        $fullPractical = (float) ($subject->full_mark_practical ?? 0);
+
+        $span = 2; /* Total + LG are always printed */
+        foreach ([$fullTheory, $fullMcq, $fullPractical] as $mark) {
+            if ($mark > 0) {
+                $span++;
+            }
+        }
+
+        return (object) [
+            'subjects_id'    => $subject->id ?? $subject->subjects_id,
+            'title'          => $subject->title,
+            'code'           => $subject->code,
+            'short_name'     => Subject::shortLabel($subject),
+            'sorting_order'  => $sortingOrder,
+            'has_theory'     => $fullTheory > 0,
+            'has_mcq'        => $fullMcq > 0,
+            'has_practical'  => $fullPractical > 0,
+            'full_theory'    => $fullTheory,
+            'full_mcq'       => $fullMcq,
+            'full_practical' => $fullPractical,
+            'full_total'     => $fullTheory + $fullMcq + $fullPractical,
+            'span'           => $span,
+        ];
+    }
+
+    /**
      * Class-wide tabulation / result sheet (one row per student).
      * Reuses hscGradingSystem() for all mark & grade calculations.
      * output: web (default) | pdf | excel
@@ -622,19 +659,14 @@ class ExamPrintController extends CollegeBaseController
         foreach (ExamSchedule::whereIn('exam_schedules.id', $scheduleIds)
                     ->join('subjects as sub', 'sub.id', '=', 'exam_schedules.subjects_id')
                     ->select('sub.id as subjects_id', 'sub.title', 'sub.code', 'sub.short_name',
+                        'sub.full_mark_theory', 'sub.mcq_number_theory', 'sub.full_mark_practical',
                         'exam_schedules.sorting_order')
                     ->orderBy('exam_schedules.sorting_order')
                     ->get() as $row) {
             if (isset($subjectColumns[$row->subjects_id])) {
                 continue;
             }
-            $subjectColumns[$row->subjects_id] = (object) [
-                'subjects_id'   => $row->subjects_id,
-                'title'         => $row->title,
-                'code'          => $row->code,
-                'short_name'    => Subject::shortLabel($row),
-                'sorting_order' => $row->sorting_order,
-            ];
+            $subjectColumns[$row->subjects_id] = $this->tabulationColumn($row, $row->sorting_order);
         }
 
         /* Safety net: a subject a student has marks for but which is no longer scheduled
@@ -644,17 +676,17 @@ class ExamPrintController extends CollegeBaseController
                 if (isset($subjectColumns[$subject->subjects_id])) {
                     continue;
                 }
-                $subjectColumns[$subject->subjects_id] = (object) [
-                    'subjects_id'   => $subject->subjects_id,
-                    'title'         => $subject->title,
-                    'code'          => $subject->code,
-                    'short_name'    => Subject::shortLabelFromTitle($subject->title),
-                    'sorting_order' => $subject->sorting_order,
-                ];
+                $subjectColumns[$subject->subjects_id] = $this->tabulationColumn(
+                    Subject::find($subject->subjects_id) ?: $subject,
+                    $subject->sorting_order
+                );
             }
         }
 
         $data['subject_columns'] = collect($subjectColumns)->sortBy('sorting_order')->values();
+
+        /* Total printed cells across the sheet - the views use it to pick a font size. */
+        $data['tabulation_cell_count'] = $data['subject_columns']->sum('span') + 4;
 
         /* roll (reg_no) ascending, like a physical tabulation sheet */
         $data['student'] = $data['student']->sortBy('reg_no')->values();
@@ -663,10 +695,17 @@ class ExamPrintController extends CollegeBaseController
             . str_replace(' ', '_', ViewHelper::getExamById($data['exam']))
             . '_' . Carbon::now()->format('d-m-Y');
 
+        /* The office prints these on legal paper; a4 and a3 stay available. */
+        $paper = strtolower((string) $request->get('paper'));
+        if (!in_array($paper, ['a4', 'legal', 'a3'], true)) {
+            $paper = 'legal';
+        }
+        $data['paper'] = $paper;
+
         if ($request->get('output') == 'pdf') {
             $pdf = PDF::loadView($this->view_path.'.tabulation-sheet-pdf', compact('data'))
-                ->setPaper('a4', 'landscape');
-            return $pdf->download($fileName.'.pdf');
+                ->setPaper($paper, 'landscape');
+            return $pdf->download($fileName.'-'.$paper.'.pdf');
         }
 
         if ($request->get('output') == 'excel') {
