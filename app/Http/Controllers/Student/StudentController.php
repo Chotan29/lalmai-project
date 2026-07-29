@@ -1069,14 +1069,21 @@ class StudentController extends CollegeBaseController
         //semesters Subjects
         $semesterModel = Semester::find($data['row']->semester);
         $data['max_subjects_count'] =  $semesterModel ? $semesterModel->major_subject_count : 0;
-        $data['subjects'] =  $semesterModel ? $semesterModel->subjects()->orderBy('subjects.title')->get() : collect();
+        $data['subjects'] =  $semesterModel
+            ? $semesterModel->subjects()->select('subjects.*', 'semester_subject.allow_as_optional')->orderBy('subjects.title')->get()
+            : collect();
         //$data['existing_subjects'] = $data['row']->majorSubject()->join('subjects as s','s.id','=','student_subjects.subjects_id')->pluck('s.title', 's.id')->toArray();
         $data['existing_subjects'] = $data['row']->majorSubject()->join('subjects as s','s.id','=','student_subject.subjects_id')->pluck('s.title', 's.id')->toArray();
         $data['selected_subject_ids'] = array_map('intval', array_keys($data['existing_subjects']));
+        /*Which of them the student carries as the 4th subject*/
+        $data['selected_optional_ids'] = $data['row']->majorSubject()
+            ->where('subject_role', \App\Models\StudentSubject::ROLE_OPTIONAL)
+            ->pluck('subjects_id')->map(function ($v) { return (int) $v; })->all();
         $data['subjects_html'] = view('student.online-registration.includes.forms.fetch-subjects', [
             'subjects' => $data['subjects'],
             'numOfSubject' => $data['max_subjects_count'] ?: $data['subjects']->count(),
             'selectedSubjectIds' => $data['selected_subject_ids'],
+            'selectedOptionalIds' => $data['selected_optional_ids'],
         ])->render();
 
         $data['annexures'] = Annexure::select('id', 'title')->Active()->get();
@@ -1092,9 +1099,38 @@ class StudentController extends CollegeBaseController
         return view(parent::loadDataToView($this->view_path.'.registration.edit'), compact('data'));
     }
 
+    /**
+     * The subject ids the user ticked in the "Optional (4th) subject" column.
+     * Posted as a comma separated hidden field by the subject picker. Only ids that are
+     * actually among the selected subjects count. When the field is absent (older forms,
+     * API callers) we fall back to the historic rule: the subject master's own type.
+     */
+    protected function postedOptionalSubjectIds($request, array $selectedSubjects, $semesterSubjects)
+    {
+        $selected = array_map('intval', $selectedSubjects);
+
+        if ($request->has('optional_subject_ids')) {
+            $raw = $request->get('optional_subject_ids');
+            $ids = is_array($raw) ? $raw : explode(',', (string) $raw);
+
+            return array_values(array_intersect(
+                array_unique(array_filter(array_map('intval', $ids))),
+                $selected
+            ));
+        }
+
+        return $semesterSubjects
+            ->filter(function ($subject) {
+                return strtolower(trim((string) ($subject->sub_type ?? ''))) === 'optional';
+            })
+            ->pluck('id')
+            ->map(function ($v) { return (int) $v; })
+            ->all();
+    }
+
     public function update(EditValidation $request, $id)
     {
-        
+
         $id = decrypt($id);
         if (!$row = Student::find($id))
             return parent::invalidRequest();
@@ -1121,9 +1157,12 @@ class StudentController extends CollegeBaseController
             ]);
         }
 
-        $optionalCount = $semesterSubjects->filter(function ($subject) {
-            return strtolower(trim((string) ($subject->sub_type ?? ''))) === 'optional';
-        })->count();
+        /*The 4th subject is whatever was ticked in the Optional column, not whatever the
+          subject master happens to say. A subject may legitimately be compulsory for one
+          student and the 4th subject for another.*/
+        $optionalSubjectIds = $this->postedOptionalSubjectIds($request, $selectedSubjects, $semesterSubjects);
+
+        $optionalCount = count($optionalSubjectIds);
         $compulsoryCount = $semesterSubjects->count() - $optionalCount;
 
         if (count($selectedSubjects) > $maxAllowedSubjects) {
@@ -1374,9 +1413,16 @@ class StudentController extends CollegeBaseController
 
             //student subjects
             if($request->has('subject')) {
-                $subjects = $selectedSubjects;
-
-                // dd($subjects);
+                /*Store the role with the enrolment: one paper is one subject, and whether
+                  the student carries it as compulsory or as the 4th subject lives here.*/
+                $subjects = [];
+                foreach ($selectedSubjects as $subjectId) {
+                    $subjects[(int) $subjectId] = [
+                        'subject_role' => in_array((int) $subjectId, $optionalSubjectIds, true)
+                            ? \App\Models\StudentSubject::ROLE_OPTIONAL
+                            : \App\Models\StudentSubject::ROLE_COMPULSORY,
+                    ];
+                }
 
                 $row->studentSubjects()->sync($subjects);
                 //            foreach ($request->get('subject') as $key => $subject) {

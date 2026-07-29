@@ -889,14 +889,30 @@ trait ExaminationScope{
                 ->whereIn('id', $student_id)
                 ->get();
 
-            $filteredStudent = $students->filter(function ($value) use ($exam_schedule_id) {
+            /*Which subject is a student's 4th (optional) subject is a property of the
+              ENROLMENT, not of the subject: Biology is compulsory for most students and the
+              4th subject for others. Read the roles once for the whole batch.*/
+            $optionalSubjectIdsByStudent = \App\Models\StudentSubject::whereIn('students_id', $student_id)
+                ->where('subject_role', \App\Models\StudentSubject::ROLE_OPTIONAL)
+                ->get()
+                ->groupBy('students_id')
+                ->map(function ($rows) {
+                    return $rows->pluck('subjects_id')->map(function ($v) { return (int) $v; })->all();
+                })
+                ->all();
+
+            $filteredStudent = $students->filter(function ($value) use ($exam_schedule_id, $optionalSubjectIdsByStudent) {
+                $studentOptionalSubjectIds = isset($optionalSubjectIdsByStudent[$value->id])
+                    ? $optionalSubjectIdsByStudent[$value->id]
+                    : [];
+
                 $subjectRows = $value->markLedger()
                     ->select('exam_schedule_id', 'obtain_mark_theory', 'obtain_mark_practical', 'obtain_mark_mcq', 'absent_theory', 'absent_practical')
                     ->whereIn('exam_schedule_id', $exam_schedule_id)
                     ->get()
                     ->unique('exam_schedule_id');
 
-                $filteredSubject = $subjectRows->filter(function ($subject) {
+                $filteredSubject = $subjectRows->filter(function ($subject) use ($studentOptionalSubjectIds) {
                     $joinSub = $subject->examSchedule()
                         ->select('subjects_id', 'full_mark_theory', 'pass_mark_theory', 'full_mark_practical', 'pass_mark_practical', 'sorting_order')
                         ->first();
@@ -940,7 +956,13 @@ trait ExaminationScope{
                     $subject->code = $subjectDetail->code ?? '';
                     $subject->sub_type = $subjectDetail->sub_type ?? 'Compulsory';
                     $subject->credit_hour = $subjectDetail->credit_hour ?? 0;
-                    $subject->is_optional = strtolower(trim((string) $subject->sub_type)) === 'optional';
+
+                    /*4th subject = what the student's enrolment says. Only when the student
+                      has no role recorded at all do we fall back to the old subject-level
+                      flag, so historical data keeps grading exactly as before.*/
+                    $subject->is_optional = count($studentOptionalSubjectIds) > 0
+                        ? in_array((int) $joinSub->subjects_id, $studentOptionalSubjectIds, true)
+                        : strtolower(trim((string) $subject->sub_type)) === 'optional';
                     $subject->is_english = $this->isHscEnglishSubject($subject->title, $subject->code);
 
                     $theoryMark = is_numeric($subject->obtain_mark_theory) ? (float) $subject->obtain_mark_theory : 0;
@@ -1114,11 +1136,22 @@ trait ExaminationScope{
                     return is_numeric($subject->grade_point) ? (float) $subject->grade_point : 0;
                 });
 
-                $baseGpa = round($basePointTotal / 6, 2);
-                $optionalGradePoint = $optionalSubjects->count() > 0 && is_numeric($optionalSubjects->first()->grade_point)
-                    ? (float) $optionalSubjects->first()->grade_point
-                    : 0;
-                $optionalBonus = $optionalGradePoint > 2 ? round(($optionalGradePoint - 2) / 6, 2) : 0;
+                /*HSC divides by 6 (the six compulsory subjects). Only when a student
+                  genuinely carries more than six compulsory subjects do we use the real
+                  count, so a normal sheet keeps giving the board-standard result.*/
+                $gpaDivisor = max(6, $compulsorySubjects->count());
+
+                $baseGpa = round($basePointTotal / $gpaDivisor, 2);
+
+                /*If more than one subject is marked as the 4th subject (a data-entry
+                  mistake), the best one counts rather than an arbitrary first row.*/
+                $optionalGradePoint = (float) $optionalSubjects
+                    ->map(function ($subject) {
+                        return is_numeric($subject->grade_point) ? (float) $subject->grade_point : 0;
+                    })
+                    ->max();
+
+                $optionalBonus = $optionalGradePoint > 2 ? round(($optionalGradePoint - 2) / $gpaDivisor, 2) : 0;
                 $finalGpa = $compulsoryFail ? 0 : min(5, round($baseGpa + $optionalBonus, 2));
 
                 $value->gpa_base = number_format($baseGpa, 2);

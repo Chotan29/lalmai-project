@@ -60,6 +60,39 @@ class OnlineRegistrationController extends CollegeBaseController
     use SmsEmailScope;
     use UserScope;
 
+    /**
+     * The subject ids ticked in the "Optional (4th) subject" column of the subject picker.
+     * Sent as a comma separated hidden field. Only ids that are actually selected count.
+     * When the field is missing (older cached form), fall back to the historic rule of
+     * reading the subject master's own type.
+     */
+    protected function optionalSubjectIdsFromRequest($request, array $selectedSubjects, $subjectRows = null)
+    {
+        $selected = array_map('intval', $selectedSubjects);
+
+        if ($request->has('optional_subject_ids')) {
+            $raw = $request->input('optional_subject_ids');
+            $ids = is_array($raw) ? $raw : explode(',', (string) $raw);
+
+            return array_values(array_intersect(
+                array_unique(array_filter(array_map('intval', $ids))),
+                $selected
+            ));
+        }
+
+        if ($subjectRows === null) {
+            $subjectRows = \App\Models\Subject::select('id', 'sub_type')->whereIn('id', $selected)->get();
+        }
+
+        return $subjectRows
+            ->filter(function ($subject) {
+                return strtolower(trim((string) $subject->sub_type)) === 'optional';
+            })
+            ->pluck('id')
+            ->map(function ($v) { return (int) $v; })
+            ->all();
+    }
+
     public function __construct()
     {
         $this->folder_path = public_path().DIRECTORY_SEPARATOR.'images'.DIRECTORY_SEPARATOR.$this->folder_name.DIRECTORY_SEPARATOR;
@@ -210,6 +243,7 @@ class OnlineRegistrationController extends CollegeBaseController
 
         $subjectLimitErrors = [];
 
+
         $semesterId = (int) $request->input('semester');
         if ($semesterId > 0 && count($selectedSubjects) > 0) {
             $semester = Semester::find($semesterId);
@@ -234,9 +268,9 @@ class OnlineRegistrationController extends CollegeBaseController
                 if ($subjectRows->count() !== count($selectedSubjects)) {
                     $subjectLimitErrors[] = 'One or more selected subjects are invalid for this semester.';
                 } else {
-                    $optionalCount = $subjectRows->filter(function ($subject) {
-                        return strtolower(trim((string) $subject->sub_type)) === 'optional';
-                    })->count();
+                    /*The 4th subject is what was ticked in the Optional column, because the
+                      same paper can be compulsory for one student and optional for another.*/
+                    $optionalCount = count($this->optionalSubjectIdsFromRequest($request, $selectedSubjects, $subjectRows));
 
                     $compulsoryCount = $subjectRows->count() - $optionalCount;
 
@@ -498,10 +532,16 @@ class OnlineRegistrationController extends CollegeBaseController
 
             //Major Subjects
             if ($request->has('subject')) {
-                foreach ($request->get('subject') as $key => $subject) {
+                $chosenSubjects = array_values(array_unique(array_filter(array_map('intval', (array) $request->get('subject')))));
+                $optionalIds = $this->optionalSubjectIdsFromRequest($request, $chosenSubjects);
+
+                foreach ($chosenSubjects as $subject) {
                     StudentSubject::create([
                         'students_id' => $student->id,
                         'subjects_id' => $subject,
+                        'subject_role' => in_array((int) $subject, $optionalIds, true)
+                            ? StudentSubject::ROLE_OPTIONAL
+                            : StudentSubject::ROLE_COMPULSORY,
                         'created_by' => $visitorUserId,
                     ]);
                 }
@@ -824,7 +864,8 @@ class OnlineRegistrationController extends CollegeBaseController
             }
 
             $subjects = $semester->subjects()
-                ->select('subjects.id as subject_id', 'subjects.title as subject_title', 'subjects.sub_type as subject_type')
+                ->select('subjects.id as subject_id', 'subjects.title as subject_title', 'subjects.sub_type as subject_type',
+                    'semester_subject.allow_as_optional')
                 ->orderBy('subjects.title')
                 ->get();
 
