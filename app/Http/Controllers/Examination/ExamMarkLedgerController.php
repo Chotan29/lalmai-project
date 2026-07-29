@@ -323,13 +323,34 @@ class ExamMarkLedgerController extends CollegeBaseController
 
                     $ledgerExist->update($ledgerUpdate);
 
-                    /*Remove leftover duplicates of this student inside the pair (rows in
-                      the other schedule) so results never count the student twice.*/
+                    /*Leftover duplicates of this student inside the pair (rows in the other
+                      schedule) must not be counted twice in the result. They are NEVER
+                      deleted: the row is deactivated (status = 0) and written to the log,
+                      so an entered mark can always be traced back and restored.*/
                     if (count($pairScheduleIds) > 1) {
-                        ExamMarkLedger::whereIn('exam_schedule_id', $pairScheduleIds)
+                        $leftovers = ExamMarkLedger::whereIn('exam_schedule_id', $pairScheduleIds)
                             ->where('students_id', $student)
                             ->where('id', '!=', $ledgerExist->id)
-                            ->delete();
+                            ->get();
+
+                        foreach ($leftovers as $leftover) {
+                            \Log::warning('Mark ledger duplicate deactivated (not deleted)', [
+                                'ledger_id' => $leftover->id,
+                                'student_id' => $student,
+                                'reg_no' => $regNo,
+                                'from_schedule_id' => $leftover->exam_schedule_id,
+                                'kept_ledger_id' => $ledgerExist->id,
+                                'kept_schedule_id' => $targetScheduleId,
+                                'theory' => $leftover->obtain_mark_theory,
+                                'mcq' => $leftover->obtain_mark_mcq,
+                                'practical' => $leftover->obtain_mark_practical,
+                                'by_user' => $userId,
+                            ]);
+
+                            \DB::table('exam_mark_ledgers')
+                                ->where('id', $leftover->id)
+                                ->update(['status' => 0, 'last_updated_by' => $userId, 'updated_at' => now()]);
+                        }
                     }
                     $savedCount++;
 
@@ -804,12 +825,20 @@ class ExamMarkLedgerController extends CollegeBaseController
         return response()->json(json_encode($response));
     }
 
-    /*Find the "(Optional)" twin of a compulsory subject (code convention: O + same code)
-      and its exam schedule for the same year/month/exam/faculty/semester.
-      Returns [optionalScheduleId, optionalSubjectId, optionalStudentIds[]] or [null, null, []].*/
+    /*Find the "(Optional)" twin of a compulsory subject and its exam schedule for the
+      same year/month/exam/faculty/semester.
+      Returns [optionalScheduleId, optionalSubjectId, optionalStudentIds[]] or [null, null, []].
+
+      Matching is deliberately STRICT. The code convention alone (O + same code) is not
+      trustworthy: e.g. "Chemistry -I" has code 176 while a completely different subject,
+      "Statistics 1st (Optional)", carries O-176. Pairing those two would push Chemistry
+      marks into the Statistics ledger. So on top of the code convention the subject NAME
+      must also agree: same paper number (I/1st/1 ...) and one name being a prefix of the
+      other ("Higher Math" vs "Higher Mathematics"). If the names disagree, NO twin is
+      returned and the two subjects stay completely independent.*/
     private function optionalTwinSchedule($mainSubjectId, $year, $month, $exam, $faculty, $semester)
     {
-        $main = Subject::select('id', 'code', 'sub_type')->find($mainSubjectId);
+        $main = Subject::select('id', 'code', 'sub_type', 'title')->find($mainSubjectId);
         if (!$main || strtolower(trim((string) $main->sub_type)) === 'optional') {
             return [null, null, []];
         }
@@ -817,13 +846,15 @@ class ExamMarkLedgerController extends CollegeBaseController
         if ($norm === '') {
             return [null, null, []];
         }
+        $self = $this;
         $twin = Subject::select('id', 'code', 'sub_type', 'title')
-            ->whereRaw("UPPER(REPLACE(REPLACE(REPLACE(code, '-', ''), ' ', ''), '_', '')) = ?", ['O'.$norm])
+            ->whereRaw("UPPER(REPLACE(REPLACE(REPLACE(code, '-', ''), ' ', ''), '_', '')) IN (?, ?)", ['O'.$norm, 'OP'.$norm])
             ->where('id', '!=', $main->id)
             ->get()
-            ->first(function ($s) {
-                return strtolower(trim((string) $s->sub_type)) === 'optional'
+            ->first(function ($s) use ($main, $self) {
+                $isOptional = strtolower(trim((string) $s->sub_type)) === 'optional'
                     || stripos((string) $s->title, 'optional') !== false;
+                return $isOptional && $self->sameSubjectName($main->title, $s->title);
             });
         if (!$twin) {
             return [null, null, []];
@@ -842,6 +873,65 @@ class ExamMarkLedgerController extends CollegeBaseController
         $studentIds = \App\Models\StudentSubject::where('subjects_id', $twin->id)
             ->pluck('students_id')->map(function ($v) { return (int) $v; })->all();
         return [$twinSchedule->id, $twin->id, $studentIds];
+    }
+
+    /**
+     * Split a subject title into [name, paperNumber].
+     *  "Chemistry -I"                       -> ['chemistry', '1']
+     *  "Biology - II (Optional)"            -> ['biology', '2']
+     *  "Economics 1st Paper(Optional)"      -> ['economics', '1']
+     *  "Higher Mathematics -I"              -> ['highermathematics', '1']
+     */
+    public function subjectTitleParts($title)
+    {
+        $t = ' '.strtolower((string) $title).' ';
+        $t = str_replace(['(', ')', '[', ']', '.', ',', '&', '-', '_', '/', ':'], ' ', $t);
+        $t = preg_replace('/\b(optional|compulsory|paper|part|course|subject)\b/', ' ', $t);
+
+        $ordinals = [
+            '1' => '1', '1st' => '1', 'first' => '1', 'i' => '1',
+            '2' => '2', '2nd' => '2', 'second' => '2', 'ii' => '2',
+            '3' => '3', '3rd' => '3', 'third' => '3', 'iii' => '3',
+            '4' => '4', '4th' => '4', 'fourth' => '4', 'iv' => '4',
+        ];
+
+        $paper = '';
+        $name = '';
+        foreach (preg_split('/\s+/', trim($t), -1, PREG_SPLIT_NO_EMPTY) as $token) {
+            if (isset($ordinals[$token])) {
+                $paper = $ordinals[$token];
+                continue;
+            }
+            $name .= preg_replace('/[^a-z0-9]/', '', $token);
+        }
+
+        return [$name, $paper];
+    }
+
+    /**
+     * True when two titles describe the same paper of the same subject.
+     * Same paper number is mandatory; the names must be identical or one a prefix of the
+     * other (handles "Higher Math" vs "Higher Mathematics"). Anything shorter than 4
+     * characters is not accepted as a prefix, to avoid accidental matches.
+     */
+    public function sameSubjectName($titleA, $titleB)
+    {
+        list($nameA, $paperA) = $this->subjectTitleParts($titleA);
+        list($nameB, $paperB) = $this->subjectTitleParts($titleB);
+
+        if ($nameA === '' || $nameB === '') {
+            return false;
+        }
+        if ($paperA !== $paperB) {
+            return false;
+        }
+        if ($nameA === $nameB) {
+            return true;
+        }
+        $shorter = strlen($nameA) <= strlen($nameB) ? $nameA : $nameB;
+        $longer = strlen($nameA) <= strlen($nameB) ? $nameB : $nameA;
+
+        return strlen($shorter) >= 4 && strpos($longer, $shorter) === 0;
     }
 
 }
