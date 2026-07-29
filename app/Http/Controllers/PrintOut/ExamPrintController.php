@@ -649,10 +649,17 @@ class ExamPrintController extends CollegeBaseController
             return $data;
         }
 
-        /* Every subject SCHEDULED for this exam gets a column - not only the ones that
-           happen to have marks - so the sheet always mirrors the exam routine. Anything a
-           student did not sit simply shows a dash. */
+        /* Columns follow the exam routine order, but a subject nobody on this sheet has a
+           mark in is left out entirely - an all-dash column only wastes width. As marks
+           get entered, the subject appears by itself. */
         $scheduleIds = array_filter(explode(',', (string) $request->get('exam_schedule_id')));
+
+        $subjectsWithMarks = [];
+        foreach ($data['student'] as $student) {
+            foreach ($student->subjects as $subject) {
+                $subjectsWithMarks[(int) $subject->subjects_id] = true;
+            }
+        }
 
         $subjectColumns = [];
 
@@ -663,7 +670,7 @@ class ExamPrintController extends CollegeBaseController
                         'exam_schedules.sorting_order')
                     ->orderBy('exam_schedules.sorting_order')
                     ->get() as $row) {
-            if (isset($subjectColumns[$row->subjects_id])) {
+            if (isset($subjectColumns[$row->subjects_id]) || !isset($subjectsWithMarks[(int) $row->subjects_id])) {
                 continue;
             }
             $subjectColumns[$row->subjects_id] = $this->tabulationColumn($row, $row->sorting_order);
