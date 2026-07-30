@@ -33,7 +33,7 @@
                                         </label>
                                     </td>
                                     <td>{{ $i }}</td>
-                                    <td><a href="{{ route('student.view', ['id' => $document->member_id]) }}"> {{  ViewHelper::getStudentById( $document->member_id ) }}</a></td>
+                                    <td><a href="{{ route('student.view', ['id' => encrypt($document->member_id)]) }}"> {{  ViewHelper::getStudentById( $document->member_id ) }}</a></td>
                                     <td><a href="{{ asset('documents'.DIRECTORY_SEPARATOR.'student'.DIRECTORY_SEPARATOR.ViewHelper::getStudentById( $document->member_id ).'/'.$document->file) }}" target="_blank">
                                             <i class="ace-icon fa fa-download bigger-120"></i> &nbsp;{{ $document->title }}
                                            </a></td>

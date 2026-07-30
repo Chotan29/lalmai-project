@@ -24,7 +24,7 @@
                                 <td>{{ $i }}</td>
                                 <td><a href="{{ route('library.staff.view', ['id' => $staff_return_over->staff_id]) }}"> {{ $staff_return_over->reg_no }} </a></td>
 
-                                <td><a href="{{ route('staff.view', ['id' => $staff_return_over->staff_id]) }}"> {{ $staff_return_over->first_name.' '.$staff_return_over->middle_name.' '. $staff_return_over->last_name }}</a></td>
+                                <td><a href="{{ route('staff.view', ['id' => encrypt($staff_return_over->staff_id)]) }}"> {{ $staff_return_over->first_name.' '.$staff_return_over->middle_name.' '. $staff_return_over->last_name }}</a></td>
                                 <td>{{ $staff_return_over->book_code }} </td>
 
                                 <td><a href="{{ route('library.book.view', ['id' => $staff_return_over->bookmaster_id]) }}">{{ $staff_return_over->title }}</a> </td>

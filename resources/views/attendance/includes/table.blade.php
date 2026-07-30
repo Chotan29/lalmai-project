@@ -64,8 +64,8 @@
                                 </label>
                             </td>
                             <td>{{ $i }}</td>
-                            <td><a href="{{ route('staff.view', ['id' => $staff->staffs_id]) }}">{{ $staff->reg_no }}</a></td>
-                            <td><a href="{{ route('staff.view', ['id' => $staff->staffs_id]) }}"> {{ $staff->first_name.' '.$staff->middle_name.' '. $staff->last_name }}</a></td>
+                            <td><a href="{{ route('staff.view', ['id' => encrypt($staff->staffs_id)]) }}">{{ $staff->reg_no }}</a></td>
+                            <td><a href="{{ route('staff.view', ['id' => encrypt($staff->staffs_id)]) }}"> {{ $staff->first_name.' '.$staff->middle_name.' '. $staff->last_name }}</a></td>
                             <td>{{ ViewHelper::getYearById($staff->years_id) }} </td>
                             <td>{{ ViewHelper::getMonthById($staff->months_id) }} </td>
                             <td class="{{ ViewHelper::getAttendanceDisplayClass($staff->day_1) }}">{{ ViewHelper::getAttendanceStatus($staff->day_1)}}</td>

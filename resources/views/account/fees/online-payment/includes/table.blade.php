@@ -35,8 +35,23 @@
                                 <td>{{ $i }}</td>
                                 <td> {{  ViewHelper::getFacultyTitle( $student->faculty )}}</td>
                                 <td> {{ ViewHelper::getSemesterTitle( $student->semester ) }}</td>
-                                <td> <a href="{{ route('student.view', ['id' => $student->students_id]) }}">{{ $student->reg_no }}</a></td>
-                                <td> <a href="{{ route('student.view', ['id' => $student->students_id]) }}">{{ $student->first_name.' '.$student->middle_name.' '. $student->last_name }}</a></td>
+                                @php($studentProfileUrl = $student->students_id ? route('student.view', ['id' => encrypt($student->students_id)]) : null)
+                                {{-- The id must be encrypted: StudentController@view decrypts it, so a raw id
+                                     throws and the link silently does nothing. --}}
+                                <td>
+                                    @if($studentProfileUrl)
+                                        <a href="{{ $studentProfileUrl }}">{{ $student->reg_no }}</a>
+                                    @else
+                                        {{ $student->reg_no }}
+                                    @endif
+                                </td>
+                                <td>
+                                    @if($studentProfileUrl)
+                                        <a href="{{ $studentProfileUrl }}">{{ trim($student->first_name.' '.$student->middle_name.' '. $student->last_name) }}</a>
+                                    @else
+                                        {{ trim($student->first_name.' '.$student->middle_name.' '. $student->last_name) }}
+                                    @endif
+                                </td>
                                 <td class="text-right">{{ $student->balance }}</td>
                                 <td>{{ $student->date }} </td>
                                 {{-- <td>{{ \Carbon\Carbon::parse($student->date)->format('Y-m-d')}} </td> --}}

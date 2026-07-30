@@ -38,11 +38,11 @@
                                 <td>{{ $history->user_type==1?"Student":"Staff" }}</td>
                                 <td>
                                     @if($history->user_type==1)
-                                        <a href="{{ route('student.view', ['id' => $history->member_id]) }}">
+                                        <a href="{{ route('student.view', ['id' => encrypt($history->member_id)]) }}">
                                             {{ ViewHelper::getStudentById($history->member_id) }}
                                         </a>
                                     @else
-                                        <a href="{{ route('staff.view', ['id' => $history->member_id]) }}">
+                                        <a href="{{ route('staff.view', ['id' => encrypt($history->member_id)]) }}">
                                             {{ ViewHelper::getStaffById($history->member_id) }}
                                         </a>
                                     @endif

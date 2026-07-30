@@ -25,7 +25,7 @@
                 <div class="profile-info-name"> Reg. No.: </div>
                 <div class="profile-info-value">
                     <span class="editable" id="reg_no">
-                        <a href="{{ route('student.view', ['id' => $data['student']->member_id]) }}">{{ ViewHelper::getStudentById($data['student']->member_id) }}</a>
+                        <a href="{{ route('student.view', ['id' => encrypt($data['student']->member_id)]) }}">{{ ViewHelper::getStudentById($data['student']->member_id) }}</a>
                     </span>
 
                 </div>

@@ -24,7 +24,7 @@
             <div class="profile-info-row">
                 <div class="profile-info-name"> Reg. No.: </div>
                 <div class="profile-info-value">
-                    <span class="editable" id="reg_no"><a href="{{ route('staff.view', ['id' => $data['staff']->staffId]) }}">{{ ViewHelper::getStaffById($data['staff']->member_id) }}</a></span>
+                    <span class="editable" id="reg_no"><a href="{{ route('staff.view', ['id' => encrypt($data['staff']->staffId)]) }}">{{ ViewHelper::getStaffById($data['staff']->member_id) }}</a></span>
                 </div>
                 <div class="profile-info-name"> Member Id : </div>
                 <div class="profile-info-value">
@@ -38,7 +38,7 @@
                 <div class="profile-info-name"> Name : </div>
                 <div class="profile-info-value">
                     <span class="editable" id="student_name">
-                        <a href="{{ route('staff.view', ['id' => $data['staff']->staffId]) }}">
+                        <a href="{{ route('staff.view', ['id' => encrypt($data['staff']->staffId)]) }}">
                             {{ $data['staff']->first_name.' '. $data['staff']->middle_name.' '.$data['staff']->last_name }}
                         </a>
                     </span>

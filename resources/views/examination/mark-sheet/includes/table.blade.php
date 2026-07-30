@@ -22,6 +22,10 @@
             <input type="radio" name="result-type" value="ledger" id="typeLedger" class="ace" />
             <span class="lbl"></span> Ledger
         </label>
+        <label class="pos-rel">
+            <input type="radio" name="result-type" value="tabulation" id="typeTabulation" class="ace" />
+            <span class="lbl"></span> Tabulation Sheet
+        </label>
         <a type="submit" class="btn-primary btn-sm print-marksheets" ><i class="fa fa-print" aria-hidden="true"></i>&nbsp; Print Mark Sheets</a>
         <span class="pull-right tableTools-container"></span>
     </div>
@@ -62,7 +66,7 @@
                                     </label>
                                 </td>
                                 <td>{{ $i }}</td>
-                                <td><a href="{{ route('student.view', ['id' => $student->students_id]) }}">{{ $student->reg_no }}</a></td>
+                                <td><a href="{{ route('student.view', ['id' => encrypt($student->students_id)]) }}">{{ $student->reg_no }}</a></td>
                                 <td>{{ $student->first_name.' '.$student->middle_name.' '.$student->last_name }}</td>
                             </tr>
                             @php($i++)

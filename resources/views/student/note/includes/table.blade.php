@@ -33,7 +33,7 @@
                                         </label>
                                     </td>
                                     <td>{{ $i }}</td>
-                                    <td><a href="{{ route('student.view', ['id' => $note->member_id]) }}"> {{  ViewHelper::getStudentById( $note->member_id ) }}</a></td>
+                                    <td><a href="{{ route('student.view', ['id' => encrypt($note->member_id)]) }}"> {{  ViewHelper::getStudentById( $note->member_id ) }}</a></td>
                                     <td>{{ $note->subject }}</td>
                                     <td>
                                         <div class="btn-group">
