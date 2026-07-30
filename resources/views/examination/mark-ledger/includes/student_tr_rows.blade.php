@@ -38,16 +38,25 @@
             {!! Form::checkbox('absent_theory[]', $student->student_id, in_array($student->student_id, $absent_theory), array_merge(['class' => 'form-control'], $isLocked ? ['disabled' => 'disabled'] : [])) !!}
         </td>
         <td>
-            {!! Form::number('obtain_mark_theory[]', $student->obtain_mark_theory, array_merge(["class" => "form-control border-form","min"=>"0",'step'=>'any','max' => (float)($markLimits['theory'] ?? 0)], $isLocked ? ['readonly' => 'readonly', 'style' => 'background:#eee;'] : [])) !!}
+            @include('examination.mark-ledger.includes.mark-input', [
+                'field' => 'obtain_mark_theory[]', 'value' => $student->obtain_mark_theory,
+                'limit' => $markLimits['theory'] ?? 0, 'label' => 'theory', 'locked' => $isLocked,
+            ])
         </td>
         <td>
-            {!! Form::number('obtain_mark_mcq[]', $student->obtain_mark_mcq, array_merge(["class" => "form-control border-form","min"=>"0",'step'=>'any','max' => (float)($markLimits['mcq'] ?? 0)], $isLocked ? ['readonly' => 'readonly', 'style' => 'background:#eee;'] : [])) !!}
+            @include('examination.mark-ledger.includes.mark-input', [
+                'field' => 'obtain_mark_mcq[]', 'value' => $student->obtain_mark_mcq,
+                'limit' => $markLimits['mcq'] ?? 0, 'label' => 'MCQ', 'locked' => $isLocked,
+            ])
         </td>
         <td>
-            {!! Form::checkbox('absent_practical[]', $student->student_id, in_array($student->student_id, $absent_practical), array_merge(['class' => 'form-control'], $isLocked ? ['disabled' => 'disabled'] : [])) !!}
+            {!! Form::checkbox('absent_practical[]', $student->student_id, in_array($student->student_id, $absent_practical), array_merge(['class' => 'form-control'], ($isLocked || (float)($markLimits['practical'] ?? 0) <= 0) ? ['disabled' => 'disabled'] : [])) !!}
         </td>
         <td>
-            {!! Form::number('obtain_mark_practical[]', $student->obtain_mark_practical, array_merge(["class" => "form-control border-form","min"=>"0",'step'=>'any','max' => (float)($markLimits['practical'] ?? 0)], $isLocked ? ['readonly' => 'readonly', 'style' => 'background:#eee;'] : [])) !!}
+            @include('examination.mark-ledger.includes.mark-input', [
+                'field' => 'obtain_mark_practical[]', 'value' => $student->obtain_mark_practical,
+                'limit' => $markLimits['practical'] ?? 0, 'label' => 'practical', 'locked' => $isLocked,
+            ])
         </td>
 
         <td>
@@ -62,3 +71,13 @@
                 <button type="button" class="btn btn-xs btn-warning unlock-one-btn" data-student-id="{{ $student->student_id }}" title="Unlock this row so any teacher can edit">
                     <i class="fa fa-unlock"></i> Unlock
                 </button>
+            @else
+                <div class="btn-group">
+                    <label class="btn btn-xs btn-danger" onclick="$(this).closest('tr').remove();">
+                        <i class="fa fa-trash bigger-120"></i>
+                    </label>
+                </div>
+            @endif
+        </td>
+    </tr>
+@endforeach

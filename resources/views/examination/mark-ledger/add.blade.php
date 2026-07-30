@@ -331,12 +331,46 @@
             });
         }
 
-        /*Show full mark in column headers*/
+        /*Show full mark in column headers, and say plainly which components this subject
+          does not have - otherwise a greyed box looks like a bug rather than a setting.*/
         function updateMarkHeaders(limits) {
             if (!limits) return;
-            if (parseFloat(limits.theory) > 0) $('#th-theory').text('Obtain Mark (' + limits.theory + ')');
-            if (parseFloat(limits.mcq) > 0) $('#th-mcq').text('MCQ (' + limits.mcq + ')');
-            if (parseFloat(limits.practical) > 0) $('#th-practical').text('Practical (' + limits.practical + ')');
+
+            var missing = [];
+
+            if (parseFloat(limits.theory) > 0) {
+                $('#th-theory').text('Obtain Mark (' + limits.theory + ')');
+            } else {
+                $('#th-theory').text('Obtain Mark (—)');
+                missing.push('Theory');
+            }
+
+            if (parseFloat(limits.mcq) > 0) {
+                $('#th-mcq').text('MCQ (' + limits.mcq + ')');
+            } else {
+                $('#th-mcq').text('MCQ (—)');
+                missing.push('MCQ');
+            }
+
+            if (parseFloat(limits.practical) > 0) {
+                $('#th-practical').text('Practical (' + limits.practical + ')');
+            } else {
+                $('#th-practical').text('Practical (—)');
+                missing.push('Practical');
+            }
+
+            $('#no-component-note').remove();
+
+            if (missing.length) {
+                $('#student_wrapper').closest('table').before(
+                    '<div id="no-component-note" class="alert alert-warning" style="margin-bottom:10px;">' +
+                    '<i class="fa fa-info-circle"></i> This subject has no <strong>' + missing.join(' / ') + '</strong> ' +
+                    'full mark set, so ' + (missing.length > 1 ? 'those columns are' : 'that column is') + ' locked. ' +
+                    'To take ' + (missing.length > 1 ? 'these marks' : 'this mark') + ', set the full mark for this subject in ' +
+                    '<strong>Academic → Subject</strong> first.' +
+                    '</div>'
+                );
+            }
         }
 
         /*Entry summary: total / entered / remaining*/

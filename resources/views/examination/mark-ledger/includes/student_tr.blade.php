@@ -21,13 +21,33 @@
             {!! Form::checkbox('absent_theory[]', $student->id, false, ['class' => 'form-control']) !!}
         </td>
         <td>
-            {!! Form::number('obtain_mark_theory[]', null, ["class" => "form-control border-form","min"=>"0",'step'=>'any','max' => (float)($markLimits['theory'] ?? 0)]) !!}
+            @include('examination.mark-ledger.includes.mark-input', [
+                'field' => 'obtain_mark_theory[]', 'value' => null,
+                'limit' => $markLimits['theory'] ?? 0, 'label' => 'theory', 'locked' => false,
+            ])
         </td>
         <td>
-            {!! Form::number('obtain_mark_mcq[]', null, ["class" => "form-control border-form","min"=>"0",'step'=>'any','max' => (float)($markLimits['mcq'] ?? 0)]) !!}
+            @include('examination.mark-ledger.includes.mark-input', [
+                'field' => 'obtain_mark_mcq[]', 'value' => null,
+                'limit' => $markLimits['mcq'] ?? 0, 'label' => 'MCQ', 'locked' => false,
+            ])
         </td>
         <td>
-            {!! Form::checkbox('absent_practical[]', $student->id, false, ['class' => 'form-control']) !!}
+            {!! Form::checkbox('absent_practical[]', $student->id, false, array_merge(['class' => 'form-control'], (float)($markLimits['practical'] ?? 0) <= 0 ? ['disabled' => 'disabled'] : [])) !!}
         </td>
         <td>
-            {!! Form::number('obtain_mark_practical[]', null, ["class" => "form-control border-form","min"=>"0",'step'=>'any','max' => (float)($markLimits['practical'] 
+            @include('examination.mark-ledger.includes.mark-input', [
+                'field' => 'obtain_mark_practical[]', 'value' => null,
+                'limit' => $markLimits['practical'] ?? 0, 'label' => 'practical', 'locked' => false,
+            ])
+        </td>
+
+        <td>
+            <div class="btn-group">
+                <label class="btn btn-xs btn-danger" onclick="$(this).closest('tr').remove();">
+                    <i class="fa fa-trash bigger-120"></i>
+                </label>
+            </div>
+        </td>
+    </tr>
+ @endforeach
