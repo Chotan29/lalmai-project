@@ -26,23 +26,41 @@
             return (int) ($subject->allow_as_optional ?? 0) === 1;
         };
 
-        $optionalSubjects = $subjects->filter(function ($subject) use ($isOptionalType, $allowsOptional) {
-            return $isOptionalType($subject) || $allowsOptional($subject);
-        })->values();
+        /*Honours classes have no 4th subject at all. Splitting the list in two would then
+          leave an empty right-hand column, and any subject that happens to be typed
+          "Optional" would sit there unselectable. So when the class allows no optional
+          subject, everything goes into one full-width list.*/
+        $hasOptionalColumn = $maxOptional > 0;
 
-        $compulsorySubjects = $subjects->reject($isOptionalType)->values();
+        $optionalSubjects = $hasOptionalColumn
+            ? $subjects->filter(function ($subject) use ($isOptionalType, $allowsOptional) {
+                return $isOptionalType($subject) || $allowsOptional($subject);
+            })->values()
+            : collect();
+
+        $compulsorySubjects = $hasOptionalColumn
+            ? $subjects->reject($isOptionalType)->values()
+            : $subjects->values();
     @endphp
 
     <div class="subject-selection-header">
         <div class="subject-selection-title">Select Subjects</div>
-        <div class="subject-selection-limit">Maximum {{$maxAllowedSubjects}} subjects (Compulsory up to {{$maxCompulsory}}, Optional up to {{$maxOptional}}).</div>
+        <div class="subject-selection-limit">
+            @if($hasOptionalColumn)
+                Maximum {{$maxAllowedSubjects}} subjects (Compulsory up to {{$maxCompulsory}}, Optional up to {{$maxOptional}}).
+            @else
+                Select {{$maxCompulsory}} subjects. This class has no optional (4th) subject.
+            @endif
+        </div>
     </div>
 
-    <div class="subject-structure-note">
-        <span><strong>Left:</strong> Compulsory subjects</span>
-        <span><strong>Right:</strong> Optional (4th) subject</span>
-        <span><strong>Total:</strong> {{$maxAllowedSubjects}} subjects maximum</span>
-    </div>
+    @if($hasOptionalColumn)
+        <div class="subject-structure-note">
+            <span><strong>Left:</strong> Compulsory subjects</span>
+            <span><strong>Right:</strong> Optional (4th) subject</span>
+            <span><strong>Total:</strong> {{$maxAllowedSubjects}} subjects maximum</span>
+        </div>
+    @endif
 
     <input type="hidden" name="max_subjects_count" value="{{$maxAllowedSubjects}}">
     <input type="hidden" name="max_compulsory_count" value="{{$maxCompulsory}}">
@@ -53,11 +71,11 @@
     <input type="hidden" name="optional_subject_ids" id="optional_subject_ids" value="{{ implode(',', $selectedOptionalIds) }}">
 
     <div class="row subject-selection-grid">
-        <div class="col-md-6 mb-3 mb-md-0">
+        <div class="{{ $hasOptionalColumn ? 'col-md-6 mb-3 mb-md-0' : 'col-md-12' }}">
             <div class="subject-group-card subject-group-card--compulsory">
                 <div class="subject-group-card__head">
-                    <h4>Compulsory Subjects</h4>
-                    <span class="subject-group-tag">LEFT</span>
+                    <h4>{{ $hasOptionalColumn ? 'Compulsory Subjects' : 'Subjects' }}</h4>
+                    @if($hasOptionalColumn)<span class="subject-group-tag">LEFT</span>@endif
                     <span class="subject-count">{{$compulsorySubjects->count()}}</span>
                 </div>
 
@@ -76,13 +94,13 @@
                             </label>
                         @endforeach
                     @else
-                        <p class="subject-empty-state">No compulsory subjects found for this semester.</p>
+                        <p class="subject-empty-state">No subjects found for this semester.</p>
                     @endif
                 </div>
             </div>
         </div>
 
-        <div class="col-md-6">
+        <div class="col-md-6" @if(!$hasOptionalColumn) style="display:none;" @endif>
             <div class="subject-group-card subject-group-card--optional">
                 <div class="subject-group-card__head">
                     <h4>Optional (4th) Subject</h4>

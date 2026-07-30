@@ -1079,11 +1079,19 @@ class StudentController extends CollegeBaseController
         $data['selected_optional_ids'] = $data['row']->majorSubject()
             ->where('subject_role', \App\Models\StudentSubject::ROLE_OPTIONAL)
             ->pluck('subjects_id')->map(function ($v) { return (int) $v; })->all();
+        /*Same per-semester limits the public registration form uses, so an honours class
+          with 8 compulsory papers is not squeezed into the HSC 6 + 1 shape.*/
+        list($maxCompulsory, $maxOptional, $maxTotal) = $this->semesterSubjectLimits($semesterModel);
+        $data['max_subjects_count'] = $maxTotal;
+
         $data['subjects_html'] = view('student.online-registration.includes.forms.fetch-subjects', [
             'subjects' => $data['subjects'],
-            'numOfSubject' => $data['max_subjects_count'] ?: $data['subjects']->count(),
+            'numOfSubject' => $maxTotal ?: $data['subjects']->count(),
             'selectedSubjectIds' => $data['selected_subject_ids'],
             'selectedOptionalIds' => $data['selected_optional_ids'],
+            'maxCompulsory' => $maxCompulsory,
+            'maxOptional' => $maxOptional,
+            'totalMax' => $maxTotal,
         ])->render();
 
         $data['annexures'] = Annexure::select('id', 'title')->Active()->get();
@@ -1097,6 +1105,35 @@ class StudentController extends CollegeBaseController
         //$subjectsFee = $data['row']->majorSubject()->join('subjects','subjects.id','=','student_subject.subjects_id')->sum('course_fee');
         //$data['admission_fee'] = $semesterFee + $subjectsFee;
         return view(parent::loadDataToView($this->view_path.'.registration.edit'), compact('data'));
+    }
+
+    /**
+     * How many compulsory / optional subjects a class allows.
+     * Returns [maxCompulsory, maxOptional, maxTotal].
+     *
+     * Configured per semester in Academic → Semester. The 6 + 1 fallback keeps HSC classes
+     * behaving as before when an admin has not filled the fields in yet; honours classes
+     * (8 papers, no 4th subject) just need their own numbers set there.
+     */
+    protected function semesterSubjectLimits($semester)
+    {
+        $blank = function ($value) {
+            return $value === null || $value === '';
+        };
+
+        $maxCompulsory = ($semester && !$blank($semester->max_compulsory_count))
+            ? (int) $semester->max_compulsory_count : 6;
+        $maxOptional = ($semester && !$blank($semester->max_optional_count))
+            ? (int) $semester->max_optional_count : 1;
+
+        $maxTotal = $maxCompulsory + $maxOptional;
+
+        /*A legacy per-semester total, when set, must not silently cut the class short.*/
+        if ($semester && !$blank($semester->major_subject_count)) {
+            $maxTotal = max($maxTotal, (int) $semester->major_subject_count);
+        }
+
+        return [$maxCompulsory, $maxOptional, $maxTotal];
     }
 
     /**
@@ -1146,7 +1183,13 @@ class StudentController extends CollegeBaseController
         }
 
         $semester = Semester::find($row->semester);
-        $maxAllowedSubjects = min((int) ($semester->major_subject_count ?? count($selectedSubjects)), 7);
+
+        /*Limits come from the semester, exactly like the public registration form. The old
+          hard-coded 6 + 1 + 7 was an HSC assumption and made honours classes impossible:
+          Accounting 3rd year, for instance, has 8 compulsory papers and no 4th subject.
+          Set "Max Compulsory" / "Max Optional" per semester in Academic → Semester.*/
+        list($maxCompulsory, $maxOptional, $maxAllowedSubjects) = $this->semesterSubjectLimits($semester);
+
         $semesterSubjects = $semester
             ? $semester->subjects()->select('subjects.id', 'subjects.sub_type')->whereIn('subjects.id', $selectedSubjects)->get()
             : collect();
@@ -1167,19 +1210,21 @@ class StudentController extends CollegeBaseController
 
         if (count($selectedSubjects) > $maxAllowedSubjects) {
             return back()->withInput()->withErrors([
-                'subject' => 'You can select maximum '.$maxAllowedSubjects.' subjects.'
+                'subject' => 'You can select maximum '.$maxAllowedSubjects.' subjects for this class.'
             ]);
         }
 
-        if ($optionalCount > 1) {
+        if ($optionalCount > $maxOptional) {
             return back()->withInput()->withErrors([
-                'subject' => 'You can select maximum 1 optional subject.'
+                'subject' => $maxOptional > 0
+                    ? 'You can select maximum '.$maxOptional.' optional subject(s) for this class.'
+                    : 'This class has no optional (4th) subject.'
             ]);
         }
 
-        if ($compulsoryCount > 6) {
+        if ($compulsoryCount > $maxCompulsory) {
             return back()->withInput()->withErrors([
-                'subject' => 'You can select maximum 6 compulsory subjects.'
+                'subject' => 'You can select maximum '.$maxCompulsory.' compulsory subjects for this class.'
             ]);
         }
 

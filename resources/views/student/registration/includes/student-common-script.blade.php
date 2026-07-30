@@ -700,13 +700,35 @@
 
 
 
+    /* Limits are per class, set in Academic → Semester and rendered as hidden inputs by the
+       subject picker. They used to be hard-coded to the HSC shape (6 compulsory + 1 optional,
+       never more than 7), which made honours classes impossible - Accounting 3rd year has 8
+       compulsory papers and no 4th subject. */
+    function getSubjectLimit(name, fallback) {
+        var value = parseInt($('input[name="' + name + '"]').val(), 10);
+        return isNaN(value) ? fallback : value;
+    }
+
+    function getSubjectMaxCompulsory() {
+        return getSubjectLimit('max_compulsory_count', 6);
+    }
+
+    function getSubjectMaxOptional() {
+        return getSubjectLimit('max_optional_count', 1);
+    }
+
     function getSubjectMaxCount() {
-        var maxFromInput = parseInt($('input[name="max_subjects_count"]').val(), 10);
-        if (!isNaN(maxFromInput) && maxFromInput > 0) {
-            return Math.min(maxFromInput, 7);
+        var maxFromInput = getSubjectLimit('max_subjects_count', 0);
+        if (maxFromInput > 0) {
+            return maxFromInput;
         }
 
-        return Math.min($('#subjects_wrapper').find('input[name="subject[]"]').length, 7);
+        var byLimits = getSubjectMaxCompulsory() + getSubjectMaxOptional();
+        if (byLimits > 0) {
+            return byLimits;
+        }
+
+        return $('#subjects_wrapper').find('input[name="subject[]"]').length;
     }
 
     function validateSubjectSelection(showToast) {
@@ -726,16 +748,21 @@
             return setSubjectWrapperInvalid('Please select at least 1 subject.', showToast);
         }
 
-        if (selectedOptionalCount > 1) {
-            return setSubjectWrapperInvalid('You can select maximum 1 optional subject.', showToast);
+        var maxOptional = getSubjectMaxOptional();
+        var maxCompulsory = getSubjectMaxCompulsory();
+
+        if (selectedOptionalCount > maxOptional) {
+            return setSubjectWrapperInvalid(maxOptional > 0
+                ? 'You can select maximum ' + maxOptional + ' optional subject(s) for this class.'
+                : 'This class has no optional (4th) subject.', showToast);
         }
 
-        if (selectedCompulsoryCount > 6) {
-            return setSubjectWrapperInvalid('You can select maximum 6 compulsory subjects.', showToast);
+        if (selectedCompulsoryCount > maxCompulsory) {
+            return setSubjectWrapperInvalid('You can select maximum ' + maxCompulsory + ' compulsory subjects for this class.', showToast);
         }
 
         if (selectedCount > maxCount) {
-            return setSubjectWrapperInvalid('You can select maximum ' + maxCount + ' subjects.', showToast);
+            return setSubjectWrapperInvalid('You can select maximum ' + maxCount + ' subjects for this class.', showToast);
         }
 
         clearSubjectWrapperInvalid();
@@ -753,21 +780,26 @@
         var selectedOptionalCount = $subjects.filter(':checked').filter('[data-subject-type="optional"]').length;
         var selectedCompulsoryCount = $subjects.filter(':checked').filter('[data-subject-type="compulsory"]').length;
 
-        if ($(this).is(':checked') && $(this).data('subject-type') === 'optional' && selectedOptionalCount > 1) {
+        var maxOptional = getSubjectMaxOptional();
+        var maxCompulsory = getSubjectMaxCompulsory();
+
+        if ($(this).is(':checked') && $(this).data('subject-type') === 'optional' && selectedOptionalCount > maxOptional) {
             this.checked = false;
-            setSubjectWrapperInvalid('You can select maximum 1 optional subject.', true);
+            setSubjectWrapperInvalid(maxOptional > 0
+                ? 'You can select maximum ' + maxOptional + ' optional subject(s) for this class.'
+                : 'This class has no optional (4th) subject.', true);
             return;
         }
 
-        if ($(this).is(':checked') && $(this).data('subject-type') === 'compulsory' && selectedCompulsoryCount > 6) {
+        if ($(this).is(':checked') && $(this).data('subject-type') === 'compulsory' && selectedCompulsoryCount > maxCompulsory) {
             this.checked = false;
-            setSubjectWrapperInvalid('You can select maximum 6 compulsory subjects.', true);
+            setSubjectWrapperInvalid('You can select maximum ' + maxCompulsory + ' compulsory subjects for this class.', true);
             return;
         }
 
         if ($(this).is(':checked') && selectedCount > maxCount) {
             this.checked = false;
-            setSubjectWrapperInvalid('You can select maximum ' + maxCount + ' subjects.', true);
+            setSubjectWrapperInvalid('You can select maximum ' + maxCount + ' subjects for this class.', true);
             return;
         }
 
