@@ -35,9 +35,12 @@
                                 <td>{{ $i }}</td>
                                 <td> {{  ViewHelper::getFacultyTitle( $student->faculty )}}</td>
                                 <td> {{ ViewHelper::getSemesterTitle( $student->semester ) }}</td>
-                                @php($studentProfileUrl = $student->students_id ? route('student.view', ['id' => encrypt($student->students_id)]) : null)
-                                {{-- The id must be encrypted: StudentController@view decrypts it, so a raw id
-                                     throws and the link silently does nothing. --}}
+                                {{-- The controller selects students.id (each row IS a Student model), so
+                                     there is no students_id column here; reading it gave an empty id and
+                                     produced a dead /student//view link. The id must be encrypted too,
+                                     because the student view controller decrypts it. --}}
+                                @php($studentId = $student->id ?? ($student->students_id ?? null))
+                                @php($studentProfileUrl = $studentId ? route('student.view', ['id' => encrypt($studentId)]) : null)
                                 <td>
                                     @if($studentProfileUrl)
                                         <a href="{{ $studentProfileUrl }}">{{ $student->reg_no }}</a>
