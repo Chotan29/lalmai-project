@@ -20,6 +20,7 @@ class Kernel extends ConsoleKernel
         Commands\SmsTest::class,                  // local SMS testing
         Commands\ReconcileRegistrationPayments::class, // finishes paid-but-stuck registrations
         Commands\MergeOptionalSubjectTwins::class,     // one paper = one subject (4th-subject cleanup)
+        Commands\DeactivateUnenrolledMarks::class,     // marks saved for papers a student never took
     ];
 
     protected function schedule(Schedule $schedule)

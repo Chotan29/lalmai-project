@@ -892,18 +892,35 @@ trait ExaminationScope{
             /*Which subject is a student's 4th (optional) subject is a property of the
               ENROLMENT, not of the subject: Biology is compulsory for most students and the
               4th subject for others. Read the roles once for the whole batch.*/
-            $optionalSubjectIdsByStudent = \App\Models\StudentSubject::whereIn('students_id', $student_id)
+            $enrolments = \App\Models\StudentSubject::whereIn('students_id', $student_id)->get();
+
+            $optionalSubjectIdsByStudent = $enrolments
                 ->where('subject_role', \App\Models\StudentSubject::ROLE_OPTIONAL)
-                ->get()
                 ->groupBy('students_id')
                 ->map(function ($rows) {
                     return $rows->pluck('subjects_id')->map(function ($v) { return (int) $v; })->all();
                 })
                 ->all();
 
-            $filteredStudent = $students->filter(function ($value) use ($exam_schedule_id, $optionalSubjectIdsByStudent) {
+            /*Every subject a student is enrolled in, whatever the role. A mark saved for a
+              paper the student never took (the ledger used to list the whole class for every
+              subject) must not be graded - one such stray 0 turns the whole result into a
+              fail. A student with no mapping at all keeps the old behaviour, so an incomplete
+              subject list can never make a real mark vanish from the result.*/
+            $enrolledSubjectIdsByStudent = $enrolments
+                ->groupBy('students_id')
+                ->map(function ($rows) {
+                    return $rows->pluck('subjects_id')->map(function ($v) { return (int) $v; })->all();
+                })
+                ->all();
+
+            $filteredStudent = $students->filter(function ($value) use ($exam_schedule_id, $optionalSubjectIdsByStudent, $enrolledSubjectIdsByStudent) {
                 $studentOptionalSubjectIds = isset($optionalSubjectIdsByStudent[$value->id])
                     ? $optionalSubjectIdsByStudent[$value->id]
+                    : [];
+
+                $studentEnrolledSubjectIds = isset($enrolledSubjectIdsByStudent[$value->id])
+                    ? $enrolledSubjectIdsByStudent[$value->id]
                     : [];
 
                 $subjectRows = $value->markLedger()
@@ -912,13 +929,30 @@ trait ExaminationScope{
                     ->get()
                     ->unique('exam_schedule_id');
 
-                $filteredSubject = $subjectRows->filter(function ($subject) use ($studentOptionalSubjectIds) {
+                $filteredSubject = $subjectRows->filter(function ($subject) use ($studentOptionalSubjectIds, $studentEnrolledSubjectIds) {
                     $joinSub = $subject->examSchedule()
                         ->select('subjects_id', 'full_mark_theory', 'pass_mark_theory', 'full_mark_practical', 'pass_mark_practical', 'sorting_order')
                         ->first();
 
                     if (!$joinSub) {
                         return false;
+                    }
+
+                    /*A paper this student is not enrolled in. Two very different cases:
+                        - the row is empty (a stray 0 typed because the ledger used to list
+                          the whole class): ignore it, it only produces a false fail;
+                        - the row holds a real mark: the student clearly sat the paper and it
+                          is their subject list that is incomplete. Never drop a real mark
+                          from a result - keep it and let the office fix the mapping.*/
+                    if (count($studentEnrolledSubjectIds) > 0
+                        && !in_array((int) $joinSub->subjects_id, $studentEnrolledSubjectIds, true)) {
+                        $hasRealMark = (float) $subject->obtain_mark_theory > 0
+                            || (float) $subject->obtain_mark_mcq > 0
+                            || (float) $subject->obtain_mark_practical > 0;
+
+                        if (!$hasRealMark) {
+                            return false;
+                        }
                     }
 
                     $subjectDetail = Subject::select(

@@ -683,6 +683,28 @@ class ExamMarkLedgerController extends CollegeBaseController
             }
         }
 
+        /*Only the students who actually take THIS subject should get a row. Listing the
+          whole class made teachers type a 0 (or tick Absent) for papers a student never
+          sat, and a single such row fails the student outright in the HSC rules.
+
+          Safety net: a student whose subject mapping is missing altogether is still shown,
+          because hiding them would make their marks impossible to enter. The screen says
+          how many such students there are so the office can complete the mapping.*/
+        $enrolledStudentIds = [];
+        $unmappedStudentIds = [];
+        if ($examSchedule) {
+            $enrolledStudentIds = \App\Models\StudentSubject::where('subjects_id', $examSchedule->subjects_id)
+                ->pluck('students_id')->map(function ($v) { return (int) $v; })->unique()->values()->all();
+
+            $classStudentIds = Student::where($studentCondition)->Active()->pluck('id')
+                ->map(function ($v) { return (int) $v; })->all();
+
+            $mappedStudentIds = \App\Models\StudentSubject::whereIn('students_id', $classStudentIds)
+                ->pluck('students_id')->map(function ($v) { return (int) $v; })->unique()->all();
+
+            $unmappedStudentIds = array_values(array_diff($classStudentIds, $mappedStudentIds));
+        }
+
         $subjectDetail = $examSchedule ? Subject::select('id', 'full_mark_theory', 'full_mark_practical', 'mcq_number_theory')->find($examSchedule->subjects_id) : null;
         $scheduleTheoryLimit = (float) ($examSchedule->full_mark_theory ?? 0);
         $schedulePracticalLimit = (float) ($examSchedule->full_mark_practical ?? 0);
@@ -753,10 +775,17 @@ class ExamMarkLedgerController extends CollegeBaseController
                 ->whereNotIn('id',$existStudentId)
                 ->Active()
                 ->orderBy('reg_no','asc');
+
             if ($isOptionalSubject) {
                 /*Optional subject screen: only its own takers can get a new row*/
                 $activeStudentQuery->whereIn('id', count($ownTakerIds) > 0 ? $ownTakerIds : [0]);
+            } else {
+                /*Everyone else: only students enrolled in this subject, plus students whose
+                  subject mapping has never been filled in (so their marks stay enterable).*/
+                $allowedIds = array_values(array_unique(array_merge($enrolledStudentIds, $unmappedStudentIds)));
+                $activeStudentQuery->whereIn('id', count($allowedIds) > 0 ? $allowedIds : [0]);
             }
+
             $activeStudent = $activeStudentQuery->get();
 
 
@@ -778,16 +807,33 @@ class ExamMarkLedgerController extends CollegeBaseController
 
 
 
+                /*Rows already saved for students who are NOT enrolled in this subject.
+                  They are never hidden - hiding a saved mark is how marks get lost - but
+                  they are flagged so the office can see and correct them.*/
+                $notEnrolledIds = [];
+                if (count($enrolledStudentIds) > 0) {
+                    foreach ($ledgerExist as $ledgerRow) {
+                        $sid = (int) $ledgerRow->students_id;
+                        if (!in_array($sid, $enrolledStudentIds, true) && !in_array($sid, $unmappedStudentIds, true)) {
+                            $notEnrolledIds[] = $sid;
+                        }
+                    }
+                }
+
                 $response['limits'] = $markLimits;
                 $response['exist_count'] = count($ledgerExist);
                 $response['new_count'] = count($activeStudent);
                 $response['locked_count'] = count($lockedIds);
+                $response['enrolled_count'] = count($enrolledStudentIds);
+                $response['unmapped_count'] = count($unmappedStudentIds);
+                $response['not_enrolled_count'] = count($notEnrolledIds);
 
                 if($ledgerExist){
                     $response['error'] = false;
 
                     $response['exist'] = view($this->view_path.'.includes.student_tr_rows', [
                         'optionalIds' => $optionalStudentIds,
+                        'notEnrolledIds' => $notEnrolledIds,
                         'exist' => $ledgerExist,
                         'absent_theory' => $trAbsentStudent,
                         'absent_practical' => $prAbsentStudent,

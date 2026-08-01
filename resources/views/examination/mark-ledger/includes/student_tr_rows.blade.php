@@ -33,6 +33,9 @@
             @if(isset($optionalIds) && in_array((int) $student->student_id, $optionalIds, true))
                 <span class="label label-info" title="Takes this subject as Optional (4th subject) - mark will be saved under the Optional subject automatically.">Optional</span>
             @endif
+            @if(isset($notEnrolledIds) && in_array((int) $student->student_id, $notEnrolledIds, true))
+                <span class="label label-danger" title="This student is not enrolled in this subject, but a mark is already saved for them. It is shown so it is not lost - check the student's subject list, then clear this mark if it was entered by mistake.">Not enrolled</span>
+            @endif
         </td>
         <td>
             {!! Form::checkbox('absent_theory[]', $student->student_id, in_array($student->student_id, $absent_theory), array_merge(['class' => 'form-control'], $isLocked ? ['disabled' => 'disabled'] : [])) !!}
