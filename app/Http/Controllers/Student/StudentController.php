@@ -916,6 +916,11 @@ class StudentController extends CollegeBaseController
             ->orderBy('semesters_id', 'asc')
             ->get();
 
+        /*This student's own tabulation, one block per exam, shown straight on the profile.
+          It runs the same engine the class-wide tabulation sheet and the HSC grade sheet
+          use, so the profile can never disagree with the printed result.*/
+        $data['exam_results'] = $this->studentExamResults($data['student'], $data['schedule_exams']);
+
     //'exam_schedules.id as exam_schedule_id',
     //       dd($data['schedule_exams']->toArray());
 
@@ -1105,6 +1110,66 @@ class StudentController extends CollegeBaseController
         //$subjectsFee = $data['row']->majorSubject()->join('subjects','subjects.id','=','student_subject.subjects_id')->sum('course_fee');
         //$data['admission_fee'] = $semesterFee + $subjectsFee;
         return view(parent::loadDataToView($this->view_path.'.registration.edit'), compact('data'));
+    }
+
+    /**
+     * One student's result for every exam they sat, in tabulation form.
+     *
+     * Deliberately reuses hscGradingSystem() - the very same engine behind the class
+     * tabulation sheet and the HSC grade sheet - so the profile, the sheet and the print
+     * can never show three different answers. Keyed by the exam group.
+     */
+    protected function studentExamResults($student, $scheduleExams)
+    {
+        $results = [];
+
+        if (!$student || !$scheduleExams || !count($scheduleExams)) {
+            return $results;
+        }
+
+        foreach ($scheduleExams as $exam) {
+            $scheduleIds = ExamSchedule::where([
+                    ['years_id', '=', $exam->years_id],
+                    ['months_id', '=', $exam->months_id],
+                    ['exams_id', '=', $exam->exams_id],
+                    ['faculty_id', '=', $exam->faculty_id],
+                    ['semesters_id', '=', $exam->semesters_id],
+                ])->pluck('id')->all();
+
+            if (!$scheduleIds) {
+                continue;
+            }
+
+            $request = new \Illuminate\Http\Request([
+                'chkIds' => [$student->id],
+                'exam_schedule_id' => implode(',', $scheduleIds),
+                'exams_id' => $exam->exams_id,
+                'year_id' => $exam->years_id,
+                'month_id' => $exam->months_id,
+                'faculty_id' => $exam->faculty_id,
+                'semester_id' => $exam->semesters_id,
+            ]);
+
+            try {
+                $data = $this->hscGradingSystem($request);
+            } catch (\Exception $e) {
+                \Log::warning('Student profile result could not be built', [
+                    'student_id' => $student->id, 'error' => $e->getMessage(),
+                ]);
+                continue;
+            }
+
+            if (!is_array($data) || !isset($data['student']) || !count($data['student'])) {
+                continue;
+            }
+
+            $key = $exam->years_id.'-'.$exam->months_id.'-'.$exam->exams_id
+                .'-'.$exam->faculty_id.'-'.$exam->semesters_id;
+
+            $results[$key] = $data['student']->first();
+        }
+
+        return $results;
     }
 
     /**
