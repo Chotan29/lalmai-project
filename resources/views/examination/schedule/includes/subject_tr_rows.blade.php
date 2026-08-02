@@ -42,7 +42,11 @@
         </td>
         <td>
             <div class="btn-group">
-                <button type="button" class="btn btn-xs btn-danger" onclick="$(this).closest('tr').remove();">
+                {{-- Removing the row only takes it off the screen; the schedule is deleted
+                     when the form is saved, and only if no mark has been entered for it. --}}
+                <button type="button" class="btn btn-xs btn-danger"
+                        title="Remove this subject from the schedule. It is deleted when you press Save — but only if no mark has been entered for it yet."
+                        onclick="if (confirm('Remove {{ addslashes($subject->title) }} from this exam schedule?\n\nIt will be deleted when you press Save. If any mark has already been entered for this subject, it will be kept and you will be told.')) { $(this).closest('tr').remove(); }">
                     <i class="fa fa-trash bigger-120"></i>
                 </button>
             </div>

@@ -247,7 +247,31 @@ class ExamScheduleController extends CollegeBaseController
 
                 }
             }
-            $request->session()->flash($this->message_success, $this->panel. ' Schedule Successfully.');
+
+            /*A subject removed from the list with the red button used to stay in the
+              database: store() only ever added or updated what was submitted, so the
+              subject kept appearing on the Exam Dashboard, the mark ledger and the
+              tabulation sheet. Remove those leftovers here.
+
+              A schedule that already holds marks is NEVER removed - deleting it would
+              orphan real marks. It is kept and reported instead, so the office can clear
+              the marks first if the subject really was scheduled by mistake.*/
+            list($removedTitles, $keptTitles) = $this->removeUnscheduledSubjects(
+                $year, $month, $exam, $faculty, $semester, $request->get('sem_subject_id')
+            );
+
+            $message = $this->panel.' Schedule Successfully.';
+            if (count($removedTitles)) {
+                $message .= ' Removed from the schedule: '.implode(', ', $removedTitles).'.';
+            }
+            $request->session()->flash($this->message_success, $message);
+
+            if (count($keptTitles)) {
+                $request->session()->flash($this->message_warning,
+                    'These subjects still have marks entered, so they were NOT removed: '
+                    .implode(', ', $keptTitles)
+                    .'. Clear their marks in the Mark Ledger first, then remove them again.');
+            }
         }else{
             $request->session()->flash($this->message_warning, 'No Any Subject To Schedule.');
         }
@@ -259,6 +283,66 @@ class ExamScheduleController extends CollegeBaseController
         }
 
 
+    }
+
+    /**
+     * Drop the schedules of subjects the user took off the list, so the subject really
+     * disappears everywhere (Exam Dashboard, mark ledger, tabulation sheet).
+     *
+     * Marks are sacred: a schedule that has ANY mark row - even a deactivated one - is
+     * left exactly where it is and reported back to the user.
+     *
+     * Returns [removedTitles, keptTitles].
+     */
+    protected function removeUnscheduledSubjects($year, $month, $exam, $faculty, $semester, $submittedSubjectIds)
+    {
+        $submitted = array_map('intval', array_filter((array) $submittedSubjectIds));
+
+        /*Nothing submitted means the form never rendered the subject list. Removing
+          everything on that basis would be reckless, so do nothing.*/
+        if (empty($submitted)) {
+            return [[], []];
+        }
+
+        $leftovers = ExamSchedule::where([
+                ['years_id', '=', $year],
+                ['months_id', '=', $month],
+                ['exams_id', '=', $exam],
+                ['faculty_id', '=', $faculty],
+                ['semesters_id', '=', $semester],
+            ])
+            ->whereNotIn('subjects_id', $submitted)
+            ->get();
+
+        $removed = [];
+        $kept = [];
+
+        foreach ($leftovers as $schedule) {
+            $title = \App\Models\Subject::where('id', $schedule->subjects_id)->value('title') ?: ('Subject #'.$schedule->subjects_id);
+            $title = trim(preg_replace('/\s+/', ' ', $title));
+
+            /*Count every mark row, including ones already deactivated.*/
+            $markCount = \DB::table('exam_mark_ledgers')->where('exam_schedule_id', $schedule->id)->count();
+
+            if ($markCount > 0) {
+                $kept[] = $title.' ('.$markCount.' mark'.($markCount > 1 ? 's' : '').')';
+                continue;
+            }
+
+            \Log::info('Exam schedule removed (no marks attached)', [
+                'schedule_id' => $schedule->id,
+                'subject_id' => $schedule->subjects_id,
+                'subject' => $title,
+                'years_id' => $year, 'months_id' => $month, 'exams_id' => $exam,
+                'faculty_id' => $faculty, 'semesters_id' => $semester,
+                'by_user' => auth()->id(),
+            ]);
+
+            $schedule->delete();
+            $removed[] = $title;
+        }
+
+        return [$removed, $kept];
     }
 
     public function delete(Request $request, $year=null,$month=null,$exam=null,$faculty=null,$semester=null)
