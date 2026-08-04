@@ -60,6 +60,29 @@
                             </button>
                         @endif
                     </span>
+
+                    {{-- Releasing to the public website is a further step again: anyone on the
+                         internet can then look up a roll. Its own button, its own flag. --}}
+                    <span class="tab-publish-box">
+                        @if(!empty($data['tabulation_public']))
+                            <span class="label label-success" style="font-size:12px;">
+                                <i class="ace-icon fa fa-globe"></i> Live on website
+                            </span>
+                            <button type="submit" name="tabulation_public" value="0" class="btn btn-danger btn-sm tab-publish-btn"
+                                    data-confirm-title="Withdraw from the website"
+                                    data-confirm-text="The public result page will stop finding this exam, and the teachers' sheet link will be cancelled. You can publish again later, but a new link will be issued."
+                                    data-confirm-ok="Withdraw">
+                                <i class="ace-icon fa fa-globe"></i> Remove from Website
+                            </button>
+                        @else
+                            <button type="submit" name="tabulation_public" value="1" class="btn btn-success btn-sm tab-publish-btn"
+                                    data-confirm-title="Publish this result on the website"
+                                    data-confirm-text="This whole sheet will be listed on lalmaigc.edu.bd under this department, open for anyone to read - every roll, name, subject mark and fail on it. Students will also be able to look up their own row by roll and date of birth. Remove from Website takes it all down again."
+                                    data-confirm-ok="Publish to Website">
+                                <i class="ace-icon fa fa-globe"></i> Publish to Website
+                            </button>
+                        @endif
+                    </span>
                 @endability
 
                 <a href="#" class="btn btn-primary btn-sm" onclick="window.print(); return false;">
@@ -73,6 +96,30 @@
                 </button>
             {!! Form::close() !!}
         </div>
+        @ability('super-admin', 'exam-result-publish')
+            @if(!empty($data['tabulation_public']) && !empty($data['tabulation_public_token']))
+                {{-- Already listed on the public result page under this department; the direct
+                     link is here so it can be put in a notice or sent on WhatsApp. --}}
+                <div class="col-sm-12 no-print" style="margin-bottom:10px;">
+                    <div class="alert alert-success" style="margin-bottom:0;">
+                        <strong><i class="ace-icon fa fa-globe"></i> This sheet is live on the website</strong>
+                        <div class="input-group" style="margin-top:6px;">
+                            <input type="text" class="form-control" id="tab-public-link" readonly
+                                   value="{{ route('public-result.sheet', ['token' => $data['tabulation_public_token']]) }}">
+                            <span class="input-group-btn">
+                                <button class="btn btn-default" type="button" id="tab-copy-link">Copy</button>
+                            </span>
+                        </div>
+                        <small>
+                            It is already listed under this department on
+                            <a href="{{ route('public-result') }}" target="_blank">{{ route('public-result') }}</a>,
+                            so nobody needs this link to find it - it is here for notices and messages.
+                            Remove from Website cancels it.
+                        </small>
+                    </div>
+                </div>
+            @endif
+        @endability
         <div class="main-content-inner">
             <div class="page-content">
                 <div class="tab-sheet-wrapper {{ $density }}">
@@ -117,6 +164,13 @@
                 }
             });
             return false;
+        });
+
+        $('#tab-copy-link').on('click', function () {
+            var box = document.getElementById('tab-public-link');
+            box.select();
+            box.setSelectionRange(0, 99999);
+            try { document.execCommand('copy'); $(this).text('Copied'); } catch (e) { /* select-and-copy by hand */ }
         });
 
         /* Paper choice drives both the browser print dialog and the PDF download. */

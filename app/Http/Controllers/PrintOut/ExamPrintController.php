@@ -640,7 +640,7 @@ class ExamPrintController extends CollegeBaseController
         /* keep original request inputs so the web view can re-post for pdf/excel.
            tabulation_publish is dropped: it is an action, not part of the sheet, and must
            not fire again when the user then presses PDF or Excel. */
-        $data['request_inputs'] = $request->except(['output', '_token', 'tabulation_publish']);
+        $data['request_inputs'] = $request->except(['output', '_token', 'tabulation_publish', 'tabulation_public']);
 
         /* The Publish / Un-Publish button re-posts this same sheet with a flag, so the
            office sees the result redraw with its new state instead of being thrown back to
@@ -665,10 +665,48 @@ class ExamPrintController extends CollegeBaseController
                 : 'Tabulation Sheet Un-Published. It is hidden from the students again.');
         }
 
+        /* Releasing to lalmaigc.edu.bd is a separate, larger step than releasing into the
+           logged-in student panel, so it has its own button and its own flag. Publishing
+           mints a fresh token for the teachers' whole-class link; un-publishing throws the
+           token away, which kills any link already handed out. */
+        if ($request->has('tabulation_public')) {
+            $state = (int) $request->get('tabulation_public') === 1 ? 1 : 0;
+
+            ExamSchedule::where([
+                    ['years_id', '=', $data['year']],
+                    ['months_id', '=', $data['month']],
+                    ['exams_id', '=', $data['exam']],
+                    ['faculty_id', '=', $data['faculty']],
+                    ['semesters_id', '=', $data['semester']],
+                ])->update([
+                    'tabulation_public_status' => $state,
+                    'tabulation_public_date' => $state ? Carbon::now() : null,
+                    'tabulation_public_token' => $state ? bin2hex(random_bytes(24)) : null,
+                ]);
+
+            $request->session()->flash($this->message_success, $state
+                ? 'Published on the website. This sheet is now listed under its department, and students can also look up their own result by roll and date of birth.'
+                : 'Removed from the website. The listing is gone and any copied link has stopped working.');
+        }
+
         /* drives the Publish / Un-Publish button on the sheet */
         $data['tabulation_published'] = $this->tabulationIsPublished(
             $data['year'], $data['month'], $data['exam'], $data['faculty'], $data['semester']
         );
+
+        $data['tabulation_public'] = $this->tabulationIsPublic(
+            $data['year'], $data['month'], $data['exam'], $data['faculty'], $data['semester']
+        );
+
+        $data['tabulation_public_token'] = $data['tabulation_public']
+            ? ExamSchedule::where([
+                    ['years_id', '=', $data['year']],
+                    ['months_id', '=', $data['month']],
+                    ['exams_id', '=', $data['exam']],
+                    ['faculty_id', '=', $data['faculty']],
+                    ['semesters_id', '=', $data['semester']],
+                ])->value('tabulation_public_token')
+            : null;
 
         return view(parent::loadDataToView($this->view_path.'.tabulation-sheet'), compact('data'));
     }

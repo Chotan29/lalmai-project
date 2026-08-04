@@ -454,6 +454,15 @@ Route::group(['prefix' => 'registration-payment', 'as' => 'registration-payment.
     Route::match(['get', 'post'], 'ucb-cancel',  ['as' => 'ucb-cancel',  'uses' => 'Student\RegistrationPaymentController@sslCancel']);
 });
 
+/*Public result page, linked from lalmaigc.edu.bd. No login.
+  A student sees only their own row, and only for an exam the office has released to the web
+  (tabulation_public_status). throttle is a second line behind the controller's own per-IP
+  counter, so the lookup cannot be walked roll by roll. The whole-class sheet needs the long
+  random token the office is given, and that token dies on un-publish.*/
+Route::get('result',            ['as' => 'public-result',       'uses' => 'Front\PublicResultController@index']);
+Route::post('result',           ['as' => 'public-result.find',  'middleware' => ['throttle:20,1'], 'uses' => 'Front\PublicResultController@find']);
+Route::get('result/sheet/{token}', ['as' => 'public-result.sheet', 'middleware' => ['throttle:30,1'], 'uses' => 'Front\PublicResultController@sheet']);
+
 /*Public self-service: a student who paid but never got the form/receipt fixes it themselves.
   Nothing is created unless SSLCommerz confirms the payment.*/
 Route::get('paid-but-no-form',  ['as' => 'registration-self-recovery',          'uses' => 'Student\RegistrationSelfRecoveryController@index']);

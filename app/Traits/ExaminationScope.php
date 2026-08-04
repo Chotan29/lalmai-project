@@ -134,6 +134,82 @@ trait ExaminationScope{
             ->exists();
     }
 
+    /**
+     * Has the office released this exam group to the open web (lalmaigc.edu.bd)?
+     *
+     * Deliberately a third flag. publish_status governs the old grade sheet, the routine and
+     * the admit card; tabulation_publish_status governs the tabulation inside the logged-in
+     * student's panel; this one governs a page anybody on the internet can open, which is a
+     * bigger step and must be revocable on its own.
+     */
+    public function tabulationIsPublic($year, $month, $exam, $faculty, $semester)
+    {
+        return ExamSchedule::where([
+                ['years_id', '=', $year],
+                ['months_id', '=', $month],
+                ['exams_id', '=', $exam],
+                ['faculty_id', '=', $faculty],
+                ['semesters_id', '=', $semester],
+            ])
+            ->where('tabulation_public_status', 1)
+            ->exists();
+    }
+
+    /**
+     * Every exam group currently released to the public site, newest first, as rows the
+     * result page turns into its picker. Only what the office has released is ever listed -
+     * an unreleased exam must not even be nameable from outside.
+     */
+    public function publicReleasedExamGroups()
+    {
+        return ExamSchedule::select('years_id', 'months_id', 'exams_id', 'faculty_id', 'semesters_id')
+            ->where('tabulation_public_status', 1)
+            ->groupBy('years_id', 'months_id', 'exams_id', 'faculty_id', 'semesters_id')
+            ->orderBy('years_id', 'desc')
+            ->orderBy('months_id', 'desc')
+            ->get();
+    }
+
+    /**
+     * Build one student's tabulation for one exam group, ready for the shared partial.
+     * Returns null when the student sat no paper in that exam.
+     *
+     * Single door for every caller - the profile, the student panel and the public result
+     * page - so a result cannot come out differently depending on who asked.
+     */
+    public function studentTabulationFor($studentId, $year, $month, $exam, $faculty, $semester)
+    {
+        $scheduleIds = ExamSchedule::where([
+                ['years_id', '=', $year],
+                ['months_id', '=', $month],
+                ['exams_id', '=', $exam],
+                ['faculty_id', '=', $faculty],
+                ['semesters_id', '=', $semester],
+            ])->pluck('id')->all();
+
+        if (!$scheduleIds) {
+            return null;
+        }
+
+        $scheduleIdList = implode(',', $scheduleIds);
+
+        $data = $this->hscGradingSystem(new Request([
+            'chkIds' => [$studentId],
+            'exam_schedule_id' => $scheduleIdList,
+            'exams_id' => $exam,
+            'year_id' => $year,
+            'month_id' => $month,
+            'faculty_id' => $faculty,
+            'semester_id' => $semester,
+        ]));
+
+        if (!is_array($data) || !isset($data['student']) || !count($data['student'])) {
+            return null;
+        }
+
+        return $this->buildTabulationView($data, $scheduleIdList);
+    }
+
     public function activeExams()
     {
         $exams = Exam::Active()->orderBy('title')->pluck('title','id')->toArray();
