@@ -218,6 +218,7 @@ Route::group(['prefix' => 'user-student/',          'as' => 'user-student',     
     Route::get('exam-schedule/{year}/{month}/{exam}/{faculty}/{semester}',         ['as' => '.exam-schedule',       'middleware' => ['permission:student-exam'],     'uses' => 'HomeController@examSchedule']);
     Route::get('exam-admit-card/{year}/{month}/{exam}/{faculty}/{semester}',       ['as' => '.exam-admit-card',     'middleware' => ['permission:student-exam'],     'uses' => 'HomeController@admitCard']);
     Route::get('exam-score/{year}/{month}/{exam}/{faculty}/{semester}',            ['as' => '.exam-score',          'middleware' => ['permission:student-exam'],     'uses' => 'HomeController@examScore']);
+    Route::get('exam-tabulation/{year}/{month}/{exam}/{faculty}/{semester}',       ['as' => '.exam-tabulation',     'middleware' => ['permission:student-exam'],     'uses' => 'HomeController@examTabulation']);
 
     Route::get('hostel',                ['as' => '.hostel',             'middleware' => ['permission:student-hostel'],         'uses' => 'HomeController@hostel']);
     Route::get('transport',             ['as' => '.transport',          'middleware' => ['permission:student-transport'],         'uses' => 'HomeController@transport']);
@@ -1209,6 +1210,10 @@ Route::group(['prefix' => 'exam/',                                      'as' => 
     //result publish status
     Route::get('schedule/{year}/{month}/{exam}/{faculty}/{semester}/result-publish',    ['as' => '.schedule.result-publish',                  'middleware' => ['ability:super-admin,exam-result-publish'],                'uses' => 'ExamScheduleController@publish']);
     Route::get('schedule/{year}/{month}/{exam}/{faculty}/{semester}/result-un-publish', ['as' => '.schedule.result-un-publish',               'middleware' => ['ability:super-admin,exam-result-un-publish'],             'uses' => 'ExamScheduleController@unPublish']);
+
+    /*tabulation publish status - released to students separately from the grade sheet above*/
+    Route::get('schedule/{year}/{month}/{exam}/{faculty}/{semester}/tabulation-publish',    ['as' => '.schedule.tabulation-publish',       'middleware' => ['ability:super-admin,exam-result-publish'],                'uses' => 'ExamScheduleController@publishTabulation']);
+    Route::get('schedule/{year}/{month}/{exam}/{faculty}/{semester}/tabulation-un-publish', ['as' => '.schedule.tabulation-un-publish',    'middleware' => ['ability:super-admin,exam-result-un-publish'],             'uses' => 'ExamScheduleController@unPublishTabulation']);
 
     /*Exam Schedule Routes*/
     Route::get('schedule',                                                      ['as' => '.schedule',                  'middleware' => ['ability:super-admin,exam-schedule-index'],                 'uses' => 'ExamScheduleController@index']);

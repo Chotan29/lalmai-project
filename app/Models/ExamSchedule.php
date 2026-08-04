@@ -8,7 +8,8 @@ class ExamSchedule extends BaseModel
 {
     protected $fillable = ['created_by', 'last_updated_by', 'years_id','months_id', 'exams_id', 'faculty_id','semesters_id', 'subjects_id',
         'date', 'start_time', 'end_time', 'full_mark_theory', 'pass_mark_theory', 'full_mark_practical',
-        'pass_mark_practical','sorting_order', 'publish_status', 'publish_date', 'status'];
+        'pass_mark_practical','sorting_order', 'publish_status', 'publish_date',
+        'tabulation_publish_status', 'tabulation_publish_date', 'status'];
 
 
 

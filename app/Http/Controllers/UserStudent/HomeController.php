@@ -922,16 +922,72 @@ class HomeController extends CollegeBaseController
         $year = Year::where('active_status',1)->first();
         if(!$year) return back();
 
-        $data['schedule_exams'] = ExamSchedule::select('years_id', 'months_id', 'exams_id', 'faculty_id', 'semesters_id', 'publish_status', 'status')
+        /*tabulation_publish_status rides along so the card can offer the Tabulation button
+          only for the exams whose sheet the office has actually released.*/
+        $data['schedule_exams'] = ExamSchedule::select('years_id', 'months_id', 'exams_id', 'faculty_id', 'semesters_id', 'publish_status', 'tabulation_publish_status', 'status')
             //->where([['semesters_id',$semester->id],['years_id',$year->id]])
             ->where('semesters_id',$semester->id)
             ->where('status', 1)
-            ->groupBy('years_id', 'months_id', 'exams_id', 'faculty_id', 'semesters_id','publish_status', 'status')
+            ->groupBy('years_id', 'months_id', 'exams_id', 'faculty_id', 'semesters_id','publish_status', 'tabulation_publish_status', 'status')
             ->orderBy('years_id', 'desc')
             ->orderBy('months_id', 'asc')
             ->get();
 
         return view(parent::loadDataToView($this->view_path.'.exam.index'), compact('data'));
+    }
+
+    /**
+     * The student's own row of the class tabulation sheet.
+     *
+     * Built by hscGradingSystem() + buildTabulationView(), the same pair the office's
+     * printed sheet uses, and drawn with the sheet's own markup - a student and the office
+     * must never be looking at two different results.
+     *
+     * Gated on tabulation_publish_status, not publish_status: the grade sheet and the
+     * tabulation are released separately.
+     */
+    public function examTabulation(Request $request, $year=null,$month=null,$exam=null,$faculty=null,$semester=null)
+    {
+        $this->panel = "Tabulation Sheet";
+        $studentId = auth()->user()->hook_id;
+
+        if (!$this->tabulationIsPublished($year, $month, $exam, $faculty, $semester)) {
+            return back()->with($this->message_warning, 'Tabulation sheet has not been published yet. Please be patient.');
+        }
+
+        $scheduleIds = ExamSchedule::where([
+                ['years_id', '=', $year],
+                ['months_id', '=', $month],
+                ['exams_id', '=', $exam],
+                ['faculty_id', '=', $faculty],
+                ['semesters_id', '=', $semester],
+            ])->pluck('id')->all();
+
+        if (!$scheduleIds) {
+            return back()->with($this->message_warning, 'No subject is scheduled for this exam.');
+        }
+
+        $scheduleIdList = implode(',', $scheduleIds);
+
+        $gradeRequest = new Request([
+            'chkIds' => [$studentId],
+            'exam_schedule_id' => $scheduleIdList,
+            'exams_id' => $exam,
+            'year_id' => $year,
+            'month_id' => $month,
+            'faculty_id' => $faculty,
+            'semester_id' => $semester,
+        ]);
+
+        $data = $this->hscGradingSystem($gradeRequest);
+
+        if (!is_array($data) || !isset($data['student']) || !count($data['student'])) {
+            return back()->with($this->message_warning, 'No mark has been entered for you in this exam yet.');
+        }
+
+        $data = $this->buildTabulationView($data, $scheduleIdList);
+
+        return view(parent::loadDataToView($this->view_path.'.exam.tabulation'), compact('data'));
     }
 
     public function examSchedule(Request $request, $year=null,$month=null,$exam=null,$faculty=null,$semester=null)

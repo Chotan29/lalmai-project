@@ -1113,11 +1113,15 @@ class StudentController extends CollegeBaseController
     }
 
     /**
-     * One student's result for every exam they sat, in tabulation form.
+     * One student's result for every exam they sat, as a ready-to-draw tabulation.
      *
-     * Deliberately reuses hscGradingSystem() - the very same engine behind the class
-     * tabulation sheet and the HSC grade sheet - so the profile, the sheet and the print
-     * can never show three different answers. Keyed by the exam group.
+     * Deliberately reuses hscGradingSystem() and buildTabulationView() - the very same
+     * engine and column builder behind the class tabulation sheet - so the profile, the
+     * sheet and the print can never show three different answers.
+     *
+     * Returns, keyed by the exam group, the whole $data array the tabulation partial
+     * expects (student collection of one, subject_columns, grade scale, exam meta), not
+     * just the student row, so the profile can render the real sheet markup.
      */
     protected function studentExamResults($student, $scheduleExams)
     {
@@ -1140,9 +1144,11 @@ class StudentController extends CollegeBaseController
                 continue;
             }
 
+            $scheduleIdList = implode(',', $scheduleIds);
+
             $request = new \Illuminate\Http\Request([
                 'chkIds' => [$student->id],
-                'exam_schedule_id' => implode(',', $scheduleIds),
+                'exam_schedule_id' => $scheduleIdList,
                 'exams_id' => $exam->exams_id,
                 'year_id' => $exam->years_id,
                 'month_id' => $exam->months_id,
@@ -1152,6 +1158,19 @@ class StudentController extends CollegeBaseController
 
             try {
                 $data = $this->hscGradingSystem($request);
+
+                if (!is_array($data) || !isset($data['student']) || !count($data['student'])) {
+                    continue;
+                }
+
+                $data = $this->buildTabulationView($data, $scheduleIdList);
+
+                /* The office sees the row whether or not it has been released; this only
+                   tells them whether the student can see it too. */
+                $data['tabulation_published'] = $this->tabulationIsPublished(
+                    $exam->years_id, $exam->months_id, $exam->exams_id,
+                    $exam->faculty_id, $exam->semesters_id
+                );
             } catch (\Exception $e) {
                 \Log::warning('Student profile result could not be built', [
                     'student_id' => $student->id, 'error' => $e->getMessage(),
@@ -1159,14 +1178,10 @@ class StudentController extends CollegeBaseController
                 continue;
             }
 
-            if (!is_array($data) || !isset($data['student']) || !count($data['student'])) {
-                continue;
-            }
-
             $key = $exam->years_id.'-'.$exam->months_id.'-'.$exam->exams_id
                 .'-'.$exam->faculty_id.'-'.$exam->semesters_id;
 
-            $results[$key] = $data['student']->first();
+            $results[$key] = $data;
         }
 
         return $results;

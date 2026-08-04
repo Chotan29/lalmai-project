@@ -15,6 +15,125 @@ use Illuminate\Http\Request;
 
 trait ExaminationScope{
 
+    /**
+     * One tabulation column group for a subject.
+     *
+     * A subject only gets the component sub-columns it really has: an English paper with no
+     * MCQ and no practical takes 2 cells (Total, LG), a science paper takes 5 (Theory, MCQ,
+     * Practical, Total, LG). That keeps the sheet as narrow as the data allows instead of
+     * printing a forest of dashes.
+     *
+     * Lives in the trait, not in a controller, because the class tabulation sheet, the
+     * student profile and the student panel all draw the same row and must never disagree.
+     */
+    public function tabulationColumn($subject, $sortingOrder)
+    {
+        $fullTheory = (float) ($subject->full_mark_theory ?? 0);
+        $fullMcq = (float) ($subject->mcq_number_theory ?? 0);
+        $fullPractical = (float) ($subject->full_mark_practical ?? 0);
+
+        $span = 2; /* Total + LG are always printed */
+        foreach ([$fullTheory, $fullMcq, $fullPractical] as $mark) {
+            if ($mark > 0) {
+                $span++;
+            }
+        }
+
+        return (object) [
+            'subjects_id'    => $subject->id ?? $subject->subjects_id,
+            'title'          => $subject->title,
+            'code'           => $subject->code,
+            'short_name'     => Subject::shortLabel($subject),
+            'sorting_order'  => $sortingOrder,
+            'has_theory'     => $fullTheory > 0,
+            'has_mcq'        => $fullMcq > 0,
+            'has_practical'  => $fullPractical > 0,
+            'full_theory'    => $fullTheory,
+            'full_mcq'       => $fullMcq,
+            'full_practical' => $fullPractical,
+            'full_total'     => $fullTheory + $fullMcq + $fullPractical,
+            'span'           => $span,
+        ];
+    }
+
+    /**
+     * Turn a graded $data array from hscGradingSystem() into a printable tabulation:
+     * adds subject_columns, the cell count the views size their font from, and sorts the
+     * students by roll the way a physical sheet is ordered.
+     *
+     * Columns follow the exam routine order, but a subject nobody on this sheet has a mark
+     * in is left out entirely - an all-dash column only wastes width. As marks get entered,
+     * the subject appears by itself.
+     */
+    public function buildTabulationView(array $data, $scheduleIdList)
+    {
+        $scheduleIds = array_filter(explode(',', (string) $scheduleIdList));
+
+        $subjectsWithMarks = [];
+        foreach ($data['student'] as $student) {
+            foreach ($student->subjects as $subject) {
+                $subjectsWithMarks[(int) $subject->subjects_id] = true;
+            }
+        }
+
+        $subjectColumns = [];
+
+        foreach (ExamSchedule::whereIn('exam_schedules.id', $scheduleIds)
+                    ->join('subjects as sub', 'sub.id', '=', 'exam_schedules.subjects_id')
+                    ->select('sub.id as subjects_id', 'sub.title', 'sub.code', 'sub.short_name',
+                        'sub.full_mark_theory', 'sub.mcq_number_theory', 'sub.full_mark_practical',
+                        'exam_schedules.sorting_order')
+                    ->orderBy('exam_schedules.sorting_order')
+                    ->get() as $row) {
+            if (isset($subjectColumns[$row->subjects_id]) || !isset($subjectsWithMarks[(int) $row->subjects_id])) {
+                continue;
+            }
+            $subjectColumns[$row->subjects_id] = $this->tabulationColumn($row, $row->sorting_order);
+        }
+
+        /* Safety net: a subject a student has marks for but which is no longer scheduled
+           must still be printed rather than silently dropped. */
+        foreach ($data['student'] as $student) {
+            foreach ($student->subjects as $subject) {
+                if (isset($subjectColumns[$subject->subjects_id])) {
+                    continue;
+                }
+                $subjectColumns[$subject->subjects_id] = $this->tabulationColumn(
+                    Subject::find($subject->subjects_id) ?: $subject,
+                    $subject->sorting_order
+                );
+            }
+        }
+
+        $data['subject_columns'] = collect($subjectColumns)->sortBy('sorting_order')->values();
+
+        /* Total printed cells across the sheet - the views use it to pick a font size. */
+        $data['tabulation_cell_count'] = $data['subject_columns']->sum('span') + 4;
+
+        /* roll (reg_no) ascending, like a physical tabulation sheet */
+        $data['student'] = $data['student']->sortBy('reg_no')->values();
+
+        return $data;
+    }
+
+    /**
+     * Has the office released the tabulation for this exam group to the students?
+     * Deliberately separate from publish_status, which governs the old grade sheet,
+     * the routine and the admit card.
+     */
+    public function tabulationIsPublished($year, $month, $exam, $faculty, $semester)
+    {
+        return ExamSchedule::where([
+                ['years_id', '=', $year],
+                ['months_id', '=', $month],
+                ['exams_id', '=', $exam],
+                ['faculty_id', '=', $faculty],
+                ['semesters_id', '=', $semester],
+            ])
+            ->where('tabulation_publish_status', 1)
+            ->exists();
+    }
+
     public function activeExams()
     {
         $exams = Exam::Active()->orderBy('title')->pluck('title','id')->toArray();

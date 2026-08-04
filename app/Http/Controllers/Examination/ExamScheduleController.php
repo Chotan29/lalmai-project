@@ -598,6 +598,54 @@ class ExamScheduleController extends CollegeBaseController
         return redirect()->route($this->base_route);
     }
 
+    /**
+     * Release the tabulation sheet to the students of this exam group.
+     *
+     * Kept apart from publish()/unPublish() above on purpose: those govern the grade sheet,
+     * the routine and the admit card, and the office hands the tabulation out on its own
+     * schedule. No SMS alert is sent here - the grade sheet publish already does that, and
+     * releasing the tabulation should not text every guardian a second time.
+     *
+     * Returns to the page it was pressed on, so the Publish button can live on the
+     * tabulation sheet itself as well as on the schedule list.
+     */
+    public function publishTabulation(Request $request, $year=null,$month=null,$exam=null,$faculty=null,$semester=null)
+    {
+        return $this->setTabulationPublish($request, 1, $year, $month, $exam, $faculty, $semester);
+    }
+
+    public function unPublishTabulation(Request $request, $year=null,$month=null,$exam=null,$faculty=null,$semester=null)
+    {
+        return $this->setTabulationPublish($request, 0, $year, $month, $exam, $faculty, $semester);
+    }
+
+    private function setTabulationPublish(Request $request, $state, $year, $month, $exam, $faculty, $semester)
+    {
+        $rows = ExamSchedule::where([
+            ['years_id', '=' , $year],
+            ['months_id', '=' , $month],
+            ['exams_id', '=' , $exam],
+            ['faculty_id', '=' , $faculty],
+            ['semesters_id', '=' , $semester],
+        ])->get();
+
+        if ($rows->isEmpty()) {
+            $request->session()->flash($this->message_warning, 'No exam is scheduled for that year / exam / group / class.');
+            return redirect()->back();
+        }
+
+        ExamSchedule::whereIn('id', array_pluck($rows, 'id'))->update([
+            'tabulation_publish_status' => $state,
+            'tabulation_publish_date' => $state ? now(getenv('APP_TIMEZONE')) : null,
+        ]);
+
+        $request->session()->flash($this->message_success, $state
+            ? 'Tabulation Sheet Published. Students can now see it in their own panel.'
+            : 'Tabulation Sheet Un-Published. It is hidden from the students again.');
+
+        return redirect()->back();
+    }
+
     //send alert on guardian mobile
     public function sendMarkAlert($examIds)
     {

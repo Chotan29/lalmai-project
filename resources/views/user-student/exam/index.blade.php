@@ -183,6 +183,17 @@
         background: var(--success-color);
         color: white;
     }
+
+    .btn-tabulation {
+        background: rgba(15, 81, 50, 0.08);
+        color: #0f5132;
+        border: 1px solid rgba(15, 81, 50, 0.3);
+    }
+
+    .btn-tabulation:hover {
+        background: #0f5132;
+        color: white;
+    }
     
     .no-exams {
         text-align: center;
@@ -289,6 +300,14 @@
                                class="action-btn btn-grade" target="_blank">
                                 <i class="fas fa-chart-line"></i> Grades
                             </a>
+                            {{-- Only offered once the office has released the tabulation;
+                                 it is published separately from the grade sheet above. --}}
+                            @if(!empty($exam->tabulation_publish_status))
+                                <a href="{{ route('user-student.exam-tabulation', ['year' => $exam->years_id, 'month' => $exam->months_id, 'exam' => $exam->exams_id,'faculty' => $exam->faculty_id, 'semester' => $exam->semesters_id]) }}"
+                                   class="action-btn btn-tabulation" target="_blank">
+                                    <i class="fas fa-table"></i> Tabulation
+                                </a>
+                            @endif
                         </div>
                         
                         <div class="exam-date">

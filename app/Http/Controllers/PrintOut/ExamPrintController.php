@@ -599,43 +599,6 @@ class ExamPrintController extends CollegeBaseController
     }
 
     /**
-     * One tabulation column group for a subject.
-     * A subject only gets the component sub-columns it really has: an English paper with
-     * no MCQ and no practical takes 2 cells (Total, LG), a science paper takes 5
-     * (Theory, MCQ, Practical, Total, LG). That keeps the sheet as narrow as the data
-     * allows instead of printing a forest of dashes.
-     */
-    private function tabulationColumn($subject, $sortingOrder)
-    {
-        $fullTheory = (float) ($subject->full_mark_theory ?? 0);
-        $fullMcq = (float) ($subject->mcq_number_theory ?? 0);
-        $fullPractical = (float) ($subject->full_mark_practical ?? 0);
-
-        $span = 2; /* Total + LG are always printed */
-        foreach ([$fullTheory, $fullMcq, $fullPractical] as $mark) {
-            if ($mark > 0) {
-                $span++;
-            }
-        }
-
-        return (object) [
-            'subjects_id'    => $subject->id ?? $subject->subjects_id,
-            'title'          => $subject->title,
-            'code'           => $subject->code,
-            'short_name'     => Subject::shortLabel($subject),
-            'sorting_order'  => $sortingOrder,
-            'has_theory'     => $fullTheory > 0,
-            'has_mcq'        => $fullMcq > 0,
-            'has_practical'  => $fullPractical > 0,
-            'full_theory'    => $fullTheory,
-            'full_mcq'       => $fullMcq,
-            'full_practical' => $fullPractical,
-            'full_total'     => $fullTheory + $fullMcq + $fullPractical,
-            'span'           => $span,
-        ];
-    }
-
-    /**
      * Class-wide tabulation / result sheet (one row per student).
      * Reuses hscGradingSystem() for all mark & grade calculations.
      * output: web (default) | pdf | excel
@@ -649,54 +612,9 @@ class ExamPrintController extends CollegeBaseController
             return $data;
         }
 
-        /* Columns follow the exam routine order, but a subject nobody on this sheet has a
-           mark in is left out entirely - an all-dash column only wastes width. As marks
-           get entered, the subject appears by itself. */
-        $scheduleIds = array_filter(explode(',', (string) $request->get('exam_schedule_id')));
-
-        $subjectsWithMarks = [];
-        foreach ($data['student'] as $student) {
-            foreach ($student->subjects as $subject) {
-                $subjectsWithMarks[(int) $subject->subjects_id] = true;
-            }
-        }
-
-        $subjectColumns = [];
-
-        foreach (ExamSchedule::whereIn('exam_schedules.id', $scheduleIds)
-                    ->join('subjects as sub', 'sub.id', '=', 'exam_schedules.subjects_id')
-                    ->select('sub.id as subjects_id', 'sub.title', 'sub.code', 'sub.short_name',
-                        'sub.full_mark_theory', 'sub.mcq_number_theory', 'sub.full_mark_practical',
-                        'exam_schedules.sorting_order')
-                    ->orderBy('exam_schedules.sorting_order')
-                    ->get() as $row) {
-            if (isset($subjectColumns[$row->subjects_id]) || !isset($subjectsWithMarks[(int) $row->subjects_id])) {
-                continue;
-            }
-            $subjectColumns[$row->subjects_id] = $this->tabulationColumn($row, $row->sorting_order);
-        }
-
-        /* Safety net: a subject a student has marks for but which is no longer scheduled
-           must still be printed rather than silently dropped. */
-        foreach ($data['student'] as $student) {
-            foreach ($student->subjects as $subject) {
-                if (isset($subjectColumns[$subject->subjects_id])) {
-                    continue;
-                }
-                $subjectColumns[$subject->subjects_id] = $this->tabulationColumn(
-                    Subject::find($subject->subjects_id) ?: $subject,
-                    $subject->sorting_order
-                );
-            }
-        }
-
-        $data['subject_columns'] = collect($subjectColumns)->sortBy('sorting_order')->values();
-
-        /* Total printed cells across the sheet - the views use it to pick a font size. */
-        $data['tabulation_cell_count'] = $data['subject_columns']->sum('span') + 4;
-
-        /* roll (reg_no) ascending, like a physical tabulation sheet */
-        $data['student'] = $data['student']->sortBy('reg_no')->values();
+        /* Columns, cell count and roll order all come from the trait, so this sheet and the
+           row drawn on the student profile / student panel are built by the same code. */
+        $data = $this->buildTabulationView($data, $request->get('exam_schedule_id'));
 
         $fileName = 'Tabulation_Sheet_'
             . str_replace(' ', '_', ViewHelper::getExamById($data['exam']))
@@ -719,8 +637,38 @@ class ExamPrintController extends CollegeBaseController
             return Excel::download(new ExamTabulationExport($data), $fileName.'.xlsx');
         }
 
-        /* keep original request inputs so the web view can re-post for pdf/excel */
-        $data['request_inputs'] = $request->except(['output', '_token']);
+        /* keep original request inputs so the web view can re-post for pdf/excel.
+           tabulation_publish is dropped: it is an action, not part of the sheet, and must
+           not fire again when the user then presses PDF or Excel. */
+        $data['request_inputs'] = $request->except(['output', '_token', 'tabulation_publish']);
+
+        /* The Publish / Un-Publish button re-posts this same sheet with a flag, so the
+           office sees the result redraw with its new state instead of being thrown back to
+           the filter form. Releasing the tabulation is deliberately separate from
+           publish_status, which governs the grade sheet, the routine and the admit card. */
+        if ($request->has('tabulation_publish')) {
+            $state = (int) $request->get('tabulation_publish') === 1 ? 1 : 0;
+
+            ExamSchedule::where([
+                    ['years_id', '=', $data['year']],
+                    ['months_id', '=', $data['month']],
+                    ['exams_id', '=', $data['exam']],
+                    ['faculty_id', '=', $data['faculty']],
+                    ['semesters_id', '=', $data['semester']],
+                ])->update([
+                    'tabulation_publish_status' => $state,
+                    'tabulation_publish_date' => $state ? Carbon::now() : null,
+                ]);
+
+            $request->session()->flash($this->message_success, $state
+                ? 'Tabulation Sheet Published. Students can now see their own row in their panel.'
+                : 'Tabulation Sheet Un-Published. It is hidden from the students again.');
+        }
+
+        /* drives the Publish / Un-Publish button on the sheet */
+        $data['tabulation_published'] = $this->tabulationIsPublished(
+            $data['year'], $data['month'], $data['exam'], $data['faculty'], $data['semester']
+        );
 
         return view(parent::loadDataToView($this->view_path.'.tabulation-sheet'), compact('data'));
     }

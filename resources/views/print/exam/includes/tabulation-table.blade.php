@@ -8,6 +8,11 @@
 @php
     $tabGs = $generalSetting ?? null;
 
+    /* Compact draws the same result grid without the college letterhead and grade scale.
+       Used where the page already says which exam this is - the student profile and the
+       student's own panel - so only the row itself is repeated. */
+    $tabCompact = isset($compact) && $compact;
+
     /* Embed the logo as base64 so it survives both the browser print dialog and the
        dompdf PDF renderer - a plain <img src="/images/..."> is dropped by dompdf when the
        app isn't reachable from the PDF worker. */
@@ -22,6 +27,7 @@
     }
 @endphp
 
+@unless($tabCompact)
 <table class="tab-sheet-head">
     <tr>
         <td class="tab-head-logo-cell">
@@ -54,6 +60,7 @@
         </td>
     </tr>
 </table>
+@endunless
 
 <table class="tab-main-table">
     <thead>
