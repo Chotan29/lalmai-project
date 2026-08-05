@@ -214,10 +214,11 @@
                 <th>{{__('form_fields.student.fields.faculty')}}</th>
                 <th width="18%">Semester/Sec</th>
                 <th width="22%">Start & End Date</th>
-                <th width="11%">New Student Fee</th>
-                <th width="11%">Old Student Fee</th>
-                <th width="9%">Status</th>
-                <th width="8%">Action</th>
+                <th width="10%">New Student Fee</th>
+                <th width="10%">Old Student Fee</th>
+                <th width="14%">Main Fee Head</th>
+                <th width="8%">Status</th>
+                <th width="7%">Action</th>
             </tr>
             </thead>
 

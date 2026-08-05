@@ -186,10 +186,24 @@ class FeesHeadController extends CollegeBaseController
                     ->withErrors($validator);
             }
 
+            /* collected_by and is_treasury are optional columns. A sheet without them still
+               imports exactly as before, and every head lands as college money, not treasury -
+               which is the safe default: a head wrongly marked treasury would end up on a
+               challan it does not belong on. */
+            $collectedBy = isset($row['collected_by']) ? strtolower(trim($row['collected_by'])) : 'college';
+            if (!in_array($collectedBy, ['college', 'department'], true)) {
+                $collectedBy = 'college';
+            }
+
+            $isTreasury = isset($row['is_treasury']) ? trim($row['is_treasury']) : 0;
+            $isTreasury = in_array(strtolower((string) $isTreasury), ['1', 'yes', 'y', 'true'], true) ? 1 : 0;
+
             //Student import
             $feeHead = FeeHead::create([
                 "fee_head_title"     => $row['fee_head_title'],
                 "fee_head_amount"    => $row['fee_head_amount'],
+                'collected_by'       => $collectedBy,
+                'is_treasury'        => $isTreasury,
                 'created_by'         => auth()->user()->id
             ]);
 

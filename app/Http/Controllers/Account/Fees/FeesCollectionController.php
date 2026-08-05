@@ -337,7 +337,10 @@ class FeesCollectionController extends CollegeBaseController
         $filtered  = $students->filter(function ($student) use ($request) {
 
             //provide discount
-            $feeMaster = $student->feeMaster()->orderBy('fee_due_date','asc')->get();
+            /* CollectionOrder, not fee_due_date alone: an admission fee lands 26 rows on one
+               date, and money must fill them in the order the office arranged - college heads
+               first - or a part payment silently lands on the wrong head. */
+            $feeMaster = $student->feeMaster()->CollectionOrder()->get();
             $student->fee_amount = $feeMaster->sum('fee_amount');
             $student->paid_amount = $student->feeCollect()->sum('paid_amount');
             $student->discount = $student->feeCollect()->sum('discount');
@@ -420,7 +423,10 @@ class FeesCollectionController extends CollegeBaseController
             }
 
             //receive fee
-            $feeMaster = $student->feeMaster()->orderBy('fee_due_date','asc')->get();
+            /* CollectionOrder, not fee_due_date alone: an admission fee lands 26 rows on one
+               date, and money must fill them in the order the office arranged - college heads
+               first - or a part payment silently lands on the wrong head. */
+            $feeMaster = $student->feeMaster()->CollectionOrder()->get();
             $student->fee_amount = $feeMaster->sum('fee_amount');
             $student->paid_amount = $student->feeCollect()->sum('paid_amount');
             $student->discount = $student->feeCollect()->sum('discount');
@@ -617,7 +623,7 @@ class FeesCollectionController extends CollegeBaseController
         //student filter
         $filtered  = $students->filter(function ($student) use ($request) {
             //provide discount
-            $feeMaster = $student->feeMaster()->whereIn('id',$request->chkIds)->orderBy('fee_due_date','asc')->get();
+            $feeMaster = $student->feeMaster()->whereIn('id',$request->chkIds)->CollectionOrder()->get();
 
             $student->fee_amount = $feeMaster->sum('fee_amount');
             $student->paid_amount = $student->feeCollect()->sum('paid_amount');
@@ -701,7 +707,7 @@ class FeesCollectionController extends CollegeBaseController
             }
 
             //receive fee
-            $feeMaster = $student->feeMaster()->whereIn('id',$request->chkIds)->orderBy('fee_due_date','asc')->get();
+            $feeMaster = $student->feeMaster()->whereIn('id',$request->chkIds)->CollectionOrder()->get();
             $student->fee_amount = $feeMaster->sum('fee_amount');
             $student->paid_amount = $student->feeCollect()->whereIn('fee_masters_id',$request->chkIds)->sum('paid_amount');
             $student->discount = $student->feeCollect()->whereIn('fee_masters_id',$request->chkIds)->sum('discount');

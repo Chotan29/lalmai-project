@@ -7,10 +7,12 @@ use App\Models\BillingProfile;
 use App\Models\BillingProfileItem;
 use App\Models\Faculty;
 use App\Models\FeeHead;
+use App\Models\FeeHeadGroup;
 use App\Models\Semester;
 use App\Models\StudentBatch;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class BillingProfileController extends CollegeBaseController
 {
@@ -45,6 +47,7 @@ class BillingProfileController extends CollegeBaseController
         $data['semesters']   = Semester::where('status', 1)->orderBy('semester')->get();
         $data['batches']     = StudentBatch::orderBy('title')->get();
         $data['fee_heads']   = FeeHead::where('status', 1)->orderBy('fee_head_title')->get();
+        $data['fee_head_groups'] = $this->billableFeeHeadGroups();
         $data['view_path']   = $this->view_path;
         $data['base_route']  = $this->base_route;
         $data['panel']       = $this->panel;
@@ -65,7 +68,9 @@ class BillingProfileController extends CollegeBaseController
             'scope_type'     => 'required|in:all,faculty,semester,batch',
             'billing_cycle'  => 'required|in:monthly,quarterly,half_yearly,yearly,one_time',
             'fee_head_id'    => 'required|array|min:1',
-            'fee_head_id.*'  => 'required|exists:fee_heads,id',
+            /* A line is a head id or a GROUP: marker, so the exists rule cannot be used here;
+               saveProfileItems() resolves which and stores it in the right column. */
+            'fee_head_id.*'  => 'required',
         ]);
 
         // Build billing_months array
@@ -126,6 +131,7 @@ class BillingProfileController extends CollegeBaseController
         $data['semesters']   = Semester::where('status', 1)->orderBy('semester')->get();
         $data['batches']     = StudentBatch::orderBy('title')->get();
         $data['fee_heads']   = FeeHead::where('status', 1)->orderBy('fee_head_title')->get();
+        $data['fee_head_groups'] = $this->billableFeeHeadGroups();
         $data['view_path']   = $this->view_path;
         $data['base_route']  = $this->base_route;
         $data['panel']       = $this->panel;
@@ -148,7 +154,7 @@ class BillingProfileController extends CollegeBaseController
             'scope_type'    => 'required|in:all,faculty,semester,batch',
             'billing_cycle' => 'required|in:monthly,quarterly,half_yearly,yearly,one_time',
             'fee_head_id'   => 'required|array|min:1',
-            'fee_head_id.*' => 'required|exists:fee_heads,id',
+            'fee_head_id.*' => 'required',
         ]);
 
         $billingMonths = $this->parseBillingMonths($request);
@@ -178,9 +184,13 @@ class BillingProfileController extends CollegeBaseController
             'alert_event_key'      => $request->filled('alert_event_key') ? $request->alert_event_key : 'BillingGenerated',
         ]);
 
-        // Replace profile items
-        $profile->profileItems()->delete();
-        $this->saveProfileItems($profile, $request);
+        /* Replace profile items. Wrapped so a failure while re-saving cannot leave the profile
+           stripped of the lines it had a moment ago - it would then generate empty bills on the
+           next run with nothing to say what was lost. */
+        DB::transaction(function () use ($profile, $request) {
+            $profile->profileItems()->delete();
+            $this->saveProfileItems($profile, $request);
+        });
 
         return redirect()->route('account.fees.billing-profile')
             ->with('message_success', 'Billing profile updated successfully.');
@@ -234,6 +244,34 @@ class BillingProfileController extends CollegeBaseController
     // PRIVATE HELPERS
     // -------------------------------------------------------
 
+    /** How a Main Fee Head is marked in the picker, so it cannot be read as a head id. */
+    const FEE_HEAD_GROUP_PREFIX = 'GROUP:';
+
+    /**
+     * Main Fee Heads a bill can charge - balanced and active only.
+     * A fee whose sub heads do not add up cannot be billed correctly, so it is not offered
+     * rather than failing in the middle of a scheduled run at two in the morning.
+     */
+    private function billableFeeHeadGroups()
+    {
+        return FeeHeadGroup::with('items')->Active()->orderBy('title')->get()
+            ->filter(function ($group) {
+                return $group->items->count() > 0 && $group->isBalanced();
+            });
+    }
+
+    /** Group id when the picked option is a Main Fee Head, otherwise null. */
+    private function feeHeadGroupId($value)
+    {
+        $value = (string) $value;
+
+        if (strpos($value, self::FEE_HEAD_GROUP_PREFIX) !== 0) {
+            return null;
+        }
+
+        return (int) substr($value, strlen(self::FEE_HEAD_GROUP_PREFIX));
+    }
+
     private function saveProfileItems(BillingProfile $profile, Request $request): void
     {
         $feeHeadIds = $request->fee_head_id;
@@ -244,12 +282,20 @@ class BillingProfileController extends CollegeBaseController
             if (!$feeHeadId) {
                 continue;
             }
-            $override = isset($amounts[$i]) && $amounts[$i] !== '' ? (float) $amounts[$i] : null;
+
+            $groupId = $this->feeHeadGroupId($feeHeadId);
+
             BillingProfileItem::create([
                 'billing_profile_id' => $profile->id,
-                'fee_head_id'        => $feeHeadId,
-                'amount_override'    => $override,
-                'is_optional'        => isset($optionals[$i]) ? 1 : 0,
+                'fee_head_id'        => $groupId ? null : $feeHeadId,
+                'fee_head_group_id'  => $groupId,
+                /* No override on a Main Fee Head: its amount is the sum of its sub heads, and
+                   letting a profile state a different total would leave the parts and the whole
+                   disagreeing with nothing to say which is right. */
+                'amount_override'    => (!$groupId && isset($amounts[$i]) && $amounts[$i] !== '') ? (float) $amounts[$i] : null,
+                /* Every row posts a value now, so this reads the row's own flag rather than
+                   "was there an i-th checked box", which used to slide onto the wrong head. */
+                'is_optional'        => !empty($optionals[$i]) ? 1 : 0,
                 'sort_order'         => $i,
             ]);
         }

@@ -497,6 +497,10 @@ class HomeController extends CollegeBaseController
         $data['fee_master'] = $data['student']->feeMaster()->orderBy('fee_due_date','desc')->get();
         $data['fee_collection'] = $data['student']->feeCollect()->get();
 
+        /* One line per fee, not one per head. The same builder the office profile uses, so a
+           student and the office can never be looking at two different versions of one fee. */
+        $data['fee_rows'] = $this->feeRowsFromMasters($data['fee_master']);
+
         $data['student']->payment_today = $data['student']->feeCollect()->where('date','=',$today)->sum('paid_amount');
 
         /*total Calculation on Table Foot*/
@@ -515,6 +519,21 @@ class HomeController extends CollegeBaseController
         $data['current_unpaid_installment'] = $this->currentUnpaidInstallment($data['student']->reg_no);        
         $current_installment_detail = $this->currentUnpaidInstallmentDetail($data['student']->reg_no);   
         $data['current_installment_detail'] = $current_installment_detail['installments'];     
+
+        /* DISABLED - invented instalments.
+           When the real instalment source returned nothing, this used to manufacture a
+           30/40/30 split of whatever the student owed and show it as if it were a real
+           schedule. The college does not take part payments, and a fee is made up of fixed
+           heads with fixed amounts - so a percentage of the total does not correspond to any
+           head and could not be posted correctly if a student paid it.
+
+           Nothing is lost by switching it off: the Pay Now panel reads student->balance, not
+           the instalment figure, so the real amount due is still shown and still payable. Only
+           the invented schedule is gone.
+
+           buildStudentFeeInstallmentFallback() below is kept, unused, in case a genuine
+           instalment policy is defined later - at which point it needs real per-head rules
+           rather than percentages.
 
         if (
             $data['student']->balance > 0 &&
@@ -539,11 +558,24 @@ class HomeController extends CollegeBaseController
                 ];
             }
         }
-        //dd($data['current_installment_detail']);
+        */
+
+        /* With the fallback off this can now legitimately be empty, and the view walks it. */
+        if (!is_array($data['current_installment_detail'])) {
+            $data['current_installment_detail'] = [];
+        }
 
         return view(parent::loadDataToView($this->view_path.'.fees.index'), compact('data'));
     }
 
+    /**
+     * NOT IN USE - see the commented-out block in fees() above.
+     *
+     * Splits a student's total due into a 30/40/30 schedule. Kept only as a starting point if
+     * a real instalment policy is ever agreed; as written it cannot be used, because a
+     * percentage of the total does not map onto the fixed fee heads the money has to be
+     * posted against.
+     */
     protected function buildStudentFeeInstallmentFallback($student)
     {
         $feeMasters = FeeMaster::where('students_id', $student->id)

@@ -52,7 +52,11 @@ class BillingProfile extends Model
 
     public function profileItems()
     {
+        /* feeHeadGroup.items comes along because a line may be a whole Main Fee Head, and the
+           bill generator reads its sub heads per student - without this it would be one query
+           per student per line on every run. */
         return $this->hasMany(BillingProfileItem::class, 'billing_profile_id')
+            ->with(['feeHead', 'feeHeadGroup.items'])
             ->orderBy('sort_order');
     }
 
@@ -121,8 +125,11 @@ class BillingProfile extends Model
      */
     public function getTotalAmountAttribute(): float
     {
+        /* Delegated to the item so a Main Fee Head is counted at what its sub heads add up to.
+           Reading amount_override directly here reported such a line as zero, because a fee
+           deliberately has no override. */
         return (float) $this->profileItems->sum(function ($item) {
-            return $item->amount_override ?? optional($item->feeHead)->fee_head_amount ?? 0;
+            return $item->effective_amount;
         });
     }
 

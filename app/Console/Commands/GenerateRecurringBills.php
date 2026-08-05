@@ -236,7 +236,12 @@ class GenerateRecurringBills extends Command
     ): array {
         // Duplicate bill check: same profile scope + same period_key + same student
         $alreadyBilled = FeeMaster::where('students_id', $student->id)
-            ->where('billing_period_key', $periodKey)
+            /* Rows generated from a Main Fee Head carry "GROUP-<id>-<period>", so a profile made
+               only of fees would otherwise look unbilled and be charged again every run. */
+            ->where(function ($q) use ($periodKey) {
+                $q->where('billing_period_key', $periodKey)
+                  ->orWhere('billing_period_key', 'like', 'GROUP-%-'.$periodKey);
+            })
             ->whereHas('billingRun', function ($q) use ($profile) {
                 $q->where('billing_profile_id', $profile->id);
             })
@@ -258,7 +263,67 @@ class GenerateRecurringBills extends Command
         $firstFeeMasterId = null;
 
         DB::transaction(function () use ($student, $profile, $run, $periodKey, $dueDate, &$totalAmount, &$firstFeeMasterId) {
+            /* Position of each row inside this bill. It decides the order money fills the dues
+               in, which matters once a line can be a whole Main Fee Head: its college heads sit
+               above its department heads, so a short payment stops at the college boundary
+               instead of landing wherever the database returned the rows. */
+            $sortOrder = 0;
+
             foreach ($profile->profileItems as $item) {
+                /* A Main Fee Head bills as its sub heads, at the fee's own amounts. Reading them
+                   at run time rather than copying them into the profile is what makes a
+                   corrected fee take effect on the next bill instead of quietly repeating last
+                   year's figures. */
+                if ($item->is_group) {
+                    $group = $item->feeHeadGroup;
+
+                    if (!$group || $group->items->count() < 1) {
+                        continue;
+                    }
+
+                    /* Parts that no longer add up to the whole cannot be billed honestly. Skip
+                       the line and leave it for the office rather than charging a total nobody
+                       can explain. */
+                    if (!$group->isBalanced()) {
+                        \Log::warning('[BILLING] Main Fee Head skipped - sub heads do not add up', [
+                            'profile' => $profile->id, 'group' => $group->id, 'student' => $student->id,
+                        ]);
+                        continue;
+                    }
+
+                    foreach ($group->items as $sub) {
+                        if ((float) $sub->amount <= 0) {
+                            continue;
+                        }
+
+                        $fm = FeeMaster::create([
+                            'created_by'          => $run->initiated_by ?? 1,
+                            'students_id'         => $student->id,
+                            'semester'            => $student->semester ?? '',
+                            'fee_head'            => $sub->fee_head_id,
+                            'fee_due_date'        => $dueDate->toDateTimeString(),
+                            'fee_due_date2'       => $dueDate->toDateTimeString(),
+                            'fee_due_date3'       => $dueDate->toDateTimeString(),
+                            'fee_amount'          => $sub->amount,
+                            'sort_order'          => $sortOrder++,
+                            'status'              => 1,
+                            'billing_run_id'      => $run->id,
+                            /* Tagged with the fee AND the period, so the fee list shows one line
+                               per month rather than folding a year of charges into a single row,
+                               and the duplicate check below can still recognise the period. */
+                            'billing_period_key'  => 'GROUP-'.$group->id.'-'.$periodKey,
+                            'source_type'         => 'fee_head_group',
+                        ]);
+
+                        $totalAmount += (float) $sub->amount;
+                        if (!$firstFeeMasterId) {
+                            $firstFeeMasterId = $fm->id;
+                        }
+                    }
+
+                    continue;
+                }
+
                 $amount = $item->effective_amount;
                 if ($amount <= 0) {
                     continue;
@@ -272,6 +337,7 @@ class GenerateRecurringBills extends Command
                     'fee_due_date2'       => $dueDate->toDateTimeString(),
                     'fee_due_date3'       => $dueDate->toDateTimeString(),
                     'fee_amount'          => $amount,
+                    'sort_order'          => $sortOrder++,
                     'status'              => 1,
                     'billing_run_id'      => $run->id,
                     'billing_period_key'  => $periodKey,

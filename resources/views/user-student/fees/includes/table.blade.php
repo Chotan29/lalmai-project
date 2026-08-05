@@ -74,35 +74,31 @@
                 </tr>
             </thead>
             <tbody>
-                @if (isset($data['fee_master']) && $data['fee_master']->count() > 0)
-                    @foreach ($data['fee_master'] as $feemaster)
+                {{-- One line per fee. A Main Fee Head is many heads in the accounts but a single
+                     charge to the student, and a student reading twenty-six lines cannot tell
+                     what they were actually billed for. --}}
+                @if (isset($data['fee_rows']) && $data['fee_rows']->count() > 0)
+                    @foreach ($data['fee_rows'] as $feerow)
                         <tr class="warning font12 odd" role="row" style="font-weight: 600;">
 
-                            <td>{{ ViewHelper::getSemesterById($feemaster->semester) }}</td>
-                            <td>{{ ViewHelper::getFeeHeadById($feemaster->fee_head) }}</td>
-                            <td>{{ isset($feemaster->fee_due_date) ? \Carbon\Carbon::parse($feemaster->fee_due_date)->format('Y-m-d') : '' }}
+                            <td>{{ ViewHelper::getSemesterById($feerow->semester) }}</td>
+                            <td>{{ $feerow->label }}</td>
+                            <td>{{ isset($feerow->due_date) ? \Carbon\Carbon::parse($feerow->due_date)->format('Y-m-d') : '' }}
                             </td>
-                                {{-- fee_due_date2 and fee_due_date3 removed (single due date) --}}
-                                {{-- <td>{{ isset($feemaster->fee_due_date2) ? \Carbon\Carbon::parse($feemaster->fee_due_date2)->format('Y-m-d') : '' }}</td> --}}
-                                {{-- <td>{{ isset($feemaster->fee_due_date3) ? \Carbon\Carbon::parse($feemaster->fee_due_date3)->format('Y-m-d') : '' }}</td> --}}
-                            <td>{{ $feemaster->fee_amount }}</td>
+                            <td>{{ $feerow->amount }}</td>
                             <td></td>
                             <td></td>
                             <td></td>
                             <td></td>
-                            <td>{{ $feemaster->feeCollect()->sum('discount') ? $feemaster->feeCollect()->sum('discount') : '-' }}
+                            <td>{{ $feerow->discount ? $feerow->discount : '-' }}
                             </td>
-                            <td>{{ $feemaster->feeCollect()->sum('fine') ? $feemaster->feeCollect()->sum('fine') : '-' }}
+                            <td>{{ $feerow->fine ? $feerow->fine : '-' }}
                             </td>
-                            <td>{{ $feemaster->feeCollect()->sum('paid_amount') ? $feemaster->feeCollect()->sum('paid_amount') : '-' }}
+                            <td>{{ $feerow->paid ? $feerow->paid : '-' }}
                             </td>
                             <td>
                                 @php
-                                    $net_balance =
-                                        $feemaster->fee_amount -
-                                        ($feemaster->feeCollect()->sum('paid_amount') +
-                                            $feemaster->feeCollect()->sum('discount')) +
-                                        $feemaster->feeCollect()->sum('fine');
+                                    $net_balance = $feerow->amount - ($feerow->paid + $feerow->discount) + $feerow->fine;
                                     $formatted_balance = number_format($net_balance, 2, '.', '');
                                 @endphp
 
@@ -114,7 +110,7 @@
                                     <span class="label label-success">Paid</span>
                                 @elseif($net_balance < 0)
                                     <span class="label label-warning">Negative</span>
-                                @elseif($net_balance < $feemaster->fee_amount)
+                                @elseif($net_balance < $feerow->amount)
                                     <span class="label label-warning">Partial</span>
                                 @else
                                     <span class="label label-danger">Due</span>
@@ -125,7 +121,8 @@
                         @if (isset($data['fee_collection']) && $data['fee_collection']->count() > 0)
                             @php($i = 1)
                             @foreach ($data['fee_collection'] as $fee_collection)
-                                @if ($fee_collection->fee_masters_id == $feemaster->id)
+                                {{-- Payments against any head inside this fee belong under its one line. --}}
+                                @if (in_array($fee_collection->fee_masters_id, $feerow->ids))
                                     <tr class="white-td even" role="row">
                                         <td></td>
                                         <td></td>

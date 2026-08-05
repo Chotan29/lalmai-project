@@ -71,21 +71,29 @@
                     </tr>
                 </thead>
                 <tbody>
-                    @if (isset($data['fee_master']) && $data['fee_master']->count() > 0)
+                    @if (isset($data['fee_rows']) && $data['fee_rows']->count() > 0)
                         @php($i=1)
-                        @foreach($data['fee_master'] as $feemaster)
+                        {{-- One line per fee. A Main Fee Head is 26 rows in the accounts but a
+                             single charge to the student, so it prints as one. --}}
+                        @foreach($data['fee_rows'] as $feerow)
                             <tr>
                                 <td>{{ $i }}</td>
-                                <td>{{ ViewHelper::getSemesterById($feemaster->semester) }}</td>
-                                <td>{{ ViewHelper::getFeeHeadById($feemaster->fee_head) }}</td>
-                                <td>{{ \Carbon\Carbon::parse($feemaster->fee_due_date)->format('Y-m-d')}}</td>
-                                <td>{{ $feemaster->fee_amount }}</td>
-                                <td>{{ $feemaster->feeCollect()->sum('discount')?$feemaster->feeCollect()->sum('discount'):'-' }}</td>
-                                <td>{{ $feemaster->feeCollect()->sum('fine')?$feemaster->feeCollect()->sum('fine'):'-' }}</td>
-                                <td>{{ $feemaster->feeCollect()->sum('paid_amount')?$feemaster->feeCollect()->sum('paid_amount'):'-' }}</td>
+                                <td>{{ ViewHelper::getSemesterById($feerow->semester) }}</td>
                                 <td>
-                                    @php($net_balance = ($feemaster->fee_amount - ($feemaster->feeCollect()->sum('paid_amount')
-                                    + $feemaster->feeCollect()->sum('discount')))+ $feemaster->feeCollect()->sum('fine'))
+                                    {{ $feerow->label }}
+                                    @if($feerow->is_group)
+                                        <span class="label label-info" title="Charged as one fee, kept as {{ $feerow->head_count }} heads in the accounts">
+                                            {{ $feerow->head_count }} heads
+                                        </span>
+                                    @endif
+                                </td>
+                                <td>{{ \Carbon\Carbon::parse($feerow->due_date)->format('Y-m-d')}}</td>
+                                <td>{{ $feerow->amount }}</td>
+                                <td>{{ $feerow->discount?$feerow->discount:'-' }}</td>
+                                <td>{{ $feerow->fine?$feerow->fine:'-' }}</td>
+                                <td>{{ $feerow->paid?$feerow->paid:'-' }}</td>
+                                <td>
+                                    @php($net_balance = ($feerow->amount - ($feerow->paid + $feerow->discount)) + $feerow->fine)
                                     {{ $net_balance?$net_balance:'-' }}
                                 </td>
                                 <td align="left" class="text text-left">
@@ -93,28 +101,22 @@
                                         <span class="label label-success">Paid</span>
                                     @elseif($net_balance < 0 )
                                         <span class="label label-warning">Negative</span>
-                                    @elseif($net_balance < $feemaster->fee_amount)
+                                    @elseif($net_balance < $feerow->amount)
                                         <span class="label label-info">Partial</span>
                                     @else
                                         <span class="label label-danger">Due</span>
                                     @endif
                                 </td>
                                 <td>
-                                   {{-- <a class="btn-primary btn-sm" href="{{ route('print-out.fees.master-receipt', ['id' => $feemaster->id]) }}" target="_blank">
-                                        <i class="fa fa-print"></i> Print
-                                    </a>--}}
-                                    {{--@if($net_balance > 0 && is_int($net_balance))
-                                        @include('account.fees.payment.online-payment')
-                                    @endif--}}
-
+                                    {{-- The visible box stands for every head inside this fee, so
+                                         printing a package prints all of it, not just its first head. --}}
                                     <label>
-                                        <input type="checkbox" name="chkIds[]" value="{{ $feemaster->id}}" class="ace" />
+                                        <input type="checkbox" name="chkIds[]" value="{{ $feerow->ids[0] }}"
+                                               class="ace fee-row-check"
+                                               data-extra-ids="{{ implode(',', array_slice($feerow->ids, 1)) }}" />
                                         <span class="lbl"></span>
                                     </label>
                                 </td>
-                                {{--<td class="center first-child">
-
-                                </td>--}}
                             </tr>
                             @php($i++)
                         @endforeach
@@ -147,3 +149,25 @@
         </form>
     </div>
 </div>
+
+<script>
+    /* A fee line stands for every head inside it. Ticking one has to send them all, or printing
+       a package would print only its first head and the receipt would not match the charge. */
+    $(document).on('change', '.fee-row-check', function () {
+        var $box = $(this);
+        var extra = ($box.data('extra-ids') || '').toString();
+
+        $box.closest('td').find('input.fee-row-extra').remove();
+
+        if (!$box.is(':checked') || extra === '') {
+            return;
+        }
+
+        extra.split(',').forEach(function (id) {
+            if (!id) return;
+            $box.closest('td').append(
+                $('<input>').attr({type: 'hidden', name: 'chkIds[]', value: id}).addClass('fee-row-extra')
+            );
+        });
+    });
+</script>

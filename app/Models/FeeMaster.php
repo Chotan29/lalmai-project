@@ -19,12 +19,29 @@ class FeeMaster extends Model
         'fee_due_date2',
         'fee_due_date3',
         'fee_amount',
+        // Position of this head inside its fee - the tie-break collection fills dues in
+        // when several rows share a due date (added 2026-08-05)
+        'sort_order',
         'status',
         // Recurring billing columns (added 2026-05-31)
         'billing_run_id',
         'billing_period_key',
         'source_type',
     ];
+
+    /**
+     * The order money must fill dues in.
+     *
+     * Oldest due first, as it always has been; then the position the head had inside its fee,
+     * which is what keeps an admission fee's 26 same-day rows in the order the office arranged
+     * them; then the id, so the result is never left to the database to decide.
+     */
+    public function scopeCollectionOrder($query)
+    {
+        return $query->orderBy('fee_due_date', 'asc')
+            ->orderBy('sort_order', 'asc')
+            ->orderBy('id', 'asc');
+    }
 
     const INSTALLMENT_PERCENTAGES = [
         1 => 30, // 1st installment 30%

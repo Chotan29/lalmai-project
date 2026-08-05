@@ -14,6 +14,7 @@ use App\Http\Controllers\CollegeBaseController;
 use App\Models\BillingRun;
 use App\Models\Faculty;
 use App\Models\FeeHead;
+use App\Models\FeeHeadGroup;
 use App\Models\FeeMaster;
 use App\Models\Student;
 use Carbon\Carbon;
@@ -157,14 +158,11 @@ class FeesMasterController extends CollegeBaseController
 
         $data['facility'] = ['0'=>'Select Facility','1'=>'Library','2'=>'Hostel','3'=>'Transport'];
 
-        $feeHeadAll = FeeHead::Active()->orderby('fee_head_title')->get();
-        $data['feeHead'] = $feeHeadAll->pluck('fee_head_title','id');
+        /* Ordinary heads and Main Fee Heads in one dropdown - a Main Fee Head is picked exactly
+           like a head, and expands into its sub heads when saved. */
+        list($data['feeHead'], $data['fee_head_attributes']) = $this->feeHeadOptions();
 
-        $data['randId'] = $randomId = rand(999,1);
-        //Create an array of option attribute
-        $data['fee_head_attributes']  =  $feeHeadAll->mapWithKeys(function ($feeHead) use($randomId) {
-            return [$feeHead->id => ['data-feeHead-amount' => $feeHead->fee_head_amount, 'data-rand-id' => $randomId]];
-        })->all();
+        $data['randId'] = rand(999,1);
 
         $data['url'] = URL::current();
         $data['filter_query'] = $this->filter_query;
@@ -230,38 +228,202 @@ class FeesMasterController extends CollegeBaseController
             ->withInput();
     }
 
-    if ($request->has('chkIds')) {
-        foreach ($request->get('chkIds') as $row_id) {
-            $row = Student::find(decrypt($row_id));
-            if ($row && $request->has('fee_head')) {
-                foreach ($request->get('fee_head') as $key => $fee_head) {
-                    // Process if validation passes
-                    $date = Carbon::parse($request->get('fee_due_date')[$key])->format('Y-m-d');
-
-                    FeeMaster::create([
-                        'students_id' => $row->id,
-                        'semester' => $row->semester,
-                        'fee_head' => $request->get('fee_head')[$key],
-                        'fee_due_date' => $date,
-                        'fee_due_date2' => $date,
-                        'fee_due_date3' => $date,
-                        'fee_amount' => $request->get('fee_amount')[$key],
-                        'created_by' => auth()->user()->id,
-                    ]);
-                }
-            } else {
-                $request->session()->flash($this->message_warning, 'Please, Add Fee Master at least one row.');
-                return redirect()->route($this->base_route);
-            }
-        }
-    } else {
+    if (!$request->has('chkIds')) {
         $request->session()->flash($this->message_warning, 'Please, check at least one '.$this->panel);
         return redirect()->route($this->base_route);
     }
 
-    $request->session()->flash($this->message_success, $this->panel. ' Add Successfully.');
+    if (!$request->has('fee_head')) {
+        $request->session()->flash($this->message_warning, 'Please, Add Fee Master at least one row.');
+        return redirect()->route($this->base_route);
+    }
+
+    /* Load any Main Fee Head that was picked, once, before touching a single student. If one is
+       unusable - its sub heads gone or no longer adding up - nothing at all is written, rather
+       than half the class being charged before the problem surfaces. */
+    $groups = [];
+    foreach ($request->get('fee_head') as $feeHeadValue) {
+        $groupId = $this->feeHeadGroupId($feeHeadValue);
+        if (!$groupId || isset($groups[$groupId])) {
+            continue;
+        }
+
+        $group = FeeHeadGroup::with('items')->find($groupId);
+
+        if (!$group || $group->items->count() < 1) {
+            $request->session()->flash($this->message_warning, 'That Main Fee Head has no Sub Head yet.');
+            return redirect()->back()->withInput();
+        }
+
+        if (!$group->isBalanced()) {
+            $request->session()->flash($this->message_warning,
+                'Sub Heads of "'.$group->title.'" add up to '.number_format($group->itemsTotal(), 2)
+                .' but the fee is '.number_format($group->total_amount, 2).'. Please correct it first.');
+            return redirect()->back()->withInput();
+        }
+
+        $groups[$groupId] = $group;
+    }
+
+    $studentCount = 0;
+    $rowCount = 0;
+    $skipped = 0;
+
+    DB::transaction(function () use ($request, $groups, &$studentCount, &$rowCount, &$skipped) {
+        /* One student can appear twice in a submission - a stray duplicate in the posted list,
+           or the same box ticked and sent again. Charging them twice from one press is never
+           what was meant. */
+        $seen = [];
+
+        foreach ($request->get('chkIds') as $row_id) {
+            $row = Student::find(decrypt($row_id));
+            if (!$row || isset($seen[$row->id])) {
+                continue;
+            }
+            $seen[$row->id] = true;
+
+            /* Already holds this fee? Skip that student and carry on with the rest. This is what
+               lets the office re-run a whole batch after a few late admissions: everyone gets
+               charged once, nobody twice. Twenty-six identical rows are invisible in a fee list,
+               so nobody would notice the double until a parent queried the balance. */
+            $alreadyHas = false;
+            foreach ($groups as $groupId => $group) {
+                if (FeeMaster::where('students_id', $row->id)
+                        ->where('billing_period_key', 'GROUP-'.$groupId)->exists()) {
+                    $alreadyHas = true;
+                    break;
+                }
+            }
+
+            if ($alreadyHas) {
+                $skipped++;
+                continue;
+            }
+
+            $studentCount++;
+            /* Position on the form is the order collection fills these in, and a Main Fee Head
+               occupies as many positions as it has sub heads - its college heads above its
+               department heads, so a short payment stops at the college boundary instead of
+               landing wherever the database returned the rows. */
+            $sortOrder = 0;
+
+            foreach ($request->get('fee_head') as $key => $fee_head) {
+                $date = Carbon::parse($request->get('fee_due_date')[$key])->format('Y-m-d');
+                $groupId = $this->feeHeadGroupId($fee_head);
+
+                /* One picked Main Fee Head becomes one row per sub head, at its own amounts -
+                   not the amount typed on the form, which is only the total shown to the
+                   office. */
+                if ($groupId && isset($groups[$groupId])) {
+                    foreach ($groups[$groupId]->items as $item) {
+                        FeeMaster::create([
+                            'students_id' => $row->id,
+                            'semester' => $row->semester,
+                            'fee_head' => $item->fee_head_id,
+                            'fee_due_date' => $date,
+                            'fee_due_date2' => $date,
+                            'fee_due_date3' => $date,
+                            'fee_amount' => $item->amount,
+                            'sort_order' => $sortOrder++,
+                            'billing_period_key' => 'GROUP-'.$groupId,
+                            'source_type' => 'fee_head_group',
+                            'created_by' => auth()->user()->id,
+                        ]);
+                        $rowCount++;
+                    }
+                    continue;
+                }
+
+                FeeMaster::create([
+                    'students_id' => $row->id,
+                    'semester' => $row->semester,
+                    'fee_head' => $fee_head,
+                    'fee_due_date' => $date,
+                    'fee_due_date2' => $date,
+                    'fee_due_date3' => $date,
+                    'fee_amount' => $request->get('fee_amount')[$key],
+                    'sort_order' => $sortOrder++,
+                    'created_by' => auth()->user()->id,
+                ]);
+                $rowCount++;
+            }
+        }
+    });
+
+    $message = $this->panel.' Add Successfully. '.$studentCount.' student(s), '.$rowCount.' fee row(s).';
+
+    if ($skipped > 0) {
+        $message .= ' '.$skipped.' student(s) skipped - they already had this Main Fee Head.';
+    }
+
+    $request->session()->flash($this->message_success, $message);
     return back();
 }
+
+    /** How a Main Fee Head is marked in the Fee Head dropdown, so it cannot be read as a head id. */
+    const FEE_HEAD_GROUP_PREFIX = 'GROUP:';
+
+    /**
+     * The Fee Head dropdown, with the Main Fee Heads offered alongside the ordinary heads.
+     *
+     * A Main Fee Head is one line on the form - "ADMISSION FEE 2025-2026", 7,400 - and becomes
+     * one fee_master per sub head when it is saved. The office never has to look at 26 rows.
+     *
+     * Group ids are prefixed because both live in the same select: without it, group 3 and fee
+     * head 3 would be indistinguishable by the time the form is posted, and money would land
+     * against whichever the code happened to look up first.
+     *
+     * @return array [id => title], and the option attributes carrying the amount
+     */
+    private function feeHeadOptions()
+    {
+        $feeHeadAll = FeeHead::Active()->orderby('fee_head_title')->get();
+
+        $groupOptions = [];
+        $attributes = [];
+
+        /* Only balanced, active fees: one whose sub heads do not add up cannot be split
+           correctly, so it is not offered rather than failing at save time. */
+        foreach (FeeHeadGroup::with('items')->Active()->orderBy('title')->get() as $group) {
+            if ($group->items->count() < 1 || !$group->isBalanced()) {
+                continue;
+            }
+
+            $key = self::FEE_HEAD_GROUP_PREFIX.$group->id;
+            $groupOptions[$key] = $group->title.' ('.number_format($group->total_amount, 2).')'
+                .' - '.$group->items->count().' sub heads';
+            $attributes[$key] = ['data-feeHead-amount' => $group->total_amount + 0];
+        }
+
+        foreach ($feeHeadAll as $head) {
+            $attributes[$head->id] = ['data-feeHead-amount' => $head->fee_head_amount];
+        }
+
+        /* Two labelled groups rather than one long list. Alphabetically a Main Fee Head lands
+           somewhere in the middle of thirty ordinary heads and is impossible to spot - and
+           picking the wrong one charges a student one head instead of twenty-six. */
+        $options = [];
+
+        if ($groupOptions) {
+            $options['Main Fee Head (splits into sub heads)'] = $groupOptions;
+        }
+
+        $options['Fee Head'] = $feeHeadAll->pluck('fee_head_title', 'id')->toArray();
+
+        return [$options, $attributes];
+    }
+
+    /** Group id when the picked option is a Main Fee Head, otherwise null. */
+    private function feeHeadGroupId($value)
+    {
+        $value = (string) $value;
+
+        if (strpos($value, self::FEE_HEAD_GROUP_PREFIX) !== 0) {
+            return null;
+        }
+
+        return (int) substr($value, strlen(self::FEE_HEAD_GROUP_PREFIX));
+    }
 
     public function edit(Request $request, $id)
     {
@@ -393,15 +555,10 @@ class FeesMasterController extends CollegeBaseController
 
     public function feeHtmlRow()
     {
-        //get all head
-        $feeHeadAll = FeeHead::Active()->orderby('fee_head_title')->get();
-        $feeHead = $feeHeadAll->pluck('fee_head_title','id');
-        //$feeHead = array_prepend($feeHead,'Select Fee Head','id');
+        //get all head - Main Fee Heads are offered here too, exactly as on the first row
+        list($feeHead, $fee_head_attributes) = $this->feeHeadOptions();
+
         $randomId = rand(999,1);
-        //Create an array of option attribute
-        $fee_head_attributes =  $feeHeadAll->mapWithKeys(function ($feeHead) use($randomId) {
-                return [$feeHead->id => ['data-feeHead-amount' => $feeHead->fee_head_amount, 'data-rand-id' => $randomId]];
-            })->all();
 
         $response['html'] = view($this->view_path.'.includes.fee_tr', ['fee_heads' => $feeHead, "fee_head_attributes" => $fee_head_attributes, 'randId' => $randomId])->render();
         return response()->json(json_encode($response));

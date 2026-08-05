@@ -5,6 +5,7 @@
 namespace App\Http\Controllers\Setting;
 use App\Http\Controllers\CollegeBaseController;
 use App\Models\Faculty;
+use App\Models\FeeHeadGroup;
 use App\Models\OnlineRegistrationProgram;
 use App\Models\OnlineRegistrationSetting;
 use App\Models\Web\WebRegistrationSetting;
@@ -38,12 +39,17 @@ class OnlineRegistrationSettingController extends CollegeBaseController
             'online_registration_programs.faculties_id','online_registration_programs.semesters_id',
             'online_registration_programs.start_date', 'online_registration_programs.end_date',
             'online_registration_programs.new_student_fee', 'online_registration_programs.old_student_fee',
+            'online_registration_programs.fee_head_group_id',
             'online_registration_programs.status','f.faculty','s.semester','s.slug')
             ->join('faculties as f','f.id','=','online_registration_programs.faculties_id')
             ->join('semesters as s','s.id','=','online_registration_programs.semesters_id')
             ->get();
 
 
+
+        /* The Main Fee Heads an admission can charge. Shared with the row partial, which
+           offers them per department. */
+        $data['fee_head_groups'] = $this->activeFeeHeadGroupList();
 
         $data['url'] = '';
 
@@ -56,11 +62,43 @@ class OnlineRegistrationSettingController extends CollegeBaseController
 
     }
 
+    /**
+     * Main Fee Heads an admission can charge, as id => title for the row dropdown.
+     * Only live ones, and only ones whose sub heads add up - an unbalanced fee cannot split a
+     * payment correctly, so it should not be offerable in the first place.
+     */
+    private function activeFeeHeadGroupList()
+    {
+        $list = [];
+
+        foreach (FeeHeadGroup::with('items')->Active()->orderBy('title')->get() as $group) {
+            if (!$group->isBalanced()) {
+                continue;
+            }
+            $list[$group->id] = $group->title.' ('.number_format($group->total_amount, 2).')';
+        }
+
+        return $list;
+    }
+
+    /**
+     * The Main Fee Head picked for one program row. "None" comes through as 0, which is stored
+     * as null so the admission keeps its old single-head behaviour.
+     */
+    private function feeHeadGroupInput(Request $request, $key)
+    {
+        $selected = $request->get('program_fee_head_group');
+        $value = (isset($selected[$key]) && $selected[$key] !== '') ? (int) $selected[$key] : 0;
+
+        return $value > 0 ? $value : null;
+    }
+
     public function add(Request $request)
     {
         $data = [];
         $data['row'] = OnlineRegistrationSetting::first();
         $data['faculties'] = $this->activeFaculties();
+        $data['fee_head_groups'] = $this->activeFeeHeadGroupList();
 
         if($data['row']){
             return view(parent::loadDataToView($this->view_path.'.edit'), compact('data'));
@@ -109,6 +147,7 @@ class OnlineRegistrationSettingController extends CollegeBaseController
                     'end_date' => $request->get('program_end_date')[$key],
                     'new_student_fee' => ($newFeeInput === null || $newFeeInput === '') ? null : $newFeeInput,
                     'old_student_fee' => ($oldFeeInput === null || $oldFeeInput === '') ? null : $oldFeeInput,
+                    'fee_head_group_id' => $this->feeHeadGroupInput($request, $key),
                     'status' => $request->get('program_status')[$key],
                     'created_by' => auth()->user()->id
                 ]);
@@ -161,6 +200,7 @@ class OnlineRegistrationSettingController extends CollegeBaseController
                         'end_date' => $request->get('program_end_date')[$key],
                         'new_student_fee' => $newFee,
                         'old_student_fee' => $oldFee,
+                        'fee_head_group_id' => $this->feeHeadGroupInput($request, $key),
                         'status' => $request->get('program_status')[$key],
                         'updated_by' => auth()->user()->id
                     ]);
@@ -172,6 +212,7 @@ class OnlineRegistrationSettingController extends CollegeBaseController
                         'end_date' => $request->get('program_end_date')[$key],
                         'new_student_fee' => $newFee,
                         'old_student_fee' => $oldFee,
+                        'fee_head_group_id' => $this->feeHeadGroupInput($request, $key),
                         'status' => $request->get('program_status')[$key],
                         'created_by' => auth()->user()->id
                     ]);
@@ -211,7 +252,12 @@ class OnlineRegistrationSettingController extends CollegeBaseController
         }
         $faculties = array_prepend($allFaculty,'Select Faculty/Program/Class','');
 
-        $response['html'] = view($this->view_path.'.includes.program_tr',['programs'=>$faculties])->render();
+        /* The row is fetched by AJAX, so it needs the fee head list handed to it here too -
+           the page's own copy is not in scope for a freshly rendered partial. */
+        $response['html'] = view($this->view_path.'.includes.program_tr', [
+            'programs' => $faculties,
+            'fee_head_groups' => $this->activeFeeHeadGroupList(),
+        ])->render();
         return response()->json($response);
     }
 

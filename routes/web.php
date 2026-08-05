@@ -696,6 +696,19 @@ Route::group(['prefix' => 'account/',                                   'as' => 
 
     Route::post('fees/head/import',            ['as' => 'fees.head.bulk.import',        'middleware' => ['ability:super-admin,fees-head-add'],             'uses' => 'Fees\FeesHeadController@handleImportFeeHead']);
 
+    /*
+     * MAIN FEE HEAD — one fee the student sees, made of the sub heads the accounts need.
+     * Nothing is deleted here: a sub head taken out of a fee is switched off, and a fee that
+     * has been collected against is locked.
+     */
+    Route::get('fees/fee-head-group',                    ['as' => 'fees.fee-head-group',                 'middleware' => ['ability:super-admin,fees-fee-head-group-index'],   'uses' => 'Fees\FeeHeadGroupController@index']);
+    Route::post('fees/fee-head-group/store',             ['as' => 'fees.fee-head-group.store',           'middleware' => ['ability:super-admin,fees-fee-head-group-add'],     'uses' => 'Fees\FeeHeadGroupController@store']);
+    Route::get('fees/fee-head-group/{id}/edit',          ['as' => 'fees.fee-head-group.edit',            'middleware' => ['ability:super-admin,fees-fee-head-group-edit'],    'uses' => 'Fees\FeeHeadGroupController@edit']);
+    Route::post('fees/fee-head-group/{id}/update',       ['as' => 'fees.fee-head-group.update',          'middleware' => ['ability:super-admin,fees-fee-head-group-edit'],    'uses' => 'Fees\FeeHeadGroupController@update']);
+    Route::get('fees/fee-head-group/{id}/duplicate',     ['as' => 'fees.fee-head-group.duplicate',       'middleware' => ['ability:super-admin,fees-fee-head-group-add'],     'uses' => 'Fees\FeeHeadGroupController@duplicate']);
+    Route::get('fees/fee-head-group/{id}/active',        ['as' => 'fees.fee-head-group.active',          'middleware' => ['ability:super-admin,fees-fee-head-group-edit'],    'uses' => 'Fees\FeeHeadGroupController@active']);
+    Route::get('fees/fee-head-group/{id}/in-active',     ['as' => 'fees.fee-head-group.in-active',       'middleware' => ['ability:super-admin,fees-fee-head-group-edit'],    'uses' => 'Fees\FeeHeadGroupController@inActive']);
+
     /*Fee Master*/
     Route::get('fees/master',                    ['as' => 'fees.master',                  'middleware' => ['ability:super-admin,fees-master-index'],            'uses' => 'Fees\FeesMasterController@index']);
     Route::get('fees/master/add',                ['as' => 'fees.master.add',              'middleware' => ['ability:super-admin,fees-master-add'],              'uses' => 'Fees\FeesMasterController@add']);

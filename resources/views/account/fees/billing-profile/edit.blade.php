@@ -598,30 +598,55 @@
                                                     <td>
                                                         <select name="fee_head_id[]" class="form-control fee-head-select" required>
                                                             <option value="">— Select Fee Head —</option>
-                                                            @foreach($fee_heads as $h)
-                                                            <option value="{{ $h->id }}"
-                                                                data-amount="{{ $h->fee_head_amount ?? 0 }}"
-                                                                {{ $h->id == $item->fee_head_id ? 'selected' : '' }}>
-                                                                {{ $h->fee_head_title }}
-                                                            </option>
-                                                            @endforeach
+                                                            {{-- Main Fee Heads first and labelled. Mixed into the alphabetical
+                                                                 list they are impossible to spot, and picking the wrong one
+                                                                 bills one head instead of twenty-six. --}}
+                                                            @if(!empty($fee_head_groups) && count($fee_head_groups))
+                                                            <optgroup label="Main Fee Head (bills all its sub heads)">
+                                                                @foreach($fee_head_groups as $g)
+                                                                <option value="GROUP:{{ $g->id }}"
+                                                                    data-amount="{{ $g->total_amount + 0 }}"
+                                                                    data-is-group="1"
+                                                                    {{ $g->id == $item->fee_head_group_id ? 'selected' : '' }}>
+                                                                    {{ $g->title }} ({{ number_format($g->total_amount, 2) }}) - {{ $g->items->count() }} sub heads
+                                                                </option>
+                                                                @endforeach
+                                                            </optgroup>
+                                                            @endif
+                                                            <optgroup label="Fee Head">
+                                                                @foreach($fee_heads as $h)
+                                                                <option value="{{ $h->id }}"
+                                                                    data-amount="{{ $h->fee_head_amount ?? 0 }}"
+                                                                    {{ !$item->is_group && $h->id == $item->fee_head_id ? 'selected' : '' }}>
+                                                                    {{ $h->fee_head_title }}
+                                                                </option>
+                                                                @endforeach
+                                                            </optgroup>
                                                         </select>
                                                     </td>
                                                     <td>
+                                                        {{-- A Main Fee Head carries its own amounts, so the override is shown
+                                                             filled and locked rather than hidden: the figure stays visible but
+                                                             cannot be edited into a total the sub heads don't add up to. --}}
                                                         <input type="number" name="amount_override[]"
                                                             class="form-control amount-override"
                                                             min="0" step="0.01"
-                                                            value="{{ $item->amount_override }}"
-                                                            placeholder="Override">
+                                                            value="{{ $item->is_group ? number_format($item->effective_amount, 2, '.', '') : $item->amount_override }}"
+                                                            placeholder="Override"
+                                                            {{ $item->is_group ? 'readonly' : '' }}>
                                                     </td>
                                                     <td>
-                                                        @php $defAmt = $item->feeHead->fee_head_amount ?? 0; @endphp
+                                                        @php $defAmt = $item->is_group ? $item->effective_amount : ($item->feeHead->fee_head_amount ?? 0); @endphp
                                                         <span class="default-amount" style="font-size:12px; color:{{ $defAmt > 0 ? '#399743' : '#aaa' }}">
                                                             {{ $defAmt > 0 ? '৳ '.number_format($defAmt, 2) : '—' }}
                                                         </span>
                                                     </td>
                                                     <td class="text-center">
-                                                        <input type="checkbox" name="is_optional[]" value="1" {{ $item->is_optional ? 'checked' : '' }} title="Mark as optional">
+                                                        {{-- The hidden field carries the value, the checkbox only drives it.
+                                                             An unchecked checkbox posts nothing, so naming the checkbox itself
+                                                             shifted every later row's flag onto the wrong fee head. --}}
+                                                        <input type="hidden" name="is_optional[]" value="{{ $item->is_optional ? 1 : 0 }}" class="is-optional-value">
+                                                        <input type="checkbox" class="is-optional-check" value="1" {{ $item->is_optional ? 'checked' : '' }} title="Mark as optional">
                                                     </td>
                                                     <td class="text-center">
                                                         <button type="button" class="btn btn-xs btn-danger remove-fee-row" title="Remove row">
@@ -634,14 +659,23 @@
                                                     <td>
                                                         <select name="fee_head_id[]" class="form-control fee-head-select" required>
                                                             <option value="">— Select Fee Head —</option>
-                                                            @foreach($fee_heads as $h)
-                                                            <option value="{{ $h->id }}" data-amount="{{ $h->fee_head_amount ?? 0 }}">{{ $h->fee_head_title }}</option>
-                                                            @endforeach
+                                                            @if(!empty($fee_head_groups) && count($fee_head_groups))
+                                                            <optgroup label="Main Fee Head (bills all its sub heads)">
+                                                                @foreach($fee_head_groups as $g)
+                                                                <option value="GROUP:{{ $g->id }}" data-amount="{{ $g->total_amount + 0 }}" data-is-group="1">{{ $g->title }} ({{ number_format($g->total_amount, 2) }}) - {{ $g->items->count() }} sub heads</option>
+                                                                @endforeach
+                                                            </optgroup>
+                                                            @endif
+                                                            <optgroup label="Fee Head">
+                                                                @foreach($fee_heads as $h)
+                                                                <option value="{{ $h->id }}" data-amount="{{ $h->fee_head_amount ?? 0 }}">{{ $h->fee_head_title }}</option>
+                                                                @endforeach
+                                                            </optgroup>
                                                         </select>
                                                     </td>
                                                     <td><input type="number" name="amount_override[]" class="form-control amount-override" min="0" step="0.01" placeholder="Override"></td>
                                                     <td><span class="default-amount text-muted" style="font-size:12px">—</span></td>
-                                                    <td class="text-center"><input type="checkbox" name="is_optional[]" value="1"></td>
+                                                    <td class="text-center"><input type="hidden" name="is_optional[]" value="0" class="is-optional-value"><input type="checkbox" class="is-optional-check" value="1"></td>
                                                     <td class="text-center">
                                                         <button type="button" class="btn btn-xs btn-danger remove-fee-row" title="Remove row"><i class="fa fa-trash"></i></button>
                                                     </td>
@@ -1047,6 +1081,19 @@ $(function () {
         var $row   = $(this).closest('tr');
         var $over  = $row.find('.amount-override');
         var $def   = $row.find('.default-amount');
+
+        /* A Main Fee Head is worth exactly what its sub heads add up to. Overriding it here
+           would leave the parts and the whole disagreeing, so the box is locked and shows the
+           fee's own total. */
+        if ($opt.data('is-group')) {
+            $over.val('').attr('placeholder', 'set by the fee').prop('readonly', true);
+            $def.text('৳ ' + amount.toFixed(2)).css('color', '#399743');
+            recalcFeeTotal();
+            return;
+        }
+
+        $over.prop('readonly', false);
+
         if (amount > 0) {
             $over.val(amount.toFixed(2));
             $over.attr('placeholder', '৳ ' + amount.toFixed(2));
@@ -1061,10 +1108,18 @@ $(function () {
 
     $(document).on('input', '.amount-override', recalcFeeTotal);
 
+    /* Keep the posted value in step with the box the user actually clicks. */
+    $(document).on('change', '.is-optional-check', function () {
+        $(this).closest('td').find('.is-optional-value').val(this.checked ? 1 : 0);
+    });
+
     function getRowAmount($row) {
+        var $opt = $row.find('.fee-head-select option:selected');
+        /* The fee's own total wins for a Main Fee Head - there is no override to consider. */
+        if ($opt.data('is-group')) return parseFloat($opt.data('amount')) || 0;
+
         var overrideVal = parseFloat($row.find('.amount-override').val());
         if (!isNaN(overrideVal) && overrideVal > 0) return overrideVal;
-        var $opt = $row.find('.fee-head-select option:selected');
         return parseFloat($opt.data('amount')) || 0;
     }
 
@@ -1084,15 +1139,21 @@ $(function () {
     ───────────────────────────────────────────── */
     function buildFeeRow() {
         var opts = $('#feeHeadTable').find('.fee-head-select:first').html();
-        return $(
+        var $row = $(
             '<tr class="fee-head-row">' +
             '<td><select name="fee_head_id[]" class="form-control fee-head-select" required>' + opts + '</select></td>' +
             '<td><input type="number" name="amount_override[]" class="form-control amount-override" min="0" step="0.01" placeholder="Override"></td>' +
             '<td><span class="default-amount text-muted" style="font-size:12px">—</span></td>' +
-            '<td class="text-center"><input type="checkbox" name="is_optional[]" value="1" title="Mark as optional"></td>' +
+            '<td class="text-center"><input type="hidden" name="is_optional[]" value="0" class="is-optional-value"><input type="checkbox" class="is-optional-check" value="1" title="Mark as optional"></td>' +
             '<td class="text-center"><button type="button" class="btn btn-xs btn-danger remove-fee-row" title="Remove row"><i class="fa fa-trash"></i></button></td>' +
             '</tr>'
         );
+
+        /* The options are copied from a row that already has a saved head selected, so the
+           clone would silently arrive pre-filled with it. Start the new row empty. */
+        $row.find('.fee-head-select').val('');
+
+        return $row;
     }
 
     $('#addFeeHead').on('click', function () {

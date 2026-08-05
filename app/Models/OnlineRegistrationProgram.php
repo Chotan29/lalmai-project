@@ -7,7 +7,18 @@ use Illuminate\Database\Eloquent\Model;
 class OnlineRegistrationProgram extends BaseModel
 {
     protected $fillable = ['created_by', 'last_updated_by', 'faculties_id', 'semesters_id','start_date', 'end_date',
-        'new_student_fee', 'old_student_fee', 'status'];
+        'new_student_fee', 'old_student_fee', 'fee_head_group_id', 'status'];
+
+    /**
+     * The Main Fee Head this admission charges - the 26 sub heads the payment is split across.
+     *
+     * Null means no fee has been built for this department yet, and the payment falls back to
+     * the single ADMISSION FEE row it has always used.
+     */
+    public function feeHeadGroup()
+    {
+        return $this->belongsTo(FeeHeadGroup::class, 'fee_head_group_id');
+    }
 
     /**
      * Registration fee for this program.

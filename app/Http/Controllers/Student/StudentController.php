@@ -688,6 +688,9 @@ class StudentController extends CollegeBaseController
         $data['degrees'] = $data['student']->studentDegrees()->join('degrees as d','d.id','=','student_degrees.degrees_id')->get();
 
         $data['fee_master'] = $data['student']->feeMaster()->orderBy('fee_due_date','asc')->get();
+
+        /* One line per fee, not one per head - see AccountingScope::feeRowsFromMasters(). */
+        $data['fee_rows'] = $this->feeRowsFromMasters($data['fee_master']);
         $data['fee_collection'] = $data['student']->feeCollect()->get();
 
         /*total Calculation on Table Foot*/
@@ -1340,7 +1343,17 @@ class StudentController extends CollegeBaseController
             $request->request->add(['student_image' => isset($student_image_name) ? $student_image_name : $row->student_image]);
             $request->request->add(['student_signature' => isset($student_signature_name) ? $student_signature_name : $row->student_signature]);
 
+            $previousEmail = $row->getOriginal('email');
+
             $student = $row->update($request->all());
+
+            /*Keep the login e-mail with the profile e-mail.
+
+              A student logs in as a users row, and that row carries its own copy of the address.
+              Changing it here used to leave the login untouched, so the student saw one address
+              on their profile, typed it, and was told the credentials were wrong - with the
+              right password. Nothing on either screen explained why.*/
+            $this->syncLoginEmail($row, $previousEmail);
 
             /*Update Associate Address Info*/
             $row->address()->update([
@@ -3017,6 +3030,42 @@ class StudentController extends CollegeBaseController
             }
     }
 
+    /**
+     * Move a student's login to the e-mail now on their profile.
+     *
+     * The login lives on a users row with its own copy of the address, so a profile edit that
+     * did not come through here would leave the two disagreeing - and the student would be
+     * typing the address they can see while the login expects one they cannot.
+     *
+     * The account is found by hook_id, not by e-mail: the old address is exactly what has just
+     * stopped being true.
+     */
+    protected function syncLoginEmail(Student $student, $previousEmail = null)
+    {
+        $email = trim((string) $student->email);
+
+        if ($email === '' || $email === trim((string) $previousEmail)) {
+            return;
+        }
+
+        $user = User::where('hook_id', $student->id)->first();
+
+        if (!$user || trim((string) $user->email) === $email) {
+            return;
+        }
+
+        /* users.email is unique. If the address already belongs to somebody else, moving it
+           would throw and lose the whole profile save, so the login is left alone and the
+           office is told - two people sharing one login is not something to fix silently. */
+        if (User::where('email', $email)->where('id', '!=', $user->id)->exists()) {
+            request()->session()->flash($this->message_warning,
+                'Profile saved, but the login e-mail was not changed: '.$email.' already belongs to another account.');
+            return;
+        }
+
+        $user->update(['email' => $email]);
+    }
+
     public function createResetLogin($id)
     {
         $student = Student::find($id);
@@ -3026,12 +3075,31 @@ class StudentController extends CollegeBaseController
             $rolesId = Role::where('name','student')->first()->id;
             $password = str_random(8);
             $emailIds = $student->email;
-            //check user is exist or not
-            $existUser = User::where('email',$emailIds)->first();
+
+            /*Find this student's login by hook_id first.
+
+              Looking it up by e-mail alone meant that once a profile e-mail had been edited,
+              this found nothing and created a SECOND account for the same student - two logins,
+              and no way to tell which one the student should use. hook_id is what actually ties
+              a login to a student.*/
+            $existUser = User::where('hook_id', $student->id)->first();
+
+            if (!$existUser) {
+                $existUser = User::where('email', $emailIds)->first();
+            }
+
             if($existUser){
-                $user = $existUser->update([
-                    'password' => Hash::make($password)
-                ]);
+                /* Reset also brings the address back in line with the profile. */
+                $updateValues = ['password' => Hash::make($password)];
+
+                if (trim((string) $existUser->email) !== trim($emailIds)
+                    && !User::where('email', $emailIds)->where('id', '!=', $existUser->id)->exists()) {
+                    $updateValues['email'] = $emailIds;
+                } else {
+                    $emailIds = $existUser->email;
+                }
+
+                $user = $existUser->update($updateValues);
 
                 $subject = 'Login Detail Reset';
                 $message = 'Dear ' . $name.', Your login detail Updated in our system. Please Login with  <br> email: '.$emailIds.' And Password: '. $password ;

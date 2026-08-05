@@ -905,7 +905,8 @@
                                     @php
                                         // Calculate total paid if not provided
                                         $total_paid = $data['total_paid'] ?? 0;
-                                        foreach ($data['current_installment_detail'] as $installment) {
+                                        // May legitimately be empty now that invented instalments are off.
+                                        foreach (($data['current_installment_detail'] ?? []) as $installment) {
                                             $total_paid += $installment['paid_amount'] ?? 0;
                                         }
                                     @endphp

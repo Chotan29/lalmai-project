@@ -25,6 +25,14 @@
         {!! Form::number('program_old_fee[]', null, ["placeholder" => "Default", "class" => "form-control", "min" => "0", "step" => "0.01", "title" => "Leave empty to use the default fee"]) !!}
     </td>
     <td>
+        {{-- Which Main Fee Head this admission charges. Empty keeps the old behaviour: one
+             lump ADMISSION FEE row instead of the sub head split. --}}
+        {!! Form::select('program_fee_head_group[]',
+            [0 => 'None (single head)'] + (isset($fee_head_groups) ? $fee_head_groups : (isset($data['fee_head_groups']) ? $data['fee_head_groups'] : [])),
+            null,
+            ['class' => 'form-control select2', 'title' => 'Splits the payment across this fee\'s sub heads']) !!}
+    </td>
+    <td>
         {!! Form::select('program_status[]', ['active' => 'Active', 'in-active' => 'In-Active'], request('status'), ['class' => 'form-control select2']) !!}
     </td>
     <td class="text-center">

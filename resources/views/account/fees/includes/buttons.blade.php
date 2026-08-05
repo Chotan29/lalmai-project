@@ -8,6 +8,7 @@
         <a class="{!! request()->is('account/fees/balance')?'btn-success':'btn-warning' !!} btn-sm" href="{{ route('account.fees.balance') }}"><i class="fa fa-money" aria-hidden="true"></i>&nbsp;Balance Fees</a>
         <a class="{!! request()->is('account/fees/online-payment')?'btn-success':'btn-primary' !!} btn-sm" href="{{ route('account.fees.online-payment') }}"><i class="fa fa-globe" aria-hidden="true"></i>&nbsp;Online Payment</a>
         <a class="{!! request()->is('account/fees/head*')?'btn-success':'btn-primary' !!} btn-sm" href="{{ route('account.fees.head') }}"><i class="fa fa-header" aria-hidden="true"></i>&nbsp;Fees Head</a>
+        <a class="{!! request()->is('account/fees/fee-head-group*')?'btn-success':'btn-primary' !!} btn-sm" href="{{ route('account.fees.fee-head-group') }}"><i class="fa fa-sitemap" aria-hidden="true"></i>&nbsp;Main Fee Head</a>
         <a class="{!! request()->is('account/fees/billing-profile*')?'btn-success':'btn-info' !!} btn-sm" href="{{ route('account.fees.billing-profile') }}"><i class="fa fa-repeat" aria-hidden="true"></i>&nbsp;Billing Profiles</a>
         <a class="{!! request()->is('account/fees/billing-run*')?'btn-success':'btn-info' !!} btn-sm" href="{{ route('account.fees.billing-run') }}"><i class="fa fa-history" aria-hidden="true"></i>&nbsp;Billing Runs</a>
         @ability('super-admin','fees-billing-settings')

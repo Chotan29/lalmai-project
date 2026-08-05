@@ -8,6 +8,7 @@ use App\Models\Assets;
 use App\Models\Bank;
 use App\Models\FeeCollection;
 use App\Models\FeeHead;
+use App\Models\FeeHeadGroup;
 use App\Models\FeeMaster;
 use App\Models\PaymentMethod;
 use App\Models\PayrollHead;
@@ -68,6 +69,75 @@ trait AccountingScope{
         }else{
             return "Unknown";
         }
+    }
+
+    /**
+     * A student's fees as they should be read, one line per fee rather than one per head.
+     *
+     * A Main Fee Head is 26 rows in the accounts but a single charge to the student. Printing
+     * all 26 tells a parent nothing: they were billed one admission fee, not twenty-six little
+     * ones. The heads stay exactly as they are underneath - collection, the ledger and every
+     * report still read them - this only decides what a fee list prints.
+     *
+     * Shared rather than written per screen, because the office profile and the student's own
+     * panel showing different figures for the same fee is precisely the bug worth designing out.
+     *
+     * @param  \Illuminate\Support\Collection  $feeMasters
+     * @return \Illuminate\Support\Collection  rows carrying label, amounts and the ids behind them
+     */
+    public function feeRowsFromMasters($feeMasters)
+    {
+        $rows = collect();
+        $grouped = [];
+
+        foreach ($feeMasters as $feemaster) {
+            $key = $feemaster->billing_period_key;
+
+            if ($key && strpos($key, 'GROUP-') === 0) {
+                if (!isset($grouped[$key])) {
+                    $group = FeeHeadGroup::find((int) substr($key, 6));
+
+                    $grouped[$key] = (object) [
+                        'is_group'   => true,
+                        'label'      => $group ? $group->title : 'Fee Package',
+                        'semester'   => $feemaster->semester,
+                        'due_date'   => $feemaster->fee_due_date,
+                        'amount'     => 0,
+                        'discount'   => 0,
+                        'fine'       => 0,
+                        'paid'       => 0,
+                        'head_count' => 0,
+                        'ids'        => [],
+                    ];
+                    $rows->push($grouped[$key]);
+                }
+
+                $row = $grouped[$key];
+                $row->amount   += (float) $feemaster->fee_amount;
+                $row->discount += (float) $feemaster->feeCollect()->sum('discount');
+                $row->fine     += (float) $feemaster->feeCollect()->sum('fine');
+                $row->paid     += (float) $feemaster->feeCollect()->sum('paid_amount');
+                $row->head_count++;
+                $row->ids[] = $feemaster->id;
+
+                continue;
+            }
+
+            $rows->push((object) [
+                'is_group'   => false,
+                'label'      => $this->getFeeHeadById($feemaster->fee_head),
+                'semester'   => $feemaster->semester,
+                'due_date'   => $feemaster->fee_due_date,
+                'amount'     => (float) $feemaster->fee_amount,
+                'discount'   => (float) $feemaster->feeCollect()->sum('discount'),
+                'fine'       => (float) $feemaster->feeCollect()->sum('fine'),
+                'paid'       => (float) $feemaster->feeCollect()->sum('paid_amount'),
+                'head_count' => 1,
+                'ids'        => [$feemaster->id],
+            ]);
+        }
+
+        return $rows;
     }
 
     public function activeFeeHead()
