@@ -2,6 +2,7 @@
 @section('css')
     <link rel="stylesheet" href="{{ asset('assets/css/jquery-ui.custom.min.css') }}" />
     <link rel="stylesheet" href="{{ asset('assets/css/bootstrap-datepicker3.min.css') }}" />
+    @include('staff.includes.form-style')
 @endsection
 @section('content')
     <div class="main-content">
