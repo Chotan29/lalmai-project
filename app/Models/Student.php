@@ -113,9 +113,17 @@ class Student extends BaseModel
     // }
 
     // app/Models/Student.php
+    /**
+     * Charges in force. status 0 already means "cancelled" elsewhere in the system - a billing
+     * run parks a bill that way and restores it by setting 1 - but nothing filtered on it, so a
+     * cancelled or superseded charge still showed on the profile and still counted towards what
+     * the student owed. Filtering here covers the profile, the student's own panel and every
+     * money-distribution path in one place, the same way feeCollect() below already does.
+     * Audit screens that need the parked rows should query FeeMaster directly.
+     */
     public function feeMaster()
     {
-        return $this->hasMany(FeeMaster::class, 'students_id', 'id');
+        return $this->hasMany(FeeMaster::class, 'students_id', 'id')->where('status', 1);
     }
 
     public function feeCollect()

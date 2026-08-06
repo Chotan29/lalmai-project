@@ -163,8 +163,12 @@ public function generateToken(Request $request)
             ], 404);
         }
 
-        // Get all fee masters for the student
+        /* Charges in force only. status 0 means cancelled here - a billing run parks a bill
+           that way, and so does a charge that has been replaced by the sub heads of a Main Fee
+           Head. Without this the parked row is read as an unpaid due and the student is asked
+           to pay money they have already paid. */
         $feeMasters = FeeMaster::where('students_id', $student->id)
+            ->where('status', 1)
             ->whereNotIn('fee_head', config('api.excluded_heads'))
             ->orderBy('semester', 'desc')
             ->orderBy('fee_due_date', 'asc')
@@ -339,7 +343,11 @@ public function generateToken(Request $request)
         
 
             // Get all fee masters with remaining dues, ordered by semester DESC
+            /* Cancelled and superseded charges excluded, or a payment would be spread onto a
+               row that is no longer in force and the money would go missing from the heads it
+               belongs to. */
             $feeMasters = FeeMaster::where('students_id', $student->id)
+                ->where('status', 1)
                 ->whereNotIn('fee_head', config('api.excluded_heads'))
                 ->orderBy('semester', 'desc')
                 ->with(['collections' => function ($query) {

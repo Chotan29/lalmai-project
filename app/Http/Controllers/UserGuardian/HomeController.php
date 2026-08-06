@@ -77,8 +77,11 @@ class HomeController extends CollegeBaseController
 
             $students_id = array_pluck($data['students'], 'id');
 
-            $feeMaster = FeeMaster::where('students_id', $students_id)->sum('fee_amount');
-            $feeCollection = FeeCollection::where('students_id', $students_id)->sum('paid_amount');
+            /* Both sides filtered on status 1, and they have to move together: a cancelled
+               charge keeps its cancelled receipt, so filtering only one of them would swing the
+               due figure by the whole amount in one direction or the other. */
+            $feeMaster = FeeMaster::where('students_id', $students_id)->where('status', 1)->sum('fee_amount');
+            $feeCollection = FeeCollection::where('students_id', $students_id)->where('status', 1)->sum('paid_amount');
             $dueFee = $feeMaster - $feeCollection;
 
             /*chart*/

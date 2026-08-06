@@ -335,7 +335,9 @@ class FeesPrintController extends CollegeBaseController
         /*filter due using call back*/
         $filtered  = $students->filter(function ($student) use($month) {
             $monthId = (int)$month;
-            $student->master = FeeMaster::where('students_id',$student->id)->whereMonth('fee_due_date',$monthId)->get();
+            /* Charges in force only - a printed due list must not bill a charge that has been
+               cancelled or replaced by the sub heads of a Main Fee Head. */
+            $student->master = FeeMaster::where('students_id',$student->id)->where('status', 1)->whereMonth('fee_due_date',$monthId)->get();
             // Keep only dues and reindex collection for consistent view access.
             $student->master = $student->master->filter(function ($value, $key) {
                // dd($value->created_at);

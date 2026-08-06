@@ -78,7 +78,12 @@ public function calculateInstallments()
     $studentId = $this->students_id;
 
     // Get all fee masters for the student (excluding excluded heads)
+    /* Charges in force only. status 0 means cancelled - a billing run parks a bill that way,
+       and so does a charge replaced by the sub heads of a Main Fee Head. Counting a parked row
+       adds its amount to the total while its receipt no longer counts, so the student appears
+       to owe the same money twice. */
     $allFeeMasters = FeeMaster::where('students_id', $studentId)
+        ->where('status', 1)
         ->whereNotIn('fee_head', config('api.excluded_heads'))
         //->orderBy('semester', 'desc')
         ->latest()

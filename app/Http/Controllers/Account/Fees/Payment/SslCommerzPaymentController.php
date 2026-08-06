@@ -397,7 +397,11 @@ class SslCommerzPaymentController extends CollegeBaseController
     protected function resolveInstallmentForPayment($student)
     {
         // Use calculateInstallments() — returns full due as single payable amount (no installment split)
+        /* Charges in force only: latest() could otherwise land on a charge that has been
+           cancelled or replaced by the sub heads of a Main Fee Head, and the amount offered
+           for payment would be computed from a row that no longer stands. */
         $feeMaster = FeeMaster::where('students_id', $student->id)
+            ->where('status', 1)
             ->whereNotIn('fee_head', config('api.excluded_heads', []))
             ->latest()
             ->first();
@@ -479,12 +483,14 @@ class SslCommerzPaymentController extends CollegeBaseController
     protected function buildInstallmentFallback($student)
     {
         $feeMasters = FeeMaster::where('students_id', $student->id)
+            ->where('status', 1)
             ->where('semester', $student->semester)
             ->orderBy('id', 'desc')
             ->get();
 
         if ($feeMasters->isEmpty()) {
             $feeMasters = FeeMaster::where('students_id', $student->id)
+                ->where('status', 1)
                 ->orderBy('id', 'desc')
                 ->get();
         }
