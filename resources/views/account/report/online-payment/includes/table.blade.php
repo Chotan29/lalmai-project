@@ -7,8 +7,9 @@
     $pending     = $rows->filter(function ($r) { return (int) $r->payment_status !== 1; });
 @endphp
 
-{{-- Styling lives in assets/css/paper.css with the rest of the print design, not inline. --}}
-<div class="op-sheet">
+{{-- Styling lives in assets/css/paper.css with the rest of the print design, not inline.
+     report-sheet is the design every report wears; op-sheet adds what only this one needs. --}}
+<div class="report-sheet op-sheet">
 
     <div class="op-title">
         <h2>Online Fee Payment Report</h2>

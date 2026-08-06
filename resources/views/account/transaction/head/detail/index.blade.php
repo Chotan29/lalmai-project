@@ -5,7 +5,7 @@
 @endsection
 
 @section('content')
-    <div class="main-content">
+    <div class="main-content report-print-page">
         <div class="main-content-inner">
             <div class="page-content">
                 @include('layouts.includes.template_setting')
@@ -35,9 +35,13 @@
                     </div>
                     <div class="space-32 hidden-print"></div>
                     <div class="col-xs-12">
-                    @include('print.includes.institution-detail')
+                    <div class="report-letterhead">
+                        @include('print.includes.institution-detail')
+                    </div>
                     <!-- PAGE CONTENT BEGINS -->
-                        @include($view_path.'.detail.includes.table')
+                        <div class="report-sheet">
+                            @include($view_path.'.detail.includes.table')
+                        </div>
                     </div>
                 </div><!-- /.row -->
             </div><!-- /.page-content -->

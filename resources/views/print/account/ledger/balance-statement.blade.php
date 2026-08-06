@@ -5,7 +5,7 @@
 @endsection
 
 @section('content')
-    <div class="main-content">
+    <div class="main-content report-print-page">
         <div class="main-content-inner">
             <div class="page-content">
                 @include('layouts.includes.template_setting')
@@ -75,8 +75,14 @@
                     </div>
                     <div class="space-32 hidden-print"></div>
                     <div class="col-xs-12">
-                    @include('print.includes.institution-detail')
+                    {{-- The letterhead is a shared partial. Wrapping it lets the report screens
+                         dress it without touching the receipts that include the same block. --}}
+                    <div class="report-letterhead">
+                        @include('print.includes.institution-detail')
+                    </div>
                     <!-- PAGE CONTENT BEGINS -->
+                    {{-- report-sheet carries the shared report design - see assets/css/paper.css. --}}
+                    <div class="report-sheet">
                         <div class="row align-center">
                             <span class="receipt-copy">BALANCE STATEMENT OF ACCOUNTS </span>
                         </div>
@@ -120,6 +126,7 @@
                             </tr>
                             </tfoot>
                         </table>
+                    </div>
                         <div class="space-8"></div>
                     </div>
                 </div><!-- /.row -->

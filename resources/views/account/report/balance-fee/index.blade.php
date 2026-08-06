@@ -25,7 +25,7 @@
 @endsection
 
 @section('content')
-    <div class="main-content A4 landscape">
+    <div class="main-content A4 landscape report-print-page">
         <div class="main-content-inner">
             <div class="page-content">
                 @include('layouts.includes.template_setting')
@@ -57,7 +57,11 @@
                     </a>
                 </div>
                 <div class="space-32 hidden-print"></div>
-                @include('print.includes.institution-detail')
+                {{-- The letterhead is a shared partial. Wrapping it lets the report screens
+                     dress it without touching the receipts that include the same block. --}}
+                <div class="report-letterhead">
+                    @include('print.includes.institution-detail')
+                </div>
                 @if(isset($data))
                     <hr class="hr hr-2">
                     <div class="row align-center">
@@ -66,11 +70,13 @@
                     <hr class="hr hr-2">
 
 
-                @if($data['layout'] == 'feeHead' && $data['flag'] !=='overdue')
+                <div class="report-sheet">
+                    @if($data['layout'] == 'feeHead' && $data['flag'] !=='overdue')
                         @include($view_path.'.includes.table-due-head')
                     @else
                         @include($view_path.'.includes.table')
                     @endif
+                    </div>
                 @endif
             </div><!-- /.page-content -->
         </div>

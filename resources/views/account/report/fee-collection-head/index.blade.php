@@ -6,7 +6,7 @@
 
 
 @section('content')
-    <div class="main-content">
+    <div class="main-content report-print-page">
         <div class="main-content-inner">
             <div class="page-content">
                 @include('layouts.includes.template_setting')
@@ -41,11 +41,13 @@
                 {{-- The letterhead is a shared partial with its own styling. Wrapping it lets
                      this report dress it differently without touching the receipts and other
                      reports that use the very same block. --}}
-                <div class="fg-letterhead">
+                <div class="report-letterhead fg-letterhead">
                     @include('print.includes.institution-detail')
                 </div>
                 @if(isset($data))
-                    @include($view_path.'.includes.table')
+                    <div class="report-sheet">
+                        @include($view_path.'.includes.table')
+                    </div>
                 @endif
             </div><!-- /.page-content -->
         </div>

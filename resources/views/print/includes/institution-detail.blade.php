@@ -1,13 +1,12 @@
 <div class="institution-header">
     <div class="institution-header-grid">
-        <div class="logo-container">
-            @if(isset($generalSetting->logo))
-                <img class="institution-logo" 
-                     src="{{ asset('images'.DIRECTORY_SEPARATOR.'setting'.DIRECTORY_SEPARATOR.'general'.DIRECTORY_SEPARATOR.$generalSetting->logo) }}" 
-                     alt="{{ isset($generalSetting->institute) ? $generalSetting->institute : 'Institution Logo' }}">
-            @endif
+        {{-- Left: the government monogram, the same file the ID card prints. --}}
+        <div class="logo-container logo-container-left">
+            <img class="institution-logo govt-monogram"
+                 src="{{ asset('images/idcard/govt_monogram.png') }}"
+                 alt="Government of the People's Republic of Bangladesh">
         </div>
-        
+
         <div class="institution-details">
             @if(isset($generalSetting->salogan) && $generalSetting->salogan)
                 <div class="institution-slogan">{{ $generalSetting->salogan }}</div>
@@ -44,7 +43,15 @@
             </div>
         </div>
 
-        <div class="header-spacer"></div>
+        {{-- Right: the college's own logo, the one the office uploads in General Settings, so a
+             change there still reaches every printed sheet. --}}
+        <div class="logo-container logo-container-right">
+            @if(isset($generalSetting->logo))
+                <img class="institution-logo college-logo"
+                     src="{{ asset('images'.DIRECTORY_SEPARATOR.'setting'.DIRECTORY_SEPARATOR.'general'.DIRECTORY_SEPARATOR.$generalSetting->logo) }}"
+                     alt="{{ isset($generalSetting->institute) ? $generalSetting->institute : 'Institution Logo' }}">
+            @endif
+        </div>
     </div>
 </div>
 
@@ -77,10 +84,13 @@
         text-align: center;
     }
 
-    .header-spacer {
-        min-height: 1px;
+    /* Both logos ride at the same height, so neither dwarfs the other and the college name
+       stays centred between them. */
+    .logo-container-left .institution-logo,
+    .logo-container-right .institution-logo {
+        max-height: 90px;
     }
-    
+
     .institution-slogan {
         font-size: 14px;
         color: #666;

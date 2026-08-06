@@ -23,7 +23,7 @@
 @endsection
 
 @section('content')
-    <div class="main-content">
+    <div class="main-content report-print-page">
         <div class="main-content-inner">
             <div class="page-content">
                 @include('layouts.includes.template_setting')
@@ -55,9 +55,17 @@
                     </a>
                 </div>
                 <div class="space-32 hidden-print"></div>
-                @include('print.includes.institution-detail')
+                {{-- The letterhead is a shared partial. Wrapping it lets the report screens
+                     dress it without touching the receipts that include the same block. --}}
+                <div class="report-letterhead">
+                    @include('print.includes.institution-detail')
+                </div>
                 @if(isset($data))
-                    @include($view_path.'.includes.table')
+                    {{-- report-sheet carries the shared report design: the ruled grid, the
+                         heading, and the print rules. See assets/css/paper.css. --}}
+                    <div class="report-sheet">
+                        @include($view_path.'.includes.table')
+                    </div>
                 @endif
             </div><!-- /.page-content -->
         </div>
