@@ -5,7 +5,9 @@
 @endsection
 
 @section('content')
-    <div class="main-content ">
+    {{-- op-print-page marks the block that holds everything this page prints. paper.css hangs the
+         A4 page box on it, so the whole sheet sits in one page context - see the note there. --}}
+    <div class="main-content op-print-page">
         <div class="main-content-inner">
             <div class="page-content">
                 @include('layouts.includes.template_setting')
@@ -37,7 +39,12 @@
                     </a>
                 </div>
                 <div class="space-32 hidden-print"></div>
-                @include('print.includes.institution-detail')
+                {{-- The letterhead is a shared partial with its own styling. Wrapping it lets
+                     this report dress it differently without touching the receipts and other
+                     reports that include the very same block. --}}
+                <div class="op-letterhead">
+                    @include('print.includes.institution-detail')
+                </div>
                 @if(isset($data))
                     @include($view_path.'.includes.table')
                 @endif

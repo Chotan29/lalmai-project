@@ -12,9 +12,22 @@
 
     <div class="op-title">
         <h2>Online Fee Payment Report</h2>
-        <div class="op-sub">
-            @if(!empty($data['print_head'])){{ $data['print_head'] }}@else All online payments @endif
-        </div>
+
+        {{-- The department the sheet covers, said once and said large. On paper this is the
+             first thing anyone needs to know, and the filter boxes do not print. --}}
+        <div class="op-dept-name">{{ $data['op_department'] ?? 'All Departments' }}</div>
+
+        @if(!empty($data['op_meta']))
+            <div class="op-meta">
+                @foreach($data['op_meta'] as $meta)
+                    <span class="op-meta-item">
+                        <span class="op-meta-l">{{ $meta['label'] }}</span>
+                        {{-- Escaped: the gateway and the dates in here come from the query string. --}}
+                        <span class="op-meta-v">{{ $meta['value'] }}</span>
+                    </span>
+                @endforeach
+            </div>
+        @endif
     </div>
 
     <div class="op-summary">
@@ -73,8 +86,10 @@
                         <span class="op-reg">{{ $student->reg_no }}</span>
                     </td>
                     <td class="op-dept">
-                        <span class="op-name">{{ ViewHelper::getFacultyTitle($student->faculty) }}</span>
-                        <span class="op-reg">{{ ViewHelper::getSemesterTitle($student->semester) }}</span>
+                        {{-- Read from the lists the controller built. The helper behind the old
+                             call runs a find() per row, which is two queries a payment. --}}
+                        <span class="op-name">{{ $data['faculty_titles'][$student->faculty] ?? ViewHelper::getFacultyTitle($student->faculty) }}</span>
+                        <span class="op-reg">{{ $data['semester_titles'][$student->semester] ?? ViewHelper::getSemesterTitle($student->semester) }}</span>
                     </td>
                     <td class="op-date">{{ \Carbon\Carbon::parse($student->date)->format('d M Y') }}</td>
                     <td class="op-gw">{{ $student->payment_gateway ?: '&mdash;' }}</td>

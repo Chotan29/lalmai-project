@@ -12,8 +12,10 @@ namespace App\Http\Controllers\Account\Report;
 
 use App\Http\Controllers\CollegeBaseController;
 use App\Models\BankTransaction;
+use App\Models\Faculty;
 use App\Models\FeeCollection;
 use App\Models\OnlinePayment;
+use App\Models\Semester;
 use App\Models\SalaryPay;
 use App\Models\Student;
 use App\Models\Transaction;
@@ -95,6 +97,22 @@ class OnlineFeePaymentReportController extends CollegeBaseController
         $data['student'] = $filteredStudent;*/
 
 
+        /* What the sheet is a report of. The filter boxes do not print, so without this a
+           printed page of eighty names does not say whose department's money it holds. */
+        $data['op_department'] = $request->get('faculty') > 0
+            ? $this->getFacultyTitle($request->get('faculty'))
+            : 'All Departments';
+        $data['op_meta'] = $this->onlinePaymentHeading($request);
+        $data['print_head'] = $data['op_department'];
+
+        /* Department and semester names resolved once for the whole list. Looked up row by row -
+           which is what this report did - each one costs a query, so eighty payments meant a
+           hundred and sixty of them to print two columns. */
+        $data['faculty_titles'] = Faculty::whereIn('id', $data['student']->pluck('faculty')->filter()->unique()->all())
+            ->pluck('faculty', 'id')->all();
+        $data['semester_titles'] = Semester::whereIn('id', $data['student']->pluck('semester')->filter()->unique()->all())
+            ->pluck('semester', 'id')->all();
+
         $data['faculties'] = $this->activeFaculties();
         $data['batch'] = $this->activeBatch();
         $data['academic_status'] = $this->activeStudentAcademicStatus();
@@ -106,6 +124,51 @@ class OnlineFeePaymentReportController extends CollegeBaseController
         $data['filter_query'] = $this->filter_query;
 
         return view(parent::loadDataToView($this->view_path.'.index'), compact('data'));
+    }
+
+    /**
+     * The lines that sit under the report title on the printed sheet.
+     *
+     * Only what was actually asked for is listed. A row reading "Gateway: All" tells the reader
+     * nothing and pushes the useful lines further apart.
+     */
+    private function onlinePaymentHeading(Request $request)
+    {
+        $meta = [];
+
+        if ($request->get('semester_select') > 0) {
+            $meta[] = ['label' => 'Sem./Section', 'value' => $this->getSemesterTitle($request->get('semester_select'))];
+        }
+
+        if ($request->get('batch') > 0) {
+            $meta[] = ['label' => 'Batch', 'value' => $this->getStudentBatchById($request->get('batch'))];
+        }
+
+        $from = $request->get('pay_date_start');
+        $to = $request->get('pay_date_end');
+        if ($from && $to) {
+            /* A real dash rather than the HTML entity: the blade escapes these values, because
+               the gateway and the dates arrive from the query string. */
+            $meta[] = ['label' => 'Payment Date', 'value' => Carbon::parse($from)->format('d M Y').' to '.Carbon::parse($to)->format('d M Y')];
+        } elseif ($from) {
+            $meta[] = ['label' => 'Payment Date', 'value' => Carbon::parse($from)->format('d M Y')];
+        } elseif ($to) {
+            $meta[] = ['label' => 'Payment Date', 'value' => 'Up to '.Carbon::parse($to)->format('d M Y')];
+        }
+
+        if ($request->get('payment_gateway')) {
+            $meta[] = ['label' => 'Gateway', 'value' => $request->get('payment_gateway')];
+        }
+
+        if ($request->get('verify_status')) {
+            $meta[] = ['label' => 'Status', 'value' => $request->get('verify_status') == 'verify' ? 'Verified' : 'Not Verified'];
+        } elseif (!$request->all()) {
+            /* Asked for nothing, the screen lists the payments still waiting to be verified.
+               Said plainly here, or the sheet reads like a complete record when it is not. */
+            $meta[] = ['label' => 'Status', 'value' => 'Not Verified only'];
+        }
+
+        return $meta;
     }
 
     public function feeCollection(Request $request)
