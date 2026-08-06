@@ -49,6 +49,19 @@ class PublicResultController extends CollegeBaseController
     const MAX_ATTEMPTS = 25;
 
     /**
+     * How long a built sheet is reused.
+     *
+     * Result day is the one day this page gets hammered, and a published sheet is the same
+     * for every visitor - so it is built once and served from cache. Without this, every
+     * single visitor re-runs the grading engine for the whole class: roughly one query per
+     * student plus two per subject per student, which is over four thousand queries for a
+     * class of 254. Publishing mints a new token, and the token is part of the cache key, so
+     * a fresh publish is served fresh; the window only bounds how late a mark correction
+     * shows up.
+     */
+    const SHEET_CACHE_MINUTES = 10;
+
+    /**
      * Results are personal and should not live in Google's index for ever, nor sit in a
      * shared proxy cache, so every response here says so.
      */
@@ -108,6 +121,25 @@ class PublicResultController extends CollegeBaseController
      * Keyed by department name (Science, Humanities, Business ...) because that is how the
      * college announces results and how a visitor looks for their own.
      */
+    /**
+     * A cheap stamp of what is published right now.
+     *
+     * One tiny query. Tokens are re-minted on every publish and cleared on withdrawal, so
+     * the stamp changes the moment the office changes anything - which is what lets the rest
+     * of the page be cached without ever going stale.
+     */
+    private function publishedStamp()
+    {
+        $rows = ExamSchedule::where('tabulation_public_status', 1)
+            ->distinct()
+            ->pluck('tabulation_public_token')
+            ->filter()
+            ->sort()
+            ->implode('|');
+
+        return md5($rows);
+    }
+
     private function releasedSheetsByDepartment()
     {
         $rows = ExamSchedule::select('years_id', 'months_id', 'exams_id', 'faculty_id', 'semesters_id',
@@ -154,14 +186,28 @@ class PublicResultController extends CollegeBaseController
         return $departments;
     }
 
+    /**
+     * The picker options and the department cards, built once per published state.
+     *
+     * Both are the same for every visitor and change only when the office publishes or
+     * withdraws something, which the stamp captures - so this is cached until that happens
+     * rather than rebuilt for each of the thousands of visitors on result day.
+     */
+    private function publicPageData()
+    {
+        return Cache::remember('pubresult:page:' . $this->publishedStamp(), now()->addHours(6), function () {
+            return [
+                'exam_groups' => $this->examGroupOptions(),
+                'departments' => $this->releasedSheetsByDepartment(),
+            ];
+        });
+    }
+
     /** The public form, with the published department sheets listed under it. */
     public function index()
     {
-        $data = [
-            'exam_groups' => $this->examGroupOptions(),
-            'departments' => $this->releasedSheetsByDepartment(),
-            'generalSetting' => GeneralSetting::first(),
-        ];
+        $data = $this->publicPageData();
+        $data['generalSetting'] = GeneralSetting::first();
 
         return $this->harden(response()->view('front.result.index', compact('data')));
     }
@@ -178,13 +224,10 @@ class PublicResultController extends CollegeBaseController
         $notFound = 'No result found for that roll and date of birth. Please check both and try '
             . 'again, or contact the college office.';
 
-        $data = [
-            'exam_groups' => $this->examGroupOptions(),
-            'departments' => $this->releasedSheetsByDepartment(),
-            'generalSetting' => GeneralSetting::first(),
-            'old_group' => (string) $request->get('exam_group'),
-            'old_roll' => trim((string) $request->get('reg_no')),
-        ];
+        $data = $this->publicPageData();
+        $data['generalSetting'] = GeneralSetting::first();
+        $data['old_group'] = (string) $request->get('exam_group');
+        $data['old_roll'] = trim((string) $request->get('reg_no'));
 
         $fail = function ($message) use (&$data) {
             $data['error'] = $message;
@@ -279,6 +322,21 @@ class PublicResultController extends CollegeBaseController
             abort(404);
         }
 
+        /* Built once, then served from cache. The whole page is identical for every visitor,
+           so there is nothing per-person to keep out of it. The token is in the key, so a
+           re-publish serves a freshly built sheet immediately. */
+        $html = Cache::remember('pubresult:sheet:' . $token,
+            now()->addMinutes(self::SHEET_CACHE_MINUTES),
+            function () use ($match) {
+                return $this->buildSheetHtml($match);
+            });
+
+        return $this->harden(response($html));
+    }
+
+    /** The expensive part: grade the whole class and render the sheet. */
+    private function buildSheetHtml($match)
+    {
         $scheduleIds = ExamSchedule::where([
                 ['years_id', '=', $match->years_id],
                 ['months_id', '=', $match->months_id],
@@ -314,7 +372,9 @@ class PublicResultController extends CollegeBaseController
         $data['generalSetting'] = GeneralSetting::first();
         $data['paper'] = 'legal';
 
-        return $this->harden(response()->view('front.result.sheet', compact('data')));
+        /* Rendered to a string, not returned as a response: it is the HTML that gets cached,
+           so repeat visitors skip the grading engine and the blade pass alike. */
+        return view('front.result.sheet', compact('data'))->render();
     }
 
     /**
