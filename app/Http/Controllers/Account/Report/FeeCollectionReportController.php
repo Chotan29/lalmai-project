@@ -114,7 +114,9 @@ class FeeCollectionReportController extends CollegeBaseController
             }
             else{
                 $date = Carbon::today()->format('Y-m-d');
-                $collection = FeeCollection::get();
+                /* Only receipts in force decide who appears in the list; a student whose
+                   only receipt was cancelled has not paid. */
+                $collection = FeeCollection::where('status', 1)->get();
                 $studentsId = $collection->pluck('students_id');
                 $students = Student::select('students.id','students.reg_no','students.reg_date', 'students.first_name',
                     'students.middle_name', 'students.last_name','students.faculty','students.semester','ai.mobile_1', 'pd.father_first_name', 'pd.father_middle_name',
@@ -130,7 +132,13 @@ class FeeCollectionReportController extends CollegeBaseController
                 if($students){
                     $filtered  = $students->filter(function ($student) use($date) {
                         $student->date = $date;
-                        $collectionFees = $student->feeCollect()->whereDate('created_at',$date)->get();
+                        /* Filtered on the day the money was taken, not on the day the row
+                           happened to be written. They are normally the same, but a receipt
+                           re-issued later - as the admission split does - carries today's
+                           created_at while belonging to a payment made weeks ago, and the
+                           report then showed a whole term's admission money as today's
+                           collection. */
+                        $collectionFees = $student->feeCollect()->whereDate('date',$date)->get();
                         $student->paid_amount = $collectionFees->sum('paid_amount');
                         $student->discount = $collectionFees->sum('discount');
                         $student->fine = $collectionFees->sum('fine');
@@ -152,7 +160,9 @@ class FeeCollectionReportController extends CollegeBaseController
         }else{
 
             $date = Carbon::today()->format('Y-m-d');
-            $collection = FeeCollection::get();
+            /* Only receipts in force decide who appears in the list; a student whose only receipt
+               was cancelled has not paid. */
+            $collection = FeeCollection::where('status', 1)->get();
             $studentsId = $collection->pluck('students_id');
             $students = Student::select('students.id','students.reg_no','students.reg_date', 'students.first_name',
                 'students.middle_name', 'students.last_name','students.faculty','students.semester','ai.mobile_1', 'pd.father_first_name', 'pd.father_middle_name',
@@ -168,9 +178,9 @@ class FeeCollectionReportController extends CollegeBaseController
             if($students){
                 $filtered  = $students->filter(function ($student) use($date) {
                     $student->date = $date;
-                    $student->paid_amount = $student->feeCollect()->where('date',$date)->sum('paid_amount');
-                    $student->discount = $student->feeCollect()->where('date',$date)->sum('discount');
-                    $student->fine = $student->feeCollect()->where('date',$date)->sum('fine');
+                    $student->paid_amount = $student->feeCollect()->whereDate('date',$date)->sum('paid_amount');
+                    $student->discount = $student->feeCollect()->whereDate('date',$date)->sum('discount');
+                    $student->fine = $student->feeCollect()->whereDate('date',$date)->sum('fine');
                     if($student->paid_amount > 0){
                         return $student;
                     }
@@ -210,6 +220,9 @@ class FeeCollectionReportController extends CollegeBaseController
             'fee_collections.payment_method','fee_collections.note','fee_collections.created_by','fee_collections.status as fc_status',
             'fm.status as fm_status','fm.fee_head')
             ->whereDate('fee_collections.date', '=', $date)
+            /* Receipts in force only. A cancelled receipt is kept so the history survives, not
+               so it can be counted again - without this the report reads double. */
+            ->where('fee_collections.status', 1)
             ->join('fee_masters as fm','fm.id','=','fee_collections.fee_masters_id')
             ->orderBy('fee_collections.created_at','desc')
             ->get();

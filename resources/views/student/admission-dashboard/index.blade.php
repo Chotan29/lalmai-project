@@ -188,6 +188,8 @@
                                         <th style="text-align:center;">Old</th>
                                         <th style="text-align:right;">Fee (New)</th>
                                         <th style="text-align:right;">Expected</th>
+                                        <th style="text-align:right;">Collected</th>
+                                        <th style="text-align:right;">Due</th>
                                     </tr>
                                     </thead>
                                     <tbody>
@@ -205,9 +207,18 @@
                                                 @else<span class="adm-badge b-amber">not set</span>@endif
                                             </td>
                                             <td style="text-align:right;">&#2547;{{ number_format($d->expected, 0) }}</td>
+                                            {{-- What the students actually paid, and what is still owed. --}}
+                                            <td style="text-align:right;"><b>&#2547;{{ number_format($d->collected, 0) }}</b></td>
+                                            <td style="text-align:right;">
+                                                @if($d->due > 0)
+                                                    <span class="adm-badge b-amber">&#2547;{{ number_format($d->due, 0) }}</span>
+                                                @else
+                                                    <span style="color:#8a94a3;">&#2547;0</span>
+                                                @endif
+                                            </td>
                                         </tr>
                                     @empty
-                                        <tr><td colspan="6" style="text-align:center; color:#8a94a3;">No admission data for this session.</td></tr>
+                                        <tr><td colspan="8" style="text-align:center; color:#8a94a3;">No admission data for this session.</td></tr>
                                     @endforelse
                                     </tbody>
                                 </table>

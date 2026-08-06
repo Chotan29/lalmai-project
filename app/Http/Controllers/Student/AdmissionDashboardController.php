@@ -134,6 +134,28 @@ class AdmissionDashboardController extends CollegeBaseController
         $programFees = OnlineRegistrationProgram::select('faculties_id', 'new_student_fee', 'old_student_fee', 'status')
             ->get()->groupBy('faculties_id');
 
+        /* What each department has actually taken in. Expected on its own answers "what should
+           this department bring", never "what has it brought" - and the gap between the two is
+           the real question, because a student who paid the college portion only is counted in
+           the intake but has not paid the department part.
+
+           One grouped query rather than one per department, and only receipts in force: a
+           cancelled receipt is kept so the history survives, not so it can be counted again. */
+        $collectedRows = DB::table('fee_collections as c')
+            ->join('students as s', 's.id', '=', 'c.students_id')
+            ->where('c.status', 1)
+            ->when($selectedBatch, function ($q) use ($selectedBatch) {
+                return $q->where('s.batch', $selectedBatch);
+            })
+            ->select('s.faculty', DB::raw('SUM(c.paid_amount) as collected'))
+            ->groupBy('s.faculty')
+            ->get();
+
+        $collectedByFaculty = [];
+        foreach ($collectedRows as $c) {
+            $collectedByFaculty[$c->faculty] = (float) $c->collected;
+        }
+
         foreach ($rows as $row) {
             $program = $programFees->get($row->faculty);
             $first = $program ? $program->first() : null;
@@ -142,6 +164,11 @@ class AdmissionDashboardController extends CollegeBaseController
             $row->program_open = $first ? (int) $first->status === 1 : false;
             $row->expected = ((float) $row->new_count * (float) ($row->new_fee ?: 0))
                            + ((float) $row->old_count * (float) ($row->old_fee ?: 0));
+
+            $row->collected = $collectedByFaculty[$row->faculty] ?? 0.0;
+            /* Never shown as a negative: a department that took more than its fee expected is
+               not owed money by the students. */
+            $row->due = max(0, round($row->expected - $row->collected, 2));
         }
         $data['departments'] = $rows;
 

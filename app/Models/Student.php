@@ -123,12 +123,17 @@ class Student extends BaseModel
      */
     public function feeMaster()
     {
-        return $this->hasMany(FeeMaster::class, 'students_id', 'id')->where('status', 1);
+        /* Column named with its table: several screens join fee_collections onto this, and
+           both tables carry a `status`, so a bare "status" makes MySQL refuse the query. */
+        return $this->hasMany(FeeMaster::class, 'students_id', 'id')->where('fee_masters.status', 1);
     }
 
     public function feeCollect()
     {
-        return $this->hasMany(FeeCollection::class, 'students_id', 'id')->where('status', 1);
+        /* Column named with its table. The Fee Collection report joins fee_masters onto this
+           relation, and both tables carry a `status`, so a bare "status" made MySQL reject the
+           whole query - that report has been erroring out on any date range because of it. */
+        return $this->hasMany(FeeCollection::class, 'students_id', 'id')->where('fee_collections.status', 1);
     }
 
     public function onlinePayments()
