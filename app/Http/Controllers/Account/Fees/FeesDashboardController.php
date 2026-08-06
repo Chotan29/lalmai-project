@@ -81,6 +81,14 @@ class FeesDashboardController extends CollegeBaseController
             $this->applyHierarchy($fc, 'fee_collections', $filters, $fcStudentCol);
             $this->applyDateRange($fc, 'fee_collections', $fcDateCol, $from, $to);
 
+            /* Receipts in force only. A cancelled receipt is not money in hand - it is kept so
+               the history survives, not so it can be counted again - and every other figure on
+               this screen is built from this one query, so Collected, Receipts, Students Paid
+               and the averages were all inflated together. */
+            if (Schema::hasColumn('fee_collections', 'status')) {
+                $fc->where('fee_collections.status', 1);
+            }
+
             $op = OnlinePayment::query()->from('online_payments');
             $this->applyHierarchy($op, 'online_payments', $filters, $opStudentCol);
             $this->applyDateRange($op, 'online_payments', $opDateCol, $from, $to);

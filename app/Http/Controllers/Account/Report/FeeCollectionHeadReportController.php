@@ -13,11 +13,13 @@ namespace App\Http\Controllers\Account\Report;
 use App\Http\Controllers\CollegeBaseController;
 use App\Models\BankTransaction;
 use App\Models\FeeCollection;
+use App\Models\FeeHeadGroup;
 use App\Models\SalaryPay;
 use App\Models\Transaction;
 use Carbon\Carbon;
 use Carbon\CarbonPeriod;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use URL;
 class FeeCollectionHeadReportController extends CollegeBaseController
 {
@@ -37,15 +39,38 @@ class FeeCollectionHeadReportController extends CollegeBaseController
         $data = [];
         $date = Carbon::now()->toDateString();
         if($request->all()){
-            if($request->fee_heads && $request->report_type && $request->start_date && $request->end_date) {
+            /* A Main Fee Head is answered head by head, not date by date: the question being
+               asked of it is "how much of this fee landed in each of its heads", and a date
+               breakdown cannot show that. Checked before the date branches so the report type
+               cannot change the answer. */
+            $feeGroupId = $this->feeHeadGroupIdFromFilter($request->fee_heads);
+
+            if($feeGroupId && $request->start_date && $request->end_date) {
+                /* Title and period kept apart as well as joined: the printed sheet sets them on
+                   separate lines, and splitting a formatted string back up in the view is how
+                   headings end up mangled. print_head stays for anything already using it. */
+                $data['fee_title'] = $this->feeFilterTitle($request->fee_heads);
+                $data['fg_period'] = Carbon::parse($request->start_date)->format('d M Y')
+                    . '  to  ' . Carbon::parse($request->end_date)->format('d M Y');
+                $data['print_head'] = $data['fee_title'] . ' - [' . $data['fg_period'] . ']';
+                $data['fee_group_rows'] = $this->feeGroupHeadBreakdown($feeGroupId, $request->start_date, $request->end_date);
+                $data['fee_collection_total'] = $data['fee_group_rows']->sum('amount');
+                $data['college_total'] = $data['fee_group_rows']->where('collected_by','!=','department')->sum('amount');
+                $data['department_total'] = $data['fee_group_rows']->where('collected_by','department')->sum('amount');
+                $data['tag'] = 'fee_group';
+                $data['fee_group_tag'] = 'fee_group';
+                $data['url'] = URL::current();
+                $data['row'] = collect($data);
+            }
+            elseif($request->fee_heads && $request->report_type && $request->start_date && $request->end_date) {
                 if($request->report_type == 'daily') {
                     $period = CarbonPeriod::create($request->start_date, $request->end_date);
                     foreach ($period as $key => $date) {
-                        $data['print_head'] = $this->getFeeHeadById($request->fee_heads).' - DAILY';
+                        $data['print_head'] = $this->feeFilterTitle($request->fee_heads).' - DAILY';
                         $data[$key]['table_head'] = Carbon::parse($date)->format('m-d-Y');
                         $feeCollection = $this->dateWithHeadFeeCollection($request->fee_heads, $date);
 
-                        $data[$key]['fee_collection'] = $feeCollection->groupBy('date');
+                        $data[$key]['fee_collection'] = $feeCollection->groupBy(function ($row) { return $this->collectionDateKey($row); });
                         $data[$key]['fee_collection_total'] = $feeCollection->sum('paid_amount');
                         $key = $key;
                     }
@@ -59,10 +84,10 @@ class FeeCollectionHeadReportController extends CollegeBaseController
                 elseif($request->report_type == 'weekly'){
                     $period = CarbonPeriod::create($request->start_date, $request->end_date)->week();
                     foreach ($period as $key => $date) {
-                        $data['print_head'] = $this->getFeeHeadById($request->fee_heads).' - WEEKLY';
+                        $data['print_head'] = $this->feeFilterTitle($request->fee_heads).' - WEEKLY';
                         $data[$key]['table_head'] = Carbon::parse($date)->format('m/d/Y') . ' - ' . Carbon::parse($date->clone()->addWeek()->subDay(1))->format('m/d/Y');
                         $feeCollection = $this->dateRangeWithHeadFeeCollection($request->fee_heads,$date,$date->clone()->addWeek()->subDay(1));
-                        $data[$key]['fee_collection'] = $feeCollection->groupBy('date');
+                        $data[$key]['fee_collection'] = $feeCollection->groupBy(function ($row) { return $this->collectionDateKey($row); });
                         $data[$key]['fee_collection_total'] = $feeCollection->sum('paid_amount');
                         $key = $key;
                     }
@@ -76,10 +101,10 @@ class FeeCollectionHeadReportController extends CollegeBaseController
                 elseif($request->report_type == 'monthly'){
                     $period = CarbonPeriod::create($request->start_date, $request->end_date)->month();
                     foreach ($period as $key => $date) {
-                        $data['print_head'] = $this->getFeeHeadById($request->fee_heads).' - MONTHLY';
+                        $data['print_head'] = $this->feeFilterTitle($request->fee_heads).' - MONTHLY';
                         $data[$key]['table_head'] = Carbon::parse($date)->format('m/d/Y') . ' - ' . Carbon::parse($date->clone()->addMonth()->subDay(1))->format('m/d/Y') ;
                         $feeCollection = $this->dateRangeWithHeadFeeCollection($request->fee_heads, $date,$date->clone()->addMonth()->subDay(1));
-                        $data[$key]['fee_collection'] = $feeCollection->groupBy('date');
+                        $data[$key]['fee_collection'] = $feeCollection->groupBy(function ($row) { return $this->collectionDateKey($row); });
                         $data[$key]['fee_collection_total'] = $feeCollection->sum('paid_amount');
                         $key = $key;
                     }
@@ -94,10 +119,10 @@ class FeeCollectionHeadReportController extends CollegeBaseController
                 elseif($request->report_type == 'yearly'){
                     $period = CarbonPeriod::create($request->start_date, $request->end_date)->year();
                     foreach ($period as $key => $date) {
-                        $data['print_head'] = $this->getFeeHeadById($request->fee_heads).' - YEARLY';
+                        $data['print_head'] = $this->feeFilterTitle($request->fee_heads).' - YEARLY';
                         $data[$key]['table_head'] = Carbon::parse($date)->format('m/d/Y') . ' - ' . Carbon::parse($date->clone()->addYear()->subDay(1))->format('m/d/Y');
                         $feeCollection = $this->dateRangeWithHeadFeeCollection($request->fee_heads, $date,$date->clone()->addYear()->subDay(1));
-                        $data[$key]['fee_collection'] = $feeCollection->groupBy('date');
+                        $data[$key]['fee_collection'] = $feeCollection->groupBy(function ($row) { return $this->collectionDateKey($row); });
                         $data[$key]['fee_collection_total'] = $feeCollection->sum('paid_amount');
                         $key = $key;
                     }
@@ -182,10 +207,10 @@ class FeeCollectionHeadReportController extends CollegeBaseController
             elseif ($request->fee_heads && $request->start_date && $request->end_date) {
                 $period = CarbonPeriod::create($request->start_date, $request->end_date);
                 foreach ($period as $key => $date) {
-                    $data['print_head'] = $this->getFeeHeadById($request->fee_heads).' - DAILY';
+                    $data['print_head'] = $this->feeFilterTitle($request->fee_heads).' - DAILY';
                     $data[$key]['table_head'] = Carbon::parse($date)->format('m-d-Y');
                     $feeCollection = $this->dateWithHeadFeeCollection($request->fee_heads, $date);
-                    $data[$key]['fee_collection'] = $feeCollection->groupBy('date');
+                    $data[$key]['fee_collection'] = $feeCollection->groupBy(function ($row) { return $this->collectionDateKey($row); });
                     $data[$key]['fee_collection_total'] = $feeCollection->sum('paid_amount');
                     $key = $key;
                 }
@@ -225,25 +250,105 @@ class FeeCollectionHeadReportController extends CollegeBaseController
         }
 
 
-        $data['fee_heads'] = $this->activeFeeHead();
+        /* Main Fee Heads offered too, so the office can ask "how much came in for the
+           admission fee" without adding up twenty-six separate reports. */
+        $data['fee_heads'] = $this->activeFeeHeadWithGroups();
         $data['filter_query'] = $this->filter_query;
         $data['url'] = URL::current();
 
         return view(parent::loadDataToView($this->view_path.'.index'), compact('data'));
     }
 
+    /**
+     * Group key for a collection row's date.
+     *
+     * FeeCollection casts `date` to a Carbon instance, and a Carbon cannot be used as an array
+     * key, so groupBy('date') died with "array_key_exists(): The first argument should be
+     * either a string or an integer" the moment a head-filtered report actually found rows.
+     * The view reads this key back with Carbon::parse(), so a plain Y-m-d string is what it
+     * wants - and grouping by the day, not the timestamp, is what "daily" means anyway.
+     */
+    private function collectionDateKey($row)
+    {
+        if ($row->date instanceof \DateTimeInterface) {
+            return $row->date->format('Y-m-d');
+        }
+
+        return Carbon::parse($row->date)->format('Y-m-d');
+    }
+
+    /**
+     * The last moment of the closing day of a range.
+     *
+     * fee_collections.date carries a time, and the weekly and monthly reports build their end
+     * date as "start + one period - one day", which is midnight. whereBetween then stopped at
+     * 00:00:00 and dropped every payment taken during that final day, so those two reports
+     * quietly under-reported. Daily was unaffected because it compares whole dates, and yearly
+     * only looked right because no money happened to land on the closing day.
+     */
+    private function endOfDay($date)
+    {
+        return Carbon::parse($date)->format('Y-m-d') . ' 23:59:59';
+    }
+
+    /**
+     * A whole fee, head by head: what landed in each of its sub heads over the range.
+     *
+     * Every sub head is listed, including the ones that received nothing - twenty-six heads
+     * that quietly become twenty-three on screen cannot be reconciled against the fee. Rows
+     * come back in the fee's own fill order, so college heads sit above department heads and
+     * a part payment reads down the page the way the money actually went in.
+     */
+    public function feeGroupHeadBreakdown($groupId, $start_date, $end_date)
+    {
+        $group = FeeHeadGroup::with('items.feeHead')->find($groupId);
+
+        if (!$group) {
+            return collect();
+        }
+
+        /* One grouped query for the money, then matched up in PHP. Asking per head would be
+           twenty-six round trips to draw one screen. */
+        $paid = FeeCollection::select('fm.fee_head', DB::raw('SUM(fee_collections.paid_amount) as paid'))
+            ->join('fee_masters as fm','fm.id','=','fee_collections.fee_masters_id')
+            ->where('fee_collections.status', 1)
+            ->whereBetween('fee_collections.date', [$start_date, $this->endOfDay($end_date)])
+            ->where(function ($query) use ($groupId) {
+                $query->where('fm.billing_period_key', 'GROUP-'.$groupId)
+                      ->orWhere('fm.billing_period_key', 'like', 'GROUP-'.$groupId.'-%');
+            })
+            ->groupBy('fm.fee_head')
+            ->pluck('paid', 'fee_head');
+
+        $rows = collect();
+
+        foreach ($group->items as $item) {
+            $rows->push((object) [
+                'fee_head'     => $item->fee_head_id,
+                'title'        => optional($item->feeHead)->fee_head_title ?? 'Unknown Head',
+                'collected_by' => optional($item->feeHead)->collected_by ?? 'college',
+                'fee_amount'   => (float) $item->amount,
+                'amount'       => (float) ($paid[$item->fee_head_id] ?? 0),
+            ]);
+        }
+
+        return $rows;
+    }
+
     //with fee head & range
     public function dateRangeWithHeadFeeCollection($head, $start_date, $end_date)
     {
-        $feeCollection = FeeCollection::select('fee_collections.date', 'fee_collections.discount', 'fee_collections.fine', 'fee_collections.paid_amount',
+        $query = FeeCollection::select('fee_collections.date', 'fee_collections.discount', 'fee_collections.fine', 'fee_collections.paid_amount',
             'fee_collections.payment_method','fee_collections.note',
             'fm.status as fm_status','fm.fee_head')
             ->where('fee_collections.paid_amount', '>',0)
-            ->where('fm.fee_head',$head)
-            ->whereBetween('fee_collections.date', [$start_date, $end_date])
+            ->whereBetween('fee_collections.date', [$start_date, $this->endOfDay($end_date)])
             ->join('fee_masters as fm','fm.id','=','fee_collections.fee_masters_id')
-            ->orderBy('fee_collections.created_at','desc')
-            ->get();
+            ->where('fee_collections.status', 1)
+            ->orderBy('fee_collections.created_at','desc');
+
+        /* One head, or every sub head of a Main Fee Head - the filter decides which. */
+        $feeCollection = $this->applyFeeHeadFilter($query, $head)->get();
 
         return $feeCollection;
 
@@ -252,15 +357,17 @@ class FeeCollectionHeadReportController extends CollegeBaseController
     //with head & single date
     public function dateWithHeadFeeCollection($head,$date)
     {
-        $feeCollection = FeeCollection::select('fee_collections.fee_masters_id', 'fee_collections.date',
+        $query = FeeCollection::select('fee_collections.fee_masters_id', 'fee_collections.date',
             'fee_collections.discount', 'fee_collections.fine', 'fee_collections.paid_amount',
             'fm.status as fm_status','fm.fee_head')
             ->where('fee_collections.paid_amount', '>',0)
-            ->where('fm.fee_head',$head)
             ->whereDate('fee_collections.date', '=', $date)
             ->join('fee_masters as fm','fm.id','=','fee_collections.fee_masters_id')
-            ->orderBy('fee_collections.date','desc')
-            ->get();
+            ->where('fee_collections.status', 1)
+            ->orderBy('fee_collections.date','desc');
+
+        /* One head, or every sub head of a Main Fee Head - the filter decides which. */
+        $feeCollection = $this->applyFeeHeadFilter($query, $head)->get();
 
         return $feeCollection;
     }
@@ -272,8 +379,9 @@ class FeeCollectionHeadReportController extends CollegeBaseController
             'fee_collections.date', 'fee_collections.discount', 'fee_collections.fine', 'fee_collections.paid_amount',
             'fee_collections.payment_method','fee_collections.note',
             'fm.status as fm_status','fm.fee_head')
-            ->whereBetween('fee_collections.date', [$start_date, $end_date])
+            ->whereBetween('fee_collections.date', [$start_date, $this->endOfDay($end_date)])
             ->join('fee_masters as fm','fm.id','=','fee_collections.fee_masters_id')
+            ->where('fee_collections.status', 1)
             ->orderBy('fee_collections.date','desc')
             ->get();
 
@@ -288,6 +396,7 @@ class FeeCollectionHeadReportController extends CollegeBaseController
             'fm.status as fm_status','fm.fee_head')
             ->whereDate('fee_collections.date', '=', $date)
             ->join('fee_masters as fm','fm.id','=','fee_collections.fee_masters_id')
+            ->where('fee_collections.status', 1)
             ->orderBy('fee_collections.date','desc')
             ->get();
 

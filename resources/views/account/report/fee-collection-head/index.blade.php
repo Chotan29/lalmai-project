@@ -94,11 +94,14 @@
                     }
                 }
 
-                if (fee_heads > 0) {
+                /* A Main Fee Head comes through as "GROUP:3", and "GROUP:3" > 0 is false in
+                   JavaScript, so the old numeric test silently dropped it from the URL and the
+                   report came back unfiltered. Test for a real choice instead. */
+                if (fee_heads && fee_heads !== '0') {
                     if (flag) {
-                        url += '&fee_heads=' + fee_heads;
+                        url += '&fee_heads=' + encodeURIComponent(fee_heads);
                     } else {
-                        url += '?fee_heads=' + fee_heads;
+                        url += '?fee_heads=' + encodeURIComponent(fee_heads);
                         flag = true;
                     }
                 }

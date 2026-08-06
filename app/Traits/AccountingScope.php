@@ -146,6 +146,87 @@ trait AccountingScope{
         return array_prepend($feeHead,'Select Fee Head',0);
     }
 
+    /**
+     * The Fee Head filter list with Main Fee Heads offered as well, as "GROUP:<id>".
+     *
+     * Separate from activeFeeHead() on purpose: that list feeds screens where a head id is
+     * written straight into fee_masters, and a fee is not a head - it would be stored as
+     * nonsense. Only screens that read money back should offer it.
+     */
+    public function activeFeeHeadWithGroups()
+    {
+        $heads = FeeHead::select('id', 'fee_head_title')->Active()
+            ->orderBy('fee_head_title')->pluck('fee_head_title', 'id')->toArray();
+
+        $groups = FeeHeadGroup::with('items')->where('status', 1)->orderBy('title')->get();
+        if ($groups->isEmpty()) {
+            return array_prepend($heads, 'Select Fee Head', 0);
+        }
+
+        $groupOptions = [];
+        foreach ($groups as $g) {
+            $groupOptions['GROUP:' . $g->id] = $g->title . ' (' . $g->items->count() . ' heads)';
+        }
+
+        /* Two labelled optgroups. A Main Fee Head dropped into the alphabetical list cannot be
+           told apart from an ordinary head of a similar name, and picking the wrong one gives
+           a report for one head instead of twenty-six. */
+        return [
+            0 => 'Select Fee Head',
+            'Main Fee Head - all its sub heads together' => $groupOptions,
+            'Fee Head' => $heads,
+        ];
+    }
+
+    /** Group id when the picked filter is a Main Fee Head, otherwise null. */
+    public function feeHeadGroupIdFromFilter($value)
+    {
+        $value = (string) $value;
+
+        if (strpos($value, 'GROUP:') !== 0) {
+            return null;
+        }
+
+        return (int) substr($value, 6);
+    }
+
+    /** Heading for whatever the filter picked, head or whole fee. */
+    public function feeFilterTitle($value)
+    {
+        $groupId = $this->feeHeadGroupIdFromFilter($value);
+
+        if ($groupId === null) {
+            return $this->getFeeHeadById($value);
+        }
+
+        $group = FeeHeadGroup::find($groupId);
+        return $group ? $group->title : 'Unknown Main Fee Head';
+    }
+
+    /**
+     * Narrow a fee_collections query (joined as `fm`) to whatever the filter picked.
+     *
+     * For a fee this matches the charges that CAME FROM it, not every charge that happens to
+     * sit on one of its heads - TRANSPORT can also be charged on its own, and counting that as
+     * admission money would overstate the fee.
+     */
+    public function applyFeeHeadFilter($query, $value)
+    {
+        $groupId = $this->feeHeadGroupIdFromFilter($value);
+
+        if ($groupId === null) {
+            return $query->where('fm.fee_head', $value);
+        }
+
+        /* A recurring run tags the period on the end ("GROUP-3-2026-08") while a one-off does
+           not, so both shapes have to match - and matching the prefix alone would let GROUP-1
+           swallow GROUP-10. */
+        return $query->where(function ($q) use ($groupId) {
+            $q->where('fm.billing_period_key', 'GROUP-' . $groupId)
+              ->orWhere('fm.billing_period_key', 'like', 'GROUP-' . $groupId . '-%');
+        });
+    }
+
     public function activePayrollHead()
     {
         $payrollHead = PayrollHead::select('id', 'title')->Active()->orderBy('title')->pluck('title','id')->toArray();

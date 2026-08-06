@@ -1108,7 +1108,10 @@ class HomeController extends CollegeBaseController
         ];
 
         // Fee collection statistics
-        $data['feeCollectionIndicator'] = FeeCollection::whereBetween('date', [$dateFilter['start_date'], $dateFilter['end_date']])->sum('paid_amount') ?? 0;
+        /* Receipts in force only. A cancelled receipt is kept so the history survives, not so
+           it can be counted again - without this it is added to income a second time, and
+           totalIncome below is built from this same figure. */
+        $data['feeCollectionIndicator'] = FeeCollection::where('status', 1)->whereBetween('date', [$dateFilter['start_date'], $dateFilter['end_date']])->sum('paid_amount') ?? 0;
         $data['salaryPayIndicator'] = SalaryPay::whereBetween('date', [$dateFilter['start_date'], $dateFilter['end_date']])->sum('paid_amount') ?? 0;
         $data['totalIncome'] = $data['feeCollectionIndicator'];
         $data['totalExpense'] = $data['salaryPayIndicator'];
@@ -1120,7 +1123,9 @@ class HomeController extends CollegeBaseController
         $data['transactionChart'] = null;
 
         // Recent collections
-        $data['recent_fees_collection'] = FeeCollection::whereBetween('date', [$dateFilter['start_date'], $dateFilter['end_date']])
+        /* Same filter on the list: a cancelled receipt appearing under "recent collections"
+           reads as money just taken. */
+        $data['recent_fees_collection'] = FeeCollection::where('status', 1)->whereBetween('date', [$dateFilter['start_date'], $dateFilter['end_date']])
             ->with('student', 'feeMaster')
             ->latest()
             ->limit(10)
