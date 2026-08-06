@@ -52,8 +52,9 @@
                 $universityGrading = $('#typeUniversityGrading').is(':checked');
                 $percentage = $('#typePercentage').is(':checked');
                 $ledger = $('#typeLedger').is(':checked');
+                $tabulation = $('#typeTabulation').is(':checked');
                 //return false;
-                if($grading || $hscGrading || $universityGrading || $percentage || $ledger){
+                if($grading || $hscGrading || $universityGrading || $percentage || $ledger || $tabulation){
                     $chkIds = document.getElementsByName('chkIds[]');
                     var $chkCount = 0;
                     $length = $chkIds.length;
@@ -72,7 +73,7 @@
                     $('#print-student-marksheet').submit();
 
                 }else{
-                    toastr.info("Please, Select Result Type - Grading, HSC Grading, University Grading, Percentage or Ledger.","Info:");
+                    toastr.info("Please, Select Result Type - Grading, HSC Grading, University Grading, Percentage, Ledger or Tabulation Sheet.","Info:");
                     return false;
                 }
 

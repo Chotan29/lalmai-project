@@ -281,4 +281,17 @@
                     <div class="hint">{{ $data['teacher_only'] ? $data['printed_by'] : '' }}&nbsp;</div>
                 </div>
                 <div class="sign">
-                    <div class="li
+                    <div class="line"></div>
+                    <div class="role">Principal</div>
+                    <div class="hint">&nbsp;</div>
+                </div>
+            </div>
+
+            <div class="foot">
+                <span>This is a computer generated document &mdash; {{ $institute }} IMS</span>
+                <span>Printed by {{ $data['printed_by'] }} on {{ date('d M Y, h:i A') }}</span>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

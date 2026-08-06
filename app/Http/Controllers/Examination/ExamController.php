@@ -275,10 +275,12 @@ class ExamController extends CollegeBaseController
                         'exam_mark_ledgers.obtain_mark_theory', 'exam_mark_ledgers.obtain_mark_practical', 'exam_mark_ledgers.absent_theory','exam_mark_ledgers.absent_practical',
                         'exam_mark_ledgers.status', 's.id as student_id', 's.reg_no', 's.first_name', 's.middle_name', 's.last_name',
                         's.last_name')
-                        ->where('exam_mark_ledgers.exam_schedule_id', $examScheduleId)
+                        ->whereIn('exam_mark_ledgers.exam_schedule_id', $examScheduleId)
                         ->join('students as s', 's.id', '=', 'exam_mark_ledgers.students_id')
-                        ->orderBy('exam_mark_ledgers.students_id','asc')
-                        ->get();
+                        ->orderBy('s.reg_no','asc')
+                        ->get()
+                        ->unique('students_id')
+                        ->values();
                 }else{
                     $request->session()->flash($this->message_warning, 'No any Examination Scheduled. for Your Target Exam. Please Schedule First.');
                     return redirect()->back();
@@ -359,10 +361,12 @@ class ExamController extends CollegeBaseController
                         'exam_mark_ledgers.obtain_mark_theory', 'exam_mark_ledgers.obtain_mark_practical', 'exam_mark_ledgers.absent_theory','exam_mark_ledgers.absent_practical',
                         'exam_mark_ledgers.status', 's.id as student_id', 's.reg_no', 's.first_name', 's.middle_name', 's.last_name',
                         's.last_name')
-                        ->where('exam_mark_ledgers.exam_schedule_id', $examScheduleId)
+                        ->whereIn('exam_mark_ledgers.exam_schedule_id', $examScheduleId)
                         ->join('students as s', 's.id', '=', 'exam_mark_ledgers.students_id')
-                        ->orderBy('exam_mark_ledgers.students_id','asc')
-                        ->get();
+                        ->orderBy('s.reg_no','asc')
+                        ->get()
+                        ->unique('students_id')
+                        ->values();
                 }else{
                     $request->session()->flash($this->message_warning, 'No any Examination Scheduled. for Your Target Exam. Please Schedule First.');
                     return redirect()->back();

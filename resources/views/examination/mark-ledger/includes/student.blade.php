@@ -20,4 +20,4 @@
 
     </table>
 </div>
-@include('includes.scr
+@include('includes.scripts.inputMask_script')
