@@ -49,7 +49,10 @@
         }
     </style>
 
-    <link rel="stylesheet" href="{{ asset('css/custom.css') }}" />
+    {{-- Version stamped from the file's own timestamp: without it a browser keeps serving the
+         custom.css it cached, and a design change looks like it simply did not happen. --}}
+    @php($customCss = public_path('css/custom.css'))
+    <link rel="stylesheet" href="{{ asset('css/custom.css') }}?v={{ is_file($customCss) ? filemtime($customCss) : 1 }}" />
     @yield('css')
 
     @yield('top-script')

@@ -1,4 +1,6 @@
-<div id="accordion" class="filter-form accordion-style1 panel-group hidden-print">
+{{-- fg-filter marks this one form so its styling in css/custom.css cannot reach the other
+     filter panels that share the .filter-form class. --}}
+<div id="accordion" class="filter-form fg-filter accordion-style1 panel-group hidden-print">
     <div class="panel panel-default">
         <div class="panel-heading">
             <h4 class="panel-title">
@@ -14,35 +16,37 @@
 
         <div class="panel-collapse collapse" id="collapseOne" aria-expanded="false" style="height: 0px;">
             <div class="panel-body">
-                <div class="clearfix">
-                    <div class="form-group">
-                        <label class="col-sm-1 control-label">Head</label>
-                        <div class="col-sm-4">
-                            {!! Form::select('fee_heads', $data['fee_heads'], null, ['class' => 'form-control chosen-select']) !!}
-                        </div>
-                        {!! Form::label('date', 'Range', ['class' => 'col-sm-1 control-label']) !!}
-                        <div class=" col-sm-3">
-                            <div class="input-group ">
-                                {!! Form::text('start_date', null, ["placeholder" => "YYYY-MM-DD", "class" => "input-sm form-control border-form input-mask-date date-picker", "data-date-format" => "yyyy-mm-dd"]) !!}
-                                <span class="input-group-addon">
-                                        <i class="fa fa-exchange"></i>
-                                </span>
-                                {!! Form::text('end_date', null, ["placeholder" => "YYYY-MM-DD", "class" => "input-sm form-control border-form input-mask-date date-picker", "data-date-format" => "yyyy-mm-dd"]) !!}
-                            </div>
-                        </div>
-                        {!! Form::label('report_type', 'Type', ['class' => 'col-sm-1 control-label']) !!}
-                        <div class="col-sm-2">
-                            {!! Form::select('report_type', [""=>"Select Report Type...", "daily"=>"Daily", "weekly"=>"Weekly", "monthly"=>"Monthly","yearly"=>"Yearly"], null, ['class' => 'form-control']) !!}
-                            @include('includes.form_fields_validation_message', ['name' => 'report_type'])
-                        </div>
+                {{-- Labels sit above their fields rather than in grey boxes beside them: the
+                     three controls then line up on one baseline and the row reads left to
+                     right in the order it is filled in. --}}
+                <div class="fg-filter-row">
+                    <div class="fg-field fg-field-head">
+                        <label for="fee_heads">Fee Head</label>
+                        {!! Form::select('fee_heads', $data['fee_heads'], null, ['class' => 'form-control chosen-select', 'id' => 'fee_heads']) !!}
+                        <small class="fg-hint">Pick a Main Fee Head for a head-by-head breakdown</small>
                     </div>
-                    <div class="clearfix form-actions">
-                        <div class="align-right">
-                            <button class="btn btn-info" type="submit" id="filter-btn">
-                                <i class="fa fa-filter bigger-110"></i>
-                                Filter
-                            </button>
+
+                    <div class="fg-field fg-field-range">
+                        <label>Date Range</label>
+                        <div class="input-group">
+                            {!! Form::text('start_date', null, ["placeholder" => "YYYY-MM-DD", "class" => "form-control input-mask-date date-picker", "data-date-format" => "yyyy-mm-dd"]) !!}
+                            <span class="input-group-addon"><i class="fa fa-arrow-right"></i></span>
+                            {!! Form::text('end_date', null, ["placeholder" => "YYYY-MM-DD", "class" => "form-control input-mask-date date-picker", "data-date-format" => "yyyy-mm-dd"]) !!}
                         </div>
+                        <small class="fg-hint">Required &mdash; the report needs a period</small>
+                    </div>
+
+                    <div class="fg-field fg-field-type">
+                        <label for="report_type">Report Type</label>
+                        {!! Form::select('report_type', [""=>"Select Report Type...", "daily"=>"Daily", "weekly"=>"Weekly", "monthly"=>"Monthly","yearly"=>"Yearly"], null, ['class' => 'form-control', 'id' => 'report_type']) !!}
+                        @include('includes.form_fields_validation_message', ['name' => 'report_type'])
+                        <small class="fg-hint">Not needed for a Main Fee Head</small>
+                    </div>
+
+                    <div class="fg-field fg-field-action">
+                        <button class="btn btn-info fg-filter-btn" type="submit" id="filter-btn">
+                            <i class="fa fa-filter"></i> Filter
+                        </button>
                     </div>
                 </div>
             </div>
