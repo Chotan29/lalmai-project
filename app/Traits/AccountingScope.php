@@ -15,6 +15,7 @@ use App\Models\PayrollHead;
 use App\Models\Student;
 use App\Models\TransactionHead;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\DB;
 
 trait AccountingScope{
 
@@ -90,12 +91,56 @@ trait AccountingScope{
         $rows = collect();
         $grouped = [];
 
+        /* Every receipt for these charges, fetched once and totalled per charge.
+           Asking each charge for its own sums meant three round trips per row, which was
+           tolerable while a student carried one admission charge and became seventy-eight
+           queries the moment that charge became twenty-six. */
+        $money = [];
+        $masterIds = collect($feeMasters)->pluck('id')->filter()->all();
+
+        if ($masterIds) {
+            $sums = FeeCollection::whereIn('fee_masters_id', $masterIds)
+                ->where('status', 1)
+                ->select('fee_masters_id',
+                    DB::raw('SUM(paid_amount) as paid_sum'),
+                    DB::raw('SUM(discount) as discount_sum'),
+                    DB::raw('SUM(fine) as fine_sum'))
+                ->groupBy('fee_masters_id')
+                ->get();
+
+            foreach ($sums as $s) {
+                $money[$s->fee_masters_id] = [
+                    'paid'     => (float) $s->paid_sum,
+                    'discount' => (float) $s->discount_sum,
+                    'fine'     => (float) $s->fine_sum,
+                ];
+            }
+        }
+
+        /* A charge with no receipt simply has nothing against it. */
+        $moneyFor = function ($id) use ($money) {
+            return isset($money[$id]) ? $money[$id] : ['paid' => 0.0, 'discount' => 0.0, 'fine' => 0.0];
+        };
+
+        /* The fee titles, also fetched once rather than per charge. */
+        $feeTitles = [];
+
+        /* Head titles for the ungrouped rows, in one query. getFeeHeadById() does a find()
+           each time it is called, which is another query per line drawn. */
+        $headTitles = FeeHead::whereIn('id', collect($feeMasters)->pluck('fee_head')->filter()->unique()->all())
+            ->pluck('fee_head_title', 'id')->all();
+
         foreach ($feeMasters as $feemaster) {
             $key = $feemaster->billing_period_key;
+            $paid = $moneyFor($feemaster->id);
 
             if ($key && strpos($key, 'GROUP-') === 0) {
                 if (!isset($grouped[$key])) {
-                    $group = FeeHeadGroup::find((int) substr($key, 6));
+                    if (!array_key_exists($key, $feeTitles)) {
+                        $g = FeeHeadGroup::find((int) substr($key, 6));
+                        $feeTitles[$key] = $g ? $g->title : null;
+                    }
+                    $group = $feeTitles[$key] ? (object) ['title' => $feeTitles[$key]] : null;
 
                     $grouped[$key] = (object) [
                         'is_group'   => true,
@@ -114,9 +159,9 @@ trait AccountingScope{
 
                 $row = $grouped[$key];
                 $row->amount   += (float) $feemaster->fee_amount;
-                $row->discount += (float) $feemaster->feeCollect()->sum('discount');
-                $row->fine     += (float) $feemaster->feeCollect()->sum('fine');
-                $row->paid     += (float) $feemaster->feeCollect()->sum('paid_amount');
+                $row->discount += $paid['discount'];
+                $row->fine     += $paid['fine'];
+                $row->paid     += $paid['paid'];
                 $row->head_count++;
                 $row->ids[] = $feemaster->id;
 
@@ -125,13 +170,13 @@ trait AccountingScope{
 
             $rows->push((object) [
                 'is_group'   => false,
-                'label'      => $this->getFeeHeadById($feemaster->fee_head),
+                'label'      => $headTitles[$feemaster->fee_head] ?? 'Unknown',
                 'semester'   => $feemaster->semester,
                 'due_date'   => $feemaster->fee_due_date,
                 'amount'     => (float) $feemaster->fee_amount,
-                'discount'   => (float) $feemaster->feeCollect()->sum('discount'),
-                'fine'       => (float) $feemaster->feeCollect()->sum('fine'),
-                'paid'       => (float) $feemaster->feeCollect()->sum('paid_amount'),
+                'discount'   => $paid['discount'],
+                'fine'       => $paid['fine'],
+                'paid'       => $paid['paid'],
                 'head_count' => 1,
                 'ids'        => [$feemaster->id],
             ]);

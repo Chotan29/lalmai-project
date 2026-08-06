@@ -2874,6 +2874,25 @@ class StudentController extends CollegeBaseController
                 return redirect()->route($this->base_route)->with($this->message_warning, 'Please, check at least one ' . $this->panel);
             }
 
+            /* Handled here rather than inside the loop below, the way export-excel and
+               print-certificate already are, because it has to RETURN a file.
+
+               Inside the loop it could never work: the loop hands generatePdf() an id it has
+               already decrypted, and generatePdf() decrypts again - which throws - and even
+               had it succeeded the return value was dropped on the floor, so no PDF was ever
+               sent. One request can only carry one file back, so a single student is asked for
+               rather than silently sending whichever one happened to be last. */
+            if ($request->get('bulk_action') == 'generate-pdf') {
+                $ids = (array) $request->get('chkIds');
+
+                if (count($ids) !== 1) {
+                    return redirect()->route($this->base_route)->with($this->message_warning,
+                        'Generate PDF works on one student at a time. Please select a single student.');
+                }
+
+                return $this->generatePdf($ids[0]);
+            }
+
             // Initialize counters for success/failure
             $successCount = 0;
             $errorCount = 0;
@@ -2898,10 +2917,7 @@ class StudentController extends CollegeBaseController
                             $successCount++;
                             break;
 
-                        case 'generate-pdf':
-                            $this->generatePdf($id);
-                            $successCount++;
-                            break;
+                        /* generate-pdf is dealt with before this loop - it returns a file. */
 
                         case 'create-reset-login':
                             $this->createResetLogin($row_id);
