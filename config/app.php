@@ -121,9 +121,23 @@ return [
     |
     */
 
-    'log' => env('APP_LOG', 'single'),
+    /*
+     * One file per day, keeping a fortnight.
+     *
+     * With 'single' everything goes to one storage/logs/laravel.log for ever. On live that file
+     * had reached 813 MB: every warning appends to the end of it, the disk fills quietly, and
+     * nobody can open it to read what actually went wrong. A fortnight is long enough to chase
+     * a problem a student reported last week and short enough that the folder stops growing.
+     */
+    'log' => env('APP_LOG', 'daily'),
 
-    'log_level' => env('APP_LOG_LEVEL', 'debug'),
+    'log_max_files' => env('APP_LOG_MAX_FILES', 14),
+
+    /*
+     * 'debug' writes every SQL-level notice; 'warning' keeps what actually needs attention.
+     * The level can still be lowered from .env on the day something needs chasing.
+     */
+    'log_level' => env('APP_LOG_LEVEL', 'warning'),
 
     /*
     |--------------------------------------------------------------------------
