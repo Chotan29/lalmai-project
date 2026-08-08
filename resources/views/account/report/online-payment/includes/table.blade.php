@@ -41,10 +41,18 @@
             <span class="op-card-v">&#2547;{{ number_format($verified->sum('amount'), 2) }}</span>
             <span class="op-card-n">{{ $verified->count() }} payment(s)</span>
         </div>
+        {{-- When the sheet is showing verified money, this card reports what is being kept off
+             it rather than a standing zero. A payment stuck at the gateway is money the college
+             is owed, and a report that says nothing about it is how it stays lost. --}}
         <div class="op-card op-card-wait">
             <span class="op-card-h">Not Verified</span>
-            <span class="op-card-v">&#2547;{{ number_format($pending->sum('amount'), 2) }}</span>
-            <span class="op-card-n">{{ $pending->count() }} payment(s)</span>
+            @if(!empty($data['op_withheld']))
+                <span class="op-card-v">&#2547;{{ number_format($data['op_withheld']['sum'], 2) }}</span>
+                <span class="op-card-n">{{ $data['op_withheld']['count'] }} payment(s) &mdash; not in the Total</span>
+            @else
+                <span class="op-card-v">&#2547;{{ number_format($pending->sum('amount'), 2) }}</span>
+                <span class="op-card-n">{{ $pending->count() }} payment(s)</span>
+            @endif
         </div>
         <div class="op-card op-card-grand">
             <span class="op-card-h">Total</span>

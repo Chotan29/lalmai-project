@@ -39,47 +39,77 @@ class OnlineFeePaymentReportController extends CollegeBaseController
     public function onlinePayments(Request $request)
     {
         $data = [];
-        if($request->all()){
-            $data['student'] = Student::select('students.id','students.reg_no','students.first_name',
-                'students.middle_name', 'students.last_name','students.faculty','students.semester',
-                'op.id as payment_id','op.date', 'op.amount', 'op.payment_gateway', 'op.ref_no', 'op.ref_text',
-                'op.status as payment_status','op.created_by as paid_by')
-                ->where(function ($query) use ($request) {
-                    $this->commonStudentFilterCondition($query, $request);
 
-                    if ($request->has('pay_date_start') && $request->has('pay_date_end')) {
-                        $query->whereBetween('op.date', [$request->get('pay_date_start'), $request->get('pay_date_end')]);
-                        $this->filter_query['op.pay_date_start'] = $request->get('pay_date_start');
-                        $this->filter_query['op.pay_date_end'] = $request->get('pay_date_end');
-                    } elseif ($request->has('pay_date_start')) {
-                        $query->where('op.date', '=', $request->get('pay_date_start'));
-                        $this->filter_query['op.pay_date_start'] = $request->get('pay_date_start');
-                    } elseif ($request->has('op.pay_date_end')) {
-                        $query->where('op.date', '=', $request->get('pay_date_end'));
-                        $this->filter_query['op.pay_date_end'] = $request->get('pay_date_end');
-                    }
+        /* Which status this sheet is a report of.
+           Left open, the report added unverified payments into the same Total as real receipts -
+           which is exactly why the sheet and the Fees Dashboard disagreed, by the unverified
+           amount and nothing else. Verified is what this report means by money, so that is the
+           default; the Status filter still reaches the rest.
+           filled() rather than has(), or an empty "Select Status" would read as 'not-verified'
+           and quietly show only the pending ones. */
+        $statusWanted = 1;
+        if ($request->filled('verify_status')) {
+            $statusWanted = $request->get('verify_status') == 'verify' ? 1 : 0;
+            $this->filter_query['op.status'] = $request->get('verify_status');
+        }
 
-                    if ($request->has('payment_gateway')) {
-                        $query->where('op.payment_gateway', '=', $request->payment_gateway);
-                        $this->filter_query['op.payment_gateway'] = $request->payment_gateway;
-                    }
+        /* Everything except the status, kept in one place so the same filters can be asked twice:
+           once for the rows, and once to count what the status is holding back. */
+        $applyFilters = function ($query) use ($request) {
+            $this->commonStudentFilterCondition($query, $request);
 
-                    if ($request->has('verify_status')) {
-                        $query->where('op.status', $request->verify_status == 'verify' ? 1 : 0);
-                        $this->filter_query['op.status'] = $request->get('verify_status');
-                    }
+            if ($request->has('pay_date_start') && $request->has('pay_date_end')) {
+                $query->whereBetween('op.date', [$request->get('pay_date_start'), $request->get('pay_date_end')]);
+                $this->filter_query['op.pay_date_start'] = $request->get('pay_date_start');
+                $this->filter_query['op.pay_date_end'] = $request->get('pay_date_end');
+            } elseif ($request->has('pay_date_start')) {
+                $query->where('op.date', '=', $request->get('pay_date_start'));
+                $this->filter_query['op.pay_date_start'] = $request->get('pay_date_start');
+            } elseif ($request->has('op.pay_date_end')) {
+                $query->where('op.date', '=', $request->get('pay_date_end'));
+                $this->filter_query['op.pay_date_end'] = $request->get('pay_date_end');
+            }
 
-                })
+            if ($request->has('payment_gateway')) {
+                $query->where('op.payment_gateway', '=', $request->payment_gateway);
+                $this->filter_query['op.payment_gateway'] = $request->payment_gateway;
+            }
+        };
+
+        $selection = ['students.id','students.reg_no','students.first_name',
+            'students.middle_name', 'students.last_name','students.faculty','students.semester',
+            'op.id as payment_id','op.date', 'op.amount', 'op.payment_gateway', 'op.ref_no', 'op.ref_text',
+            'op.status as payment_status','op.created_by as paid_by'];
+
+        $rows = Student::select($selection)
+            ->join('online_payments as op', 'op.students_id', '=', 'students.id')
+            ->where('op.status', $statusWanted);
+
+        if ($request->all()) {
+            $rows->where($applyFilters);
+        }
+
+        $data['student'] = $rows->get();
+
+        /* What this status is keeping off the sheet.
+           Without it the Not Verified card would read zero for ever, and a payment stuck at the
+           gateway would never be noticed by anyone reading this report - the money would simply
+           be missing and nothing would say so. Only asked when the reader has not gone looking
+           for the unverified ones themselves. */
+        $data['op_withheld'] = null;
+        if ($statusWanted === 1) {
+            $withheld = Student::select('op.amount')
                 ->join('online_payments as op', 'op.students_id', '=', 'students.id')
-                ->get();
-        }else{
-            $data['student'] = Student::select('students.id','students.reg_no','students.first_name',
-                'students.middle_name', 'students.last_name','students.faculty','students.semester',
-                'op.id as payment_id','op.date', 'op.amount', 'op.payment_gateway', 'op.ref_no', 'op.ref_text',
-                'op.status as payment_status','op.created_by as paid_by')
-                ->where('op.status',0)
-                ->join('online_payments as op', 'op.students_id', '=', 'students.id')
-                ->get();
+                ->where('op.status', 0);
+
+            if ($request->all()) {
+                $withheld->where($applyFilters);
+            }
+
+            $withheld = $withheld->get();
+            if ($withheld->count()) {
+                $data['op_withheld'] = ['count' => $withheld->count(), 'sum' => $withheld->sum('amount')];
+            }
         }
 
 
@@ -160,12 +190,12 @@ class OnlineFeePaymentReportController extends CollegeBaseController
             $meta[] = ['label' => 'Gateway', 'value' => $request->get('payment_gateway')];
         }
 
-        if ($request->get('verify_status')) {
+        /* Always stated, never left off. A sheet that does not say which status it holds reads
+           like a complete record of every payment, and it is not one either way. */
+        if ($request->filled('verify_status')) {
             $meta[] = ['label' => 'Status', 'value' => $request->get('verify_status') == 'verify' ? 'Verified' : 'Not Verified'];
-        } elseif (!$request->all()) {
-            /* Asked for nothing, the screen lists the payments still waiting to be verified.
-               Said plainly here, or the sheet reads like a complete record when it is not. */
-            $meta[] = ['label' => 'Status', 'value' => 'Not Verified only'];
+        } else {
+            $meta[] = ['label' => 'Status', 'value' => 'Verified only'];
         }
 
         return $meta;
