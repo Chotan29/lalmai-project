@@ -589,10 +589,17 @@ class StaffController extends CollegeBaseController
 
     public function bulkAction(Request $request)
     {
-        $bulkActions = ['export-excel', 'active', 'in-active', 'delete', 'create-reset-login', 'create-reset-library-member'];
+        $bulkActions = ['export-excel', 'print-id-card', 'active', 'in-active', 'delete', 'create-reset-login', 'create-reset-library-member'];
         if ($request->has('bulk_action') && in_array($request->get('bulk_action'), $bulkActions)) {
 
             if ($request->has('chkIds')) {
+                /* Handled before the loop below, the way export-excel is, because it returns a
+                   page of its own rather than changing rows and redirecting back to the list. */
+                if ($request->get('bulk_action') == 'print-id-card') {
+                    return app(\App\Http\Controllers\PrintOut\CertificatePrintController::class)
+                        ->staffIdCardPrint($request);
+                }
+
                 if($request->get('bulk_action') == 'export-excel'){
                     $dataIds = [];
                     foreach ($request->get('chkIds') as $row_id) {

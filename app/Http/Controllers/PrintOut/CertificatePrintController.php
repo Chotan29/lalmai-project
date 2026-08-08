@@ -14,6 +14,7 @@ use App\Http\Controllers\CollegeBaseController;
 use App\Models\CertificateTemplate;
 use App\Models\ExamSchedule;
 use App\Models\Semester;
+use App\Models\Staff;
 use App\Models\Student;
 use App\Traits\CertificateScope;
 use App\Traits\StudentScopes;
@@ -195,6 +196,53 @@ class CertificatePrintController extends CollegeBaseController
         $data['student'] = $students;
 
         return view(parent::loadDataToView($this->view_path.'.id-card'), compact('data'));
+    }
+
+    /**
+     * The same 54x86mm card, for teachers and other staff.
+     *
+     * Kept beside the student one rather than folded into it: the two cards read from different
+     * tables and print different lines - a teacher has a designation and a joining date where a
+     * student has a group and a session - and a single method serving both would be a knot of
+     * conditionals in the query, the view and the QR link.
+     */
+    public function staffIdCardPrint(Request $request)
+    {
+        $staffIds = [];
+        foreach ((array) $request->get('chkIds') as $id) {
+            try {
+                $staffIds[] = decrypt($id);
+            } catch (\Exception $e) {
+                /* Ids arrive encrypted from the list screen; anything else is not ours. */
+            }
+        }
+
+        $staffs = Staff::select('staff.id', 'staff.reg_no', 'staff.first_name', 'staff.middle_name',
+            'staff.last_name', 'staff.father_name', 'staff.mother_name', 'staff.date_of_birth',
+            'staff.blood_group', 'staff.email', 'staff.mobile_1', 'staff.mobile_2',
+            'staff.home_phone', 'staff.address', 'staff.state', 'staff.join_date',
+            'staff.national_id_1', 'staff.staff_image', 'staff.status',
+            'd.title as designation_title')
+            ->whereIn('staff.id', $staffIds)
+            ->leftJoin('staff_designations as d', 'd.id', '=', 'staff.designation')
+            ->orderBy('d.title')
+            ->orderBy('staff.reg_no')
+            ->get();
+
+        foreach ($staffs as $staff) {
+            $verifyUrl = route('verification.staff-id-card', ['t' => encrypt($staff->id)]);
+            try {
+                $svg = \SimpleSoftwareIO\QrCode\Facades\QrCode::format('svg')
+                    ->size(240)->margin(0)->errorCorrection('M')->generate($verifyUrl);
+                $staff->qr_data_uri = 'data:image/svg+xml;base64,'.base64_encode((string) $svg);
+            } catch (\Exception $e) {
+                $staff->qr_data_uri = '';
+            }
+        }
+
+        $data['staff'] = $staffs;
+
+        return view(parent::loadDataToView($this->view_path.'.staff-id-card'), compact('data'));
     }
 
 }

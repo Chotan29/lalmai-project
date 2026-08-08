@@ -486,6 +486,8 @@ Route::get('certificate-verification',              ['as' => 'verification.certi
 
 //public student ID card verification (QR on ID card)
 Route::get('id-card-verify',                        ['as' => 'verification.id-card',             'uses' => 'VerificationController@idCard']);
+//public staff ID card verification (QR on the staff ID card)
+Route::get('staff-id-card-verify',                  ['as' => 'verification.staff-id-card',       'uses' => 'VerificationController@staffIdCard']);
 
 /*Students Guardian Grouping*/
 Route::group(['prefix' => 'guardian/',                                   'as' => 'guardian',                                     'namespace' => 'Student\\'], function () {

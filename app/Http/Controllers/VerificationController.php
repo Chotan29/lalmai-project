@@ -13,6 +13,7 @@ namespace App\Http\Controllers;
 
 
 use App\Models\CertificateTemplate;
+use App\Models\Staff;
 use App\Models\Student;
 use App\Traits\AcademicScope;
 use App\Traits\CertificateScope;
@@ -200,6 +201,39 @@ class VerificationController extends CollegeBaseController
             }
         }
         return view('verification.id-card', compact('student'));
+    }
+
+    /**
+     * The page a staff ID card's QR code opens.
+     *
+     * Its own route rather than a flag on the student one: the token in a printed card lives as
+     * long as the card does, and a single route that decides what a token means by looking up
+     * two tables would show the wrong person the day an id happened to exist in both.
+     */
+    public function staffIdCard(Request $request)
+    {
+        $staff = null;
+        $token = (string) $request->get('t', '');
+
+        if ($token !== '') {
+            try {
+                $staffId = decrypt($token);
+            } catch (\Exception $e) {
+                $staffId = null;
+            }
+
+            if ($staffId) {
+                $staff = Staff::select('staff.id', 'staff.reg_no', 'staff.first_name',
+                    'staff.middle_name', 'staff.last_name', 'staff.blood_group',
+                    'staff.join_date', 'staff.staff_image', 'staff.status',
+                    'd.title as designation_title')
+                    ->leftJoin('staff_designations as d', 'd.id', '=', 'staff.designation')
+                    ->where('staff.id', $staffId)
+                    ->first();
+            }
+        }
+
+        return view('verification.staff-id-card', compact('staff'));
     }
 
 }
