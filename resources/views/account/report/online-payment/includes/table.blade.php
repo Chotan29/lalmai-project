@@ -31,6 +31,9 @@
         @endif
     </div>
 
+    {{-- Only once a report has been asked for. Four cards reading zero look like an answer,
+         and the answer they give - no money at all - is not true. --}}
+    @if(!isset($data['op_asked']) || $data['op_asked'])
     <div class="op-summary">
         <div class="op-card">
             <span class="op-card-h">Payments</span>
@@ -59,6 +62,7 @@
             <span class="op-card-v">&#2547;{{ number_format($totalAmount, 2) }}</span>
         </div>
     </div>
+    @endif
 
     <table class="op-report">
         {{-- Fixed widths so the columns land in the same place on screen and on paper. --}}
@@ -115,7 +119,16 @@
             @endforeach
         @else
             <tr>
-                <td colspan="7" class="op-empty">No {{ $panel }} data found. Please Filter {{ $panel }} to show.</td>
+                {{-- Two different silences. Nothing asked for yet is not the same as asked and
+                     found nothing, and telling the office "no data found" when it has not
+                     searched sends it looking for a fault that is not there. --}}
+                <td colspan="7" class="op-empty">
+                    @if(isset($data['op_asked']) && !$data['op_asked'])
+                        Choose a date range above, then press Filter to build the report.
+                    @else
+                        No {{ $panel }} data found for this filter.
+                    @endif
+                </td>
             </tr>
         @endif
         </tbody>

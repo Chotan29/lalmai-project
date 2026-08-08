@@ -81,32 +81,40 @@ class OnlineFeePaymentReportController extends CollegeBaseController
             'op.id as payment_id','op.date', 'op.amount', 'op.payment_gateway', 'op.ref_no', 'op.ref_text',
             'op.status as payment_status','op.created_by as paid_by'];
 
-        $rows = Student::select($selection)
-            ->join('online_payments as op', 'op.students_id', '=', 'students.id')
-            ->where('op.status', $statusWanted);
+        /* Nothing asked for, nothing reported.
+           This screen used to answer an empty request with every unverified payment - three
+           rows at the time, so it passed for a landing page. Answering the same empty request
+           with verified money means every payment the college has ever taken, rebuilt on each
+           visit and growing every day. A report is a thing you ask for, so the page now opens
+           on its filter and waits. */
+        $asked = (bool) $request->all();
 
-        if ($request->all()) {
-            $rows->where($applyFilters);
+        $data['op_asked'] = $asked;
+        $data['student'] = collect();
+        $data['op_withheld'] = null;
+
+        if (!$asked) {
+            return $this->onlinePaymentView($request, $data);
         }
 
-        $data['student'] = $rows->get();
+        $data['student'] = Student::select($selection)
+            ->join('online_payments as op', 'op.students_id', '=', 'students.id')
+            ->where('op.status', $statusWanted)
+            ->where($applyFilters)
+            ->get();
 
         /* What this status is keeping off the sheet.
            Without it the Not Verified card would read zero for ever, and a payment stuck at the
            gateway would never be noticed by anyone reading this report - the money would simply
            be missing and nothing would say so. Only asked when the reader has not gone looking
            for the unverified ones themselves. */
-        $data['op_withheld'] = null;
         if ($statusWanted === 1) {
             $withheld = Student::select('op.amount')
                 ->join('online_payments as op', 'op.students_id', '=', 'students.id')
-                ->where('op.status', 0);
+                ->where('op.status', 0)
+                ->where($applyFilters)
+                ->get();
 
-            if ($request->all()) {
-                $withheld->where($applyFilters);
-            }
-
-            $withheld = $withheld->get();
             if ($withheld->count()) {
                 $data['op_withheld'] = ['count' => $withheld->count(), 'sum' => $withheld->sum('amount')];
             }
@@ -127,6 +135,19 @@ class OnlineFeePaymentReportController extends CollegeBaseController
         $data['student'] = $filteredStudent;*/
 
 
+        return $this->onlinePaymentView($request, $data);
+    }
+
+    /**
+     * The heading, the filter boxes and the render - everything the page needs whether or not a
+     * report was asked for.
+     *
+     * Its own method because the screen returns from two places now: once when it opens with
+     * nothing asked, and once with the rows. Repeating this tail in both is how the two drift
+     * apart.
+     */
+    private function onlinePaymentView(Request $request, array $data)
+    {
         /* What the sheet is a report of. The filter boxes do not print, so without this a
            printed page of eighty names does not say whose department's money it holds. */
         $data['op_department'] = $request->get('faculty') > 0
@@ -190,11 +211,12 @@ class OnlineFeePaymentReportController extends CollegeBaseController
             $meta[] = ['label' => 'Gateway', 'value' => $request->get('payment_gateway')];
         }
 
-        /* Always stated, never left off. A sheet that does not say which status it holds reads
-           like a complete record of every payment, and it is not one either way. */
+        /* Stated on any sheet that actually holds rows, never left off. A sheet that does not
+           say which status it covers reads like a complete record of every payment, and it is
+           not one either way. Nothing is claimed before a report has been asked for. */
         if ($request->filled('verify_status')) {
             $meta[] = ['label' => 'Status', 'value' => $request->get('verify_status') == 'verify' ? 'Verified' : 'Not Verified'];
-        } else {
+        } elseif ($request->all()) {
             $meta[] = ['label' => 'Status', 'value' => 'Verified only'];
         }
 
