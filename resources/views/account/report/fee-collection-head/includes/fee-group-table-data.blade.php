@@ -27,6 +27,76 @@
         </div>
     </div>
 
+    {{-- Whose money this is. The head table says how much landed in each head; this says how
+         many students it came from, and from where. Both are needed to check the sheet: a head
+         divided by its rate should land on the student count, and where it does not, the two
+         count columns below usually say why. --}}
+    @if(isset($data['fee_group_departments']) && $data['fee_group_departments']->count() > 0)
+        @php
+            $deptRows = $data['fee_group_departments'];
+            $totStudents = $deptRows->sum('students');
+            $totDeptStudents = $deptRows->sum('dept_students');
+        @endphp
+
+        <div class="fg-section-h">Students behind these figures</div>
+
+        <table class="fee-group-report fg-dept-table">
+            <colgroup>
+                <col style="width:34%">
+                <col style="width:11%">
+                <col style="width:13%">
+                <col style="width:14%">
+                <col style="width:14%">
+                <col style="width:14%">
+            </colgroup>
+            <thead>
+                <tr>
+                    <th class="fg-head">{{ __('form_fields.student.fields.faculty') }}</th>
+                    <th class="fg-by">Students</th>
+                    <th class="fg-by">Paid Dept. Part</th>
+                    <th class="fg-amt">College</th>
+                    <th class="fg-amt">Department</th>
+                    <th class="fg-amt">Total</th>
+                </tr>
+            </thead>
+            <tbody>
+            @foreach($deptRows as $dept)
+                <tr>
+                    <td class="fg-head">{{ $dept->department }}</td>
+                    <td class="fg-by fg-count">{{ number_format($dept->students) }}</td>
+                    {{-- Flagged when fewer students paid the department part than paid at all:
+                         that difference is money the departments have not received. --}}
+                    <td class="fg-by fg-count {{ $dept->dept_students < $dept->students ? 'fg-short' : '' }}">
+                        {{ number_format($dept->dept_students) }}
+                    </td>
+                    <td class="fg-amt">{{ number_format($dept->college_amount, 2) }}</td>
+                    <td class="fg-amt {{ $dept->department_amount == 0 ? 'fg-zero' : '' }}">{{ number_format($dept->department_amount, 2) }}</td>
+                    <td class="fg-amt">{{ number_format($dept->total_amount, 2) }}</td>
+                </tr>
+            @endforeach
+            </tbody>
+            <tfoot>
+                <tr>
+                    <td class="fg-total-lbl">All Departments</td>
+                    <td class="fg-by fg-count">{{ number_format($totStudents) }}</td>
+                    <td class="fg-by fg-count">{{ number_format($totDeptStudents) }}</td>
+                    <td class="fg-amt fg-total-val">{{ number_format($data['college_total'] ?? 0, 2) }}</td>
+                    <td class="fg-amt fg-total-val">{{ number_format($data['department_total'] ?? 0, 2) }}</td>
+                    <td class="fg-amt fg-total-val">{{ number_format($data['fee_collection_total'] ?? 0, 2) }}</td>
+                </tr>
+            </tfoot>
+        </table>
+
+        @if($totDeptStudents < $totStudents)
+            <div class="fg-note">
+                {{ number_format($totStudents - $totDeptStudents) }} student(s) paid the college
+                part but not the department part.
+            </div>
+        @endif
+
+        <div class="fg-section-h">Head by head</div>
+    @endif
+
     <table class="fee-group-report">
         {{-- Fixed widths so the columns land in the same place on screen and on paper. --}}
         <colgroup>

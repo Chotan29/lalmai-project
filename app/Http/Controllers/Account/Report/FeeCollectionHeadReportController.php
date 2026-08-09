@@ -57,6 +57,12 @@ class FeeCollectionHeadReportController extends CollegeBaseController
                 $data['fee_collection_total'] = $data['fee_group_rows']->sum('amount');
                 $data['college_total'] = $data['fee_group_rows']->where('collected_by','!=','department')->sum('amount');
                 $data['department_total'] = $data['fee_group_rows']->where('collected_by','department')->sum('amount');
+                /* Whose money this is. A head-wise total answers "how much" but not "for how
+                   many", and the two are only reconcilable together: a head divided by its rate
+                   should land on the number of students, and where it does not the department
+                   list is what says which. */
+                $data['fee_group_departments'] = $this->feeGroupStudentsByDepartment(
+                    $feeGroupId, $request->start_date, $request->end_date);
                 $data['tag'] = 'fee_group';
                 $data['fee_group_tag'] = 'fee_group';
                 $data['url'] = URL::current();
@@ -333,6 +339,57 @@ class FeeCollectionHeadReportController extends CollegeBaseController
         }
 
         return $rows;
+    }
+
+    /**
+     * Whose money the head-wise total is made of, department by department.
+     *
+     * Two counts, not one, because they answer different questions and are rarely the same:
+     * how many students paid anything towards this fee, and how many of those paid its
+     * department part. Where a head divided by its rate does not land on a whole number of
+     * students, the gap between these two columns is usually the reason.
+     *
+     * Same filter as the head breakdown - status 1, the same dates, the same GROUP-n key - so
+     * the two tables on the sheet always add up to each other.
+     */
+    public function feeGroupStudentsByDepartment($groupId, $start_date, $end_date)
+    {
+        $deptHeadIds = DB::table('fee_head_group_items as i')
+            ->leftJoin('fee_heads as h', 'h.id', '=', 'i.fee_head_id')
+            ->where('i.fee_head_group_id', $groupId)
+            ->where('i.status', 1)
+            ->where('h.collected_by', 'department')
+            ->pluck('i.fee_head_id')
+            ->all();
+
+        /* fee_masters.fee_head holds the head id as text, so the list is quoted to match it
+           rather than forcing MySQL to cast the column on every row. Built from ints taken from
+           our own table - nothing here comes from the request. */
+        $deptList = $deptHeadIds
+            ? implode(',', array_map(function ($id) { return "'" . (int) $id . "'"; }, $deptHeadIds))
+            : "''";
+
+        return DB::table('fee_collections as c')
+            ->join('fee_masters as fm', 'fm.id', '=', 'c.fee_masters_id')
+            ->join('students as s', 's.id', '=', 'c.students_id')
+            ->leftJoin('faculties as f', 'f.id', '=', 's.faculty')
+            ->where('c.status', 1)
+            ->whereBetween('c.date', [$start_date, $this->endOfDay($end_date)])
+            ->where(function ($query) use ($groupId) {
+                $query->where('fm.billing_period_key', 'GROUP-' . $groupId)
+                      ->orWhere('fm.billing_period_key', 'like', 'GROUP-' . $groupId . '-%');
+            })
+            ->select(
+                DB::raw("COALESCE(NULLIF(TRIM(f.faculty), ''), 'Not set') as department"),
+                DB::raw('COUNT(DISTINCT c.students_id) as students'),
+                DB::raw("COUNT(DISTINCT CASE WHEN fm.fee_head IN ({$deptList}) THEN c.students_id END) as dept_students"),
+                DB::raw("SUM(CASE WHEN fm.fee_head IN ({$deptList}) THEN 0 ELSE c.paid_amount END) as college_amount"),
+                DB::raw("SUM(CASE WHEN fm.fee_head IN ({$deptList}) THEN c.paid_amount ELSE 0 END) as department_amount"),
+                DB::raw('SUM(c.paid_amount) as total_amount')
+            )
+            ->groupBy('department')
+            ->orderBy('department')
+            ->get();
     }
 
     //with fee head & range
