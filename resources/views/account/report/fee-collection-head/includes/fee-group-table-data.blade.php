@@ -38,7 +38,22 @@
             $totDeptStudents = $deptRows->sum('dept_students');
         @endphp
 
-        <div class="fg-section-h">Students behind these figures</div>
+        {{-- Screen only. The printed sheet is the head-wise statement that gets signed and
+             filed; this list is a working aid, and it goes out as a file instead. --}}
+        <div class="fg-screen-only">
+            <div class="fg-section-h fg-section-h-with-actions">
+                <span>Students behind these figures</span>
+                <span class="fg-actions">
+                    <a class="fg-dl" target="_blank"
+                       href="{{ route('account.report.fee-collection-head.departments.export', array_merge(request()->only(['fee_heads', 'start_date', 'end_date']), ['format' => 'xlsx'])) }}">
+                        <i class="fa fa-file-excel-o" aria-hidden="true"></i>&nbsp;Excel
+                    </a>
+                    <a class="fg-dl" target="_blank"
+                       href="{{ route('account.report.fee-collection-head.departments.export', array_merge(request()->only(['fee_heads', 'start_date', 'end_date']), ['format' => 'csv'])) }}">
+                        <i class="fa fa-file-text-o" aria-hidden="true"></i>&nbsp;CSV
+                    </a>
+                </span>
+            </div>
 
         <table class="fee-group-report fg-dept-table">
             <colgroup>
@@ -87,14 +102,17 @@
             </tfoot>
         </table>
 
-        @if($totDeptStudents < $totStudents)
-            <div class="fg-note">
-                {{ number_format($totStudents - $totDeptStudents) }} student(s) paid the college
-                part but not the department part.
-            </div>
-        @endif
+            @if($totDeptStudents < $totStudents)
+                <div class="fg-note">
+                    {{ number_format($totStudents - $totDeptStudents) }} student(s) paid the college
+                    part but not the department part.
+                </div>
+            @endif
+        </div>{{-- /.fg-screen-only --}}
 
-        <div class="fg-section-h">Head by head</div>
+        {{-- Also screen only: with the list above hidden on paper, a heading announcing the
+             table below it would be the only thing left of a section that is not there. --}}
+        <div class="fg-section-h fg-screen-only">Head by head</div>
     @endif
 
     <table class="fee-group-report">

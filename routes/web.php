@@ -675,6 +675,8 @@ Route::group(['prefix' => 'account/',                                   'as' => 
     Route::get('report/cash-book',                      ['as' => 'report.cash-book',                  'middleware' => ['ability:super-admin,report-cash-book'],                 'uses' => 'Report\CashBookReportController@cashBook']);
     Route::get('report/fee-collection',                 ['as' => 'report.fee-collection',             'middleware' => ['ability:super-admin,report-fee-collection'],            'uses' => 'Report\FeeCollectionReportController@feeCollection']);
     Route::get('report/fee-collection-head',            ['as' => 'report.fee-collection-head',        'middleware' => ['ability:super-admin,report-fee-collection-head'],       'uses' => 'Report\FeeCollectionHeadReportController@feeCollectionHead']);
+    //the department list from that report as a file - same permission, it is the same data
+    Route::get('report/fee-collection-head/departments/export', ['as' => 'report.fee-collection-head.departments.export', 'middleware' => ['ability:super-admin,report-fee-collection-head'], 'uses' => 'Report\FeeCollectionHeadReportController@feeGroupDepartmentExport']);
     Route::get('report/fee-online-payment',             ['as' => 'report.fee-online-payment',         'middleware' => ['ability:super-admin,report-fee-online-payment'],        'uses' => 'Report\OnlineFeePaymentReportController@onlinePayments']);
     Route::get('report/balance-fee',                    ['as' => 'report.balance-fee',                'middleware' => ['ability:super-admin,report-balance-fee'],               'uses' => 'Report\BalanceFeeReportController@balanceFees']);
 

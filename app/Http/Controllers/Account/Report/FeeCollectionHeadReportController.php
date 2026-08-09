@@ -10,6 +10,7 @@
 
 namespace App\Http\Controllers\Account\Report;
 
+use App\Exports\FeeGroupDepartmentExport;
 use App\Http\Controllers\CollegeBaseController;
 use App\Models\BankTransaction;
 use App\Models\FeeCollection;
@@ -20,6 +21,7 @@ use Carbon\Carbon;
 use Carbon\CarbonPeriod;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Maatwebsite\Excel\Facades\Excel;
 use URL;
 class FeeCollectionHeadReportController extends CollegeBaseController
 {
@@ -339,6 +341,56 @@ class FeeCollectionHeadReportController extends CollegeBaseController
         }
 
         return $rows;
+    }
+
+    /**
+     * The department list as a file, so it can be worked on rather than only looked at.
+     *
+     * Excel by default, CSV on request. Same query as the screen, so the file and the sheet can
+     * never say different things - the numbers are not recomputed here, only formatted.
+     */
+    public function feeGroupDepartmentExport(Request $request)
+    {
+        $groupId = $this->feeHeadGroupIdFromFilter($request->get('fee_heads'));
+
+        if (!$groupId || !$request->get('start_date') || !$request->get('end_date')) {
+            $request->session()->flash($this->message_warning,
+                'Choose a Main Fee Head and a date range first.');
+            return redirect()->route($this->base_route);
+        }
+
+        $rows = $this->feeGroupStudentsByDepartment(
+            $groupId, $request->get('start_date'), $request->get('end_date'));
+
+        if (!$rows->count()) {
+            $request->session()->flash($this->message_warning,
+                'Nothing was collected against this fee in that period.');
+            return redirect()->back();
+        }
+
+        $title = $this->feeFilterTitle($request->get('fee_heads'));
+        $period = Carbon::parse($request->get('start_date'))->format('d M Y')
+            . ' to ' . Carbon::parse($request->get('end_date'))->format('d M Y');
+
+        $heads = $this->feeGroupHeadBreakdown(
+            $groupId, $request->get('start_date'), $request->get('end_date'));
+        $collegeTotal = $heads->where('collected_by', '!=', 'department')->sum('amount');
+        $departmentTotal = $heads->where('collected_by', 'department')->sum('amount');
+
+        /* A file name that says what is in it and for when, so a folder of these stays usable. */
+        $name = 'Students-by-Department_'
+            . preg_replace('/[^A-Za-z0-9]+/', '-', $title) . '_'
+            . Carbon::parse($request->get('start_date'))->format('d-m-Y') . '_to_'
+            . Carbon::parse($request->get('end_date'))->format('d-m-Y');
+
+        $export = new FeeGroupDepartmentExport($rows, $title, $period,
+            $collegeTotal, $departmentTotal, $heads->sum('amount'));
+
+        if (strtolower((string) $request->get('format')) === 'csv') {
+            return Excel::download($export, $name . '.csv', \Maatwebsite\Excel\Excel::CSV);
+        }
+
+        return Excel::download($export, $name . '.xlsx');
     }
 
     /**
