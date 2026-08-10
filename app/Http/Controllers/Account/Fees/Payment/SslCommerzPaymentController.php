@@ -160,22 +160,24 @@ class SslCommerzPaymentController extends CollegeBaseController
                 $statusMessage = 'Payment completed, but fee posting is pending: ' . $collectionApply['message'];
             }
 
-            return view('account.fees.payment.sslcommerz.payment_status', [
-                'status'        => 'success',
-                'transactionId' => $transactionId,
-                'message'       => $statusMessage,
-                'amount'        => $amount,
-                'currency'      => $currency,
-                'payment'       => $payment,
-                'dueAmount'     => (float) ($student->balance ?? 0),
-            ]);
+            return view('account.fees.payment.sslcommerz.payment_status',
+                $this->paymentStatusView([
+                    'status'        => 'success',
+                    'transactionId' => $transactionId,
+                    'message'       => $statusMessage,
+                    'amount'        => $amount,
+                    'currency'      => $currency,
+                    'payment'       => $payment,
+                    'dueAmount'     => (float) ($student->balance ?? 0),
+                ]));
 
         } catch (\Exception $e) {
             Log::error("Payment Success Error: " . $e->getMessage());
-            return view('account.fees.payment.sslcommerz.payment_status', [
-                'status'  => 'error',
-                'message' => $e->getMessage()
-            ]);
+            return view('account.fees.payment.sslcommerz.payment_status',
+                $this->paymentStatusView([
+                    'status'  => 'error',
+                    'message' => $e->getMessage(),
+                ]));
         }
     }
 
@@ -193,25 +195,34 @@ class SslCommerzPaymentController extends CollegeBaseController
 
             $student = $this->resolveStudentFromCallback($callbackData, $transactionId);
 
-            // NOTE: Do NOT create any OnlinePayment record on cancel
+            /* No record is created here - but one already exists. pay() writes a pending row
+               before sending the student to the gateway, and until this closed it, every
+               abandoned attempt left a permanent unverified row that the reports had to be
+               taught to ignore. It is marked, never deleted: who tried and gave up is worth
+               keeping, and a student ringing up about a payment that "did not work" is easier
+               to answer with the attempt still on file. */
+            $this->closePendingPayment($transactionId, 'cancelled', $callbackData);
+
             Log::warning("SSLCommerz payment cancelled", [
                 'transaction_id' => $transactionId,
                 'callback'       => $callbackData,
             ]);
 
-            return view('account.fees.payment.sslcommerz.payment_status', [
-                'status'        => 'cancelled',
-                'transactionId' => $transactionId,
-                'message'       => 'Payment was cancelled',
-                'dueAmount'     => (float) ($student->balance ?? 0),
-            ]);
+            return view('account.fees.payment.sslcommerz.payment_status',
+                $this->paymentStatusView([
+                    'status'        => 'cancelled',
+                    'transactionId' => $transactionId,
+                    'message'       => 'Payment was cancelled. Nothing has been charged.',
+                    'dueAmount'     => (float) (optional($student)->balance ?? 0),
+                ]));
 
         } catch (\Exception $e) {
             Log::error("Cancel Callback Error: " . $e->getMessage());
-            return view('account.fees.payment.sslcommerz.payment_status', [
-                'status'  => 'error',
-                'message' => 'Payment processing error: ' . $e->getMessage()
-            ]);
+            return view('account.fees.payment.sslcommerz.payment_status',
+                $this->paymentStatusView([
+                    'status'  => 'error',
+                    'message' => 'Payment processing error: ' . $e->getMessage(),
+                ]));
         }
     }
 
@@ -229,26 +240,83 @@ class SslCommerzPaymentController extends CollegeBaseController
 
             $student = $this->resolveStudentFromCallback($callbackData, $transactionId);
 
-            // NOTE: Do NOT create any OnlinePayment record on failure
+            /* Same as cancel: the pending row from pay() is closed rather than left to gather. */
+            $this->closePendingPayment($transactionId, 'failed', $callbackData);
+
             Log::warning("SSLCommerz payment failed", [
                 'transaction_id' => $transactionId,
                 'callback'       => $callbackData,
             ]);
 
-            return view('account.fees.payment.sslcommerz.payment_status', [
-                'status'        => 'failed',
-                'transactionId' => $transactionId,
-                'message'       => 'Payment failed. Please try again.',
-                'dueAmount'     => (float) ($student->balance ?? 0),
-            ]);
+            return view('account.fees.payment.sslcommerz.payment_status',
+                $this->paymentStatusView([
+                    'status'        => 'failed',
+                    'transactionId' => $transactionId,
+                    'message'       => 'Payment failed. Nothing has been charged - please try again.',
+                    'dueAmount'     => (float) (optional($student)->balance ?? 0),
+                ]));
 
         } catch (\Exception $e) {
             Log::error("Fail Callback Error: " . $e->getMessage());
-            return view('account.fees.payment.sslcommerz.payment_status', [
-                'status'  => 'error',
-                'message' => 'Payment processing error: ' . $e->getMessage()
+            return view('account.fees.payment.sslcommerz.payment_status',
+                $this->paymentStatusView([
+                    'status'  => 'error',
+                    'message' => 'Payment processing error: ' . $e->getMessage(),
+                ]));
+        }
+    }
+
+    /**
+     * Close the row pay() opened, without touching one that has already succeeded.
+     *
+     * Guarded on payment_status: a success callback can arrive before or after a cancel
+     * callback for the same transaction, and a completed payment must never be talked back
+     * down to cancelled by a late message from the gateway.
+     */
+    protected function closePendingPayment(string $transactionId, string $outcome, array $callbackData = []): void
+    {
+        try {
+            $payment = OnlinePayment::where('ref_no', $transactionId)->first();
+
+            if (!$payment) {
+                return;
+            }
+
+            if (in_array(strtolower((string) $payment->payment_status), ['completed', 'cancelled', 'failed'], true)) {
+                return;
+            }
+
+            /* status stays 0. This money never arrived, so it must not be counted anywhere. */
+            $payment->update([
+                'payment_status' => $outcome,
+                'note'           => trim(sprintf('%s at the gateway on %s. %s',
+                    ucfirst($outcome),
+                    Carbon::now()->format('d M Y, h:i A'),
+                    isset($callbackData['error']) ? 'Gateway said: ' . $callbackData['error'] : '')),
+            ]);
+        } catch (\Throwable $e) {
+            /* A tidy-up must never be the reason a student sees an error page. */
+            Log::error('Could not close the pending payment row', [
+                'transaction_id' => $transactionId,
+                'outcome'        => $outcome,
+                'message'        => $e->getMessage(),
             ]);
         }
+    }
+
+    /**
+     * The two links every result page needs, worked out once.
+     *
+     * The view used to hardcode the fees page behind a button labelled "Go to Dashboard", and
+     * the retry link was commented out - so a student who cancelled landed somewhere that did
+     * not match the button and had no way back to paying.
+     */
+    protected function paymentStatusView(array $data): array
+    {
+        return $data + [
+            'dashboardUrl' => $this->getUserDashboardRoute(),
+            'feesUrl'      => route('user-student.fees'),
+        ];
     }
 
     public function ipn(Request $request)
@@ -370,14 +438,37 @@ class SslCommerzPaymentController extends CollegeBaseController
         return OnlinePayment::create($paymentData);
     }
 
+    /**
+     * Where "Go to Dashboard" should actually go.
+     *
+     * This used to call getRoleByUserId(), which lives in a trait this controller does not use -
+     * so any call threw, and the result page worked around it by hardcoding the fees route
+     * behind a button labelled Dashboard. Asked of the user directly instead, and wrapped:
+     * a payment result page must never fail over a navigation link.
+     */
     protected function getUserDashboardRoute()
     {
-        if (auth()->check()) {
-            return $this->getRoleByUserId(auth()->user()->id) == 'Student'
-                ? route('user-student')
-                : route('user-guardian');
+        try {
+            $user = auth()->user();
+
+            if (!$user) {
+                return route('login');
+            }
+
+            if (method_exists($user, 'hasRole')) {
+                if ($user->hasRole('student')) {
+                    return route('user-student');
+                }
+                if ($user->hasRole('guardian')) {
+                    return route('user-guardian');
+                }
+            }
+
+            return route('user-student');
+        } catch (\Throwable $e) {
+            Log::warning('Could not work out the dashboard route: ' . $e->getMessage());
+            return route('user-student.fees');
         }
-        return route('login');
     }
 
     protected function getPaymentStatusFromCallback(array $callbackData)

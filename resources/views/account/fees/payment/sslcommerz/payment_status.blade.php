@@ -217,20 +217,38 @@
                 @endif
             </div>
 
+            {{-- Links come from the controller. This page used to send everyone to the fees
+                 page behind a button labelled "Go to Dashboard", which is not where it went. --}}
+            @php
+                $feesLink = $feesUrl ?? route('user-student.fees');
+                $dashLink = $dashboardUrl ?? route('user-student');
+                $didNotGoThrough = in_array($status, ['failed', 'cancelled', 'error'], true);
+            @endphp
+
             <div class="action-buttons">
-                <a href="{{ route('user-student.fees') }}" class="btn btn-primary">
-                    <i class="fas fa-home"></i> Go to Dashboard
-                </a>
-                @if ($status === 'success' || $status === 'completed')
+                @if($didNotGoThrough)
+                    {{-- Nothing was charged, so the useful thing is a way back to paying -
+                         which is the fees page, where the Pay button lives. --}}
+                    <a href="{{ $feesLink }}" class="btn btn-primary">
+                        <i class="fas fa-redo"></i> Try Again
+                    </a>
+                    <a href="{{ $dashLink }}" class="btn btn-secondary">
+                        <i class="fas fa-home"></i> Go to Dashboard
+                    </a>
+                @else
+                    <a href="{{ $dashLink }}" class="btn btn-primary">
+                        <i class="fas fa-home"></i> Go to Dashboard
+                    </a>
+                    <a href="{{ $feesLink }}" class="btn btn-secondary">
+                        <i class="fas fa-file-invoice"></i> My Fees
+                    </a>
+                @endif
+
+                @if (($status === 'success' || $status === 'completed') && !empty($payment))
                     <a href="{{ route('print-out.fees.online-payment-receipt', ['id' => encrypt($payment->id)]) }}" target="_blank" class="btn btn-secondary">
                         <i class="fas fa-receipt"></i> View Receipt
                     </a>
                 @endif
-                {{-- @if ($status === 'failed' || $status === 'cancelled')
-                    <a href="{{ route('account.fees.pay-with-sslcommerz.index') }}" class="btn btn-secondary">
-                        <i class="fas fa-redo"></i> Try Again
-                    </a>
-                @endif --}}
             </div>
 
             @if ($status === 'success' || $status === 'completed')
