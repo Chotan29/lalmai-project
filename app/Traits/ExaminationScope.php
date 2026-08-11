@@ -16,6 +16,76 @@ use Illuminate\Http\Request;
 trait ExaminationScope{
 
     /**
+     * Rows that are read over and over while a class is graded, remembered for this request.
+     *
+     * Grading a class of 254 asked the database 3,818 questions, and 3,562 of them were the
+     * same two: "which subject is this exam schedule for?" and "what are that subject's full
+     * marks?" - asked once per mark row, for a class that has only 31 schedules and 10
+     * subjects between them. Neither table changes while a sheet is being drawn.
+     *
+     * Nothing here writes to the rows it hands back, so one shared instance is safe. The store
+     * is per request; the flush exists for a long-running worker that grades in a loop.
+     */
+    protected static $examLookupCache = [];
+
+    protected function examLookup($key, callable $load)
+    {
+        if (!array_key_exists($key, self::$examLookupCache)) {
+            self::$examLookupCache[$key] = $load();
+        }
+
+        return self::$examLookupCache[$key];
+    }
+
+    public static function flushExaminationLookupCache()
+    {
+        self::$examLookupCache = [];
+    }
+
+    /**
+     * The exam schedule a mark row belongs to - the marks and the subject it is for.
+     *
+     * Nine places in this trait used to write this same lookup out by hand against the
+     * relation. They all call here now, so the columns a grade is built from are decided in
+     * one place and the second reader of the same schedule costs nothing.
+     */
+    public function examScheduleRow($scheduleId)
+    {
+        $scheduleId = (int) $scheduleId;
+
+        if ($scheduleId <= 0) {
+            return null;
+        }
+
+        return $this->examLookup('schedule:' . $scheduleId, function () use ($scheduleId) {
+            return ExamSchedule::select('id', 'subjects_id', 'full_mark_theory', 'pass_mark_theory',
+                'full_mark_practical', 'pass_mark_practical', 'sorting_order')
+                ->find($scheduleId);
+        });
+    }
+
+    /**
+     * The subject master row - title, code, full marks, MCQ split.
+     *
+     * The master row, not the schedule's copy, is what a grade must be measured against.
+     */
+    public function subjectRow($subjectId)
+    {
+        $subjectId = (int) $subjectId;
+
+        if ($subjectId <= 0) {
+            return null;
+        }
+
+        return $this->examLookup('subject:' . $subjectId, function () use ($subjectId) {
+            return Subject::select('id', 'title', 'code', 'short_name', 'sub_type', 'class_type',
+                'credit_hour', 'full_mark_theory', 'pass_mark_theory', 'full_mark_practical',
+                'pass_mark_practical', 'mcq_number_theory', 'mcq_number_practical')
+                ->find($subjectId);
+        });
+    }
+
+    /**
      * One tabulation column group for a subject.
      *
      * A subject only gets the component sub-columns it really has: an English paper with no
@@ -247,44 +317,39 @@ trait ExaminationScope{
         return array_prepend($exams,'Select Exams','0');
     }
 
+    /*These four are called from inside table rows - once per subject, per student, per page.
+      They read the same handful of rows every time, so they go through the request store
+      rather than the database.*/
     public function getExamById($id)
     {
-        $exam = Exam::find($id);
-        if ($exam) {
-            return $exam->title;
-        }else{
-            return "Unknown";
-        }
+        $id = (int) $id;
+
+        $exam = $id > 0 ? $this->examLookup('exam:' . $id, function () use ($id) {
+            return Exam::find($id);
+        }) : null;
+
+        return $exam ? $exam->title : "Unknown";
     }
 
     public function getSubjectById($id)
     {
-        $subject = Subject::find($id);
-        if ($subject) {
-            return $subject->title;
-        }else{
-            return "Unknown";
-        }
+        $subject = $this->subjectRow($id);
+
+        return $subject ? $subject->title : "Unknown";
     }
 
     public function getSubjectCodeById($id)
     {
-        $subject = Subject::find($id);
-        if ($subject) {
-            return $subject->code;
-        }else{
-            return "Unknown";
-        }
+        $subject = $this->subjectRow($id);
+
+        return $subject ? $subject->code : "Unknown";
     }
 
     public function getSubCreditById($id)
     {
-        $subject = Subject::find($id);
-        if ($subject) {
-            return $subject->credit_hour;
-        }else{
-            return "Unknown";
-        }
+        $subject = $this->subjectRow($id);
+
+        return $subject ? $subject->credit_hour : "Unknown";
     }
 
     public function getFinalGrade($semester, $gpa_average)
@@ -530,9 +595,7 @@ trait ExaminationScope{
 
             //filter subject and joint mark from schedules;
             $filteredSubject  = $subject->filter(function ($subject, $key) {
-                $joinSub = $subject->examSchedule()
-                    ->select('subjects_id','full_mark_theory', 'pass_mark_theory', 'full_mark_practical', 'pass_mark_practical','sorting_order')
-                    ->first();
+                $joinSub = $this->examScheduleRow($subject->exam_schedule_id);
 
                 $subject->subjects_id = $joinSub->subjects_id;
                 $subject->sorting_order = $joinSub->sorting_order;
@@ -735,9 +798,7 @@ trait ExaminationScope{
 
             //filter subject and joint mark from schedules;
             $filteredSubject  = $subject->filter(function ($subject, $key) {
-                $joinSub = $subject->examSchedule()
-                    ->select('subjects_id','full_mark_theory', 'pass_mark_theory', 'full_mark_practical', 'pass_mark_practical','sorting_order')
-                    ->first();
+                $joinSub = $this->examScheduleRow($subject->exam_schedule_id);
 
                 $subject->subjects_id = $joinSub->subjects_id;
                 $subject->sorting_order = $joinSub->sorting_order;
@@ -925,9 +986,7 @@ trait ExaminationScope{
                     ->get();
                 //filter subject and joint mark from schedules;
                 $filteredSubject  = $subject->filter(function ($subject, $key) {
-                    $joinSub = $subject->examSchedule()
-                        ->select('subjects_id','full_mark_theory', 'pass_mark_theory', 'full_mark_practical', 'pass_mark_practical','sorting_order')
-                        ->first();
+                    $joinSub = $this->examScheduleRow($subject->exam_schedule_id);
 
                     $subject->subjects_id = $joinSub->subjects_id;
                     $subject->sorting_order = $joinSub->sorting_order;
@@ -1140,7 +1199,20 @@ trait ExaminationScope{
                 })
                 ->all();
 
-            $filteredStudent = $students->filter(function ($value) use ($exam_schedule_id, $optionalSubjectIdsByStudent, $enrolledSubjectIdsByStudent) {
+            /*Every mark of the whole class in one read, then handed out student by student.
+              Asking per student cost one query each - 254 for a class - and they were all the
+              same question with a different id in it. The rows are the same rows, grouped in
+              PHP instead of in the database; each student still gets their own instances, so
+              the grading below writes into them exactly as it did before.*/
+            $ledgerByStudent = ExamMarkLedger::select('students_id', 'exam_schedule_id',
+                    'obtain_mark_theory', 'obtain_mark_practical', 'obtain_mark_mcq',
+                    'absent_theory', 'absent_practical')
+                ->whereIn('students_id', $student_id)
+                ->whereIn('exam_schedule_id', $exam_schedule_id)
+                ->get()
+                ->groupBy('students_id');
+
+            $filteredStudent = $students->filter(function ($value) use ($ledgerByStudent, $optionalSubjectIdsByStudent, $enrolledSubjectIdsByStudent) {
                 $studentOptionalSubjectIds = isset($optionalSubjectIdsByStudent[$value->id])
                     ? $optionalSubjectIdsByStudent[$value->id]
                     : [];
@@ -1149,16 +1221,13 @@ trait ExaminationScope{
                     ? $enrolledSubjectIdsByStudent[$value->id]
                     : [];
 
-                $subjectRows = $value->markLedger()
-                    ->select('exam_schedule_id', 'obtain_mark_theory', 'obtain_mark_practical', 'obtain_mark_mcq', 'absent_theory', 'absent_practical')
-                    ->whereIn('exam_schedule_id', $exam_schedule_id)
-                    ->get()
+                $subjectRows = (isset($ledgerByStudent[$value->id])
+                    ? $ledgerByStudent[$value->id]
+                    : collect())
                     ->unique('exam_schedule_id');
 
                 $filteredSubject = $subjectRows->filter(function ($subject) use ($studentOptionalSubjectIds, $studentEnrolledSubjectIds) {
-                    $joinSub = $subject->examSchedule()
-                        ->select('subjects_id', 'full_mark_theory', 'pass_mark_theory', 'full_mark_practical', 'pass_mark_practical', 'sorting_order')
-                        ->first();
+                    $joinSub = $this->examScheduleRow($subject->exam_schedule_id);
 
                     if (!$joinSub) {
                         return false;
@@ -1181,21 +1250,7 @@ trait ExaminationScope{
                         }
                     }
 
-                    $subjectDetail = Subject::select(
-                        'id',
-                        'title',
-                        'code',
-                        'sub_type',
-                        'class_type',
-                        'credit_hour',
-                        'full_mark_theory',
-                        'pass_mark_theory',
-                        'full_mark_practical',
-                        'pass_mark_practical',
-                        'mcq_number_theory',
-                        'mcq_number_practical'
-                    )
-                        ->find($joinSub->subjects_id);
+                    $subjectDetail = $this->subjectRow($joinSub->subjects_id);
 
                     $masterFullTheory = (float) ($subjectDetail->full_mark_theory ?? 0);
                     $masterPassTheory = (float) ($subjectDetail->pass_mark_theory ?? 0);
@@ -1496,9 +1551,7 @@ trait ExaminationScope{
 
                 //filter subject and joint mark from schedules;
                 $filteredSubject  = $subject->filter(function ($subject, $key) use($semester) {
-                    $joinSub = $subject->examSchedule()
-                        ->select('subjects_id','full_mark_theory', 'pass_mark_theory', 'full_mark_practical', 'pass_mark_practical','sorting_order')
-                        ->first();
+                    $joinSub = $this->examScheduleRow($subject->exam_schedule_id);
 
 
                     if(!$joinSub) return back();
@@ -1761,9 +1814,7 @@ trait ExaminationScope{
                 //filter subject and joint mark from schedules;
                 $filteredSubject  = $subject->filter(function ($subject, $key) use($semester) {
                     //dd($subject);
-                    $joinSub = $subject->examSchedule()
-                        ->select('subjects_id','full_mark_theory', 'pass_mark_theory', 'full_mark_practical', 'pass_mark_practical','sorting_order')
-                        ->first();
+                    $joinSub = $this->examScheduleRow($subject->exam_schedule_id);
 
                     if(!$joinSub) return back();
 
@@ -2037,9 +2088,7 @@ trait ExaminationScope{
 
                 //filter subject and joint mark from schedules;
                 $filteredSubject  = $subject->filter(function ($subject, $key) use($semester) {
-                    $joinSub = $subject->examSchedule()
-                        ->select('subjects_id','full_mark_theory', 'pass_mark_theory', 'full_mark_practical', 'pass_mark_practical','sorting_order')
-                        ->first();
+                    $joinSub = $this->examScheduleRow($subject->exam_schedule_id);
 
 
                     if(!$joinSub) return back();
@@ -2366,9 +2415,7 @@ trait ExaminationScope{
                 $semester = Semester::find($semesterLedger[0]['semesters_id']);
 
                 $value = $filteredSubject[$key]  = $semesterLedger->filter(function ($subject, $key) use($semester) {
-                    $joinSub = $subject->examSchedule()
-                        ->select('subjects_id','full_mark_theory', 'pass_mark_theory', 'full_mark_practical', 'pass_mark_practical','sorting_order')
-                        ->first();
+                    $joinSub = $this->examScheduleRow($subject->exam_schedule_id);
 
                     if(!$joinSub) return back();
 
@@ -2659,9 +2706,7 @@ trait ExaminationScope{
             $semester = Semester::find($semesterLedger[0]['semesters_id']);
 
             $value = $filteredSubject[$key]  = $semesterLedger->filter(function ($subject, $key) use($semester) {
-                $joinSub = $subject->examSchedule()
-                    ->select('subjects_id','full_mark_theory', 'pass_mark_theory', 'full_mark_practical', 'pass_mark_practical','sorting_order')
-                    ->first();
+                $joinSub = $this->examScheduleRow($subject->exam_schedule_id);
 
                 if(!$joinSub) return back();
 

@@ -52,6 +52,7 @@ use App\Models\SubjectAttendance;
 use App\Models\TransportHistory;
 use App\Models\Year;
 use App\Models\Role;
+use App\Support\ExamResultLookup;
 use App\Traits\AcademicScope;
 use App\Traits\CertificateScope;
 use App\Traits\LibraryScope;
@@ -2327,6 +2328,14 @@ class StudentController extends CollegeBaseController
     public function transfer(Request $request)
     {
         $data = [];
+
+        /*The office promotes the students who passed, so the list has to be able to say who
+          did. It never decides that itself - it asks the same grading engine the tabulation
+          sheet asks, and reads the result off that.*/
+        $results = app(ExamResultLookup::class);
+        $examGroup = $results->parseKey($request->get('exam_group'));
+        $resultFilter = $request->get('result_filter');
+
         if($request->all()) {
             $data['student'] = Student::select('id', 'reg_no', 'reg_date', 'first_name', 'middle_name', 'last_name',
                 'faculty', 'semester','academic_status', 'status')
@@ -2334,7 +2343,30 @@ class StudentController extends CollegeBaseController
                     $this->commonStudentFilterCondition($query, $request);
                 })
                 ->get();
+
+            if ($examGroup) {
+                $resultIndex = $results->resultIndex($examGroup);
+
+                foreach ($data['student'] as $student) {
+                    $student->exam_result = isset($resultIndex[$student->id])
+                        ? $resultIndex[$student->id]
+                        : null;
+                }
+
+                $data['student'] = $data['student']
+                    ->filter(function ($student) use ($results, $resultFilter) {
+                        return $results->matches($student->exam_result, $resultFilter);
+                    })
+                    ->values();
+
+                $data['result_summary'] = $results->summarise($data['student']);
+            }
         }
+
+        $data['exam_groups'] = $results->options();
+        $data['result_filters'] = $results->filterOptions();
+        $data['exam_group_selected'] = $examGroup ? $results->key($examGroup) : '';
+        $data['result_filter_selected'] = $resultFilter;
 
         $data['faculties'] = $this->activeFaculties();
         $data['batch'] = $this->activeBatch();

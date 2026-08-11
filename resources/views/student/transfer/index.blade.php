@@ -45,6 +45,22 @@
 
             $('#filter-btn').click(function () {
                 @include('student.includes.common-script.student_filter_common_script')
+
+                /*The exam and the pass/fail choice ride along with the rest of the filter.
+                  They are added here rather than in the shared filter script because no other
+                  student screen has them.*/
+                var exam_group = $('#filter-exam-group').val();
+                var result_filter = $('#filter-result').val();
+
+                if (exam_group) {
+                    url += (flag ? '&' : '?') + 'exam_group=' + encodeURIComponent(exam_group);
+                    flag = true;
+
+                    if (result_filter) {
+                        url += '&result_filter=' + encodeURIComponent(result_filter);
+                    }
+                }
+
                 location.href = url;
             });
 

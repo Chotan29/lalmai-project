@@ -27,6 +27,17 @@
             <hr class="hr-8">
             <span class="pull-right tableTools-container"></span>
         </div>
+
+        @if (!empty($data['result_summary']))
+            @php($summary = $data['result_summary'])
+            <div class="alert alert-info" style="margin-bottom: 8px;">
+                <strong>{{ number_format($summary['listed']) }}</strong> student(s) listed &mdash;
+                {{ number_format($summary['passed']) }} passed,
+                {{ number_format($summary['failed']) }} failed,
+                {{ number_format($summary['no_result']) }} did not sit this exam.
+                <span class="grey">Pass and fail are read from the same marks as the tabulation sheet.</span>
+            </div>
+        @endif
         {{--<div class="table-header">
             {{ $panel }}  Record list on table. Filter {{ $panel }} using the filter.
         </div>--}}
@@ -47,6 +58,9 @@
                         <th>Reg. Date</th>
                         <th>Reg. Num.</th>
                         <th>Name of Student</th>
+                        @if (!empty($data['exam_group_selected']))
+                            <th>Result</th>
+                        @endif
                         <th>{{ __('common.status')}}</th>
                     </tr>
                     </thead>
@@ -68,6 +82,24 @@
                                 </td>
                                 <td><a href="{{ route($base_route.'.view', ['id' => encrypt($student->id)]) }}">{{ $student->reg_no }}</a></td>
                                 <td> {{ $student->first_name.' '.$student->middle_name.' '. $student->last_name }}</td>
+                                @if (!empty($data['exam_group_selected']))
+                                    @php($result = isset($student->exam_result) ? $student->exam_result : null)
+                                    <td>
+                                        @if (!$result)
+                                            {{-- Not in this exam at all. Never shown as passed. --}}
+                                            <span class="label label-default">Not in this exam</span>
+                                        @elseif ($result['status'] === 'Pass')
+                                            <span class="label label-success">Pass</span>
+                                            @if (!empty($result['failed_optional']))
+                                                {{-- A failed 4th subject never held anybody back, so say so rather than hide it. --}}
+                                                <div class="grey" style="font-size: 11px;">4th subject not passed: {{ implode(', ', $result['failed_optional']) }}</div>
+                                            @endif
+                                        @else
+                                            <span class="label label-danger">Fail ({{ $result['failed_count'] }})</span>
+                                            <div class="grey" style="font-size: 11px;">{{ implode(', ', $result['failed']) }}</div>
+                                        @endif
+                                    </td>
+                                @endif
                                 <td>
                                     {{ ViewHelper::getAcademicStatus($student->academic_status)}}
                                     <div class="btn-group">
