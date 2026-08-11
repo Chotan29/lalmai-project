@@ -65,7 +65,14 @@ trait ExaminationScope{
      * in is left out entirely - an all-dash column only wastes width. As marks get entered,
      * the subject appears by itself.
      */
-    public function buildTabulationView(array $data, $scheduleIdList)
+    /**
+     * @param bool $passedOnly  Leave the students who failed off the sheet.
+     *
+     * Off by default, and it must stay that way: this method also builds the row a student sees
+     * on their own profile and in their own panel, and a student who failed still has to be
+     * able to read their own result. Only the sheets that get printed or published ask for it.
+     */
+    public function buildTabulationView(array $data, $scheduleIdList, $passedOnly = false)
     {
         $scheduleIds = array_filter(explode(',', (string) $scheduleIdList));
 
@@ -112,6 +119,30 @@ trait ExaminationScope{
 
         /* roll (reg_no) ascending, like a physical tabulation sheet */
         $data['student'] = $data['student']->sortBy('reg_no')->values();
+
+        /* Counted before anyone is taken off, or a passed-only sheet would report that all of
+           its students passed - true, and useless. These are what the sheet prints as its
+           appeared / passed / rate line, so they must describe the whole exam either way.
+           A remark is set by the grading engine above: "Pass", or "* Fail" where any subject
+           carries a star. Anything else is treated as not passed rather than guessed at. */
+        $appeared = $data['student']->count();
+        $passed = $data['student']->filter(function ($s) {
+            return trim((string) ($s->remark ?? '')) === 'Pass';
+        })->count();
+
+        $data['result_summary'] = [
+            'appeared'    => $appeared,
+            'passed'      => $passed,
+            'failed'      => $appeared - $passed,
+            'pass_rate'   => $appeared > 0 ? round($passed * 100 / $appeared, 2) : 0.0,
+            'passed_only' => (bool) $passedOnly,
+        ];
+
+        if ($passedOnly) {
+            $data['student'] = $data['student']->filter(function ($s) {
+                return trim((string) ($s->remark ?? '')) === 'Pass';
+            })->values();
+        }
 
         return $data;
     }

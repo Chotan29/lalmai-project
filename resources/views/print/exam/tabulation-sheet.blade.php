@@ -85,6 +85,17 @@
                     </span>
                 @endability
 
+                {{-- Two versions of the same sheet: the whole class for the office's record, and
+                     the ones who passed for the notice board. A toggle rather than a setting,
+                     because it is a choice made per print, not once. --}}
+                @php($passedOnly = !empty($data['result_summary']['passed_only']))
+                <input type="hidden" name="passed_only" id="tab-passed-field" value="{{ $passedOnly ? 1 : 0 }}"/>
+                <button type="submit" name="passed_only" value="{{ $passedOnly ? 0 : 1 }}"
+                        class="btn btn-sm {{ $passedOnly ? 'btn-warning' : 'btn-purple' }}">
+                    <i class="ace-icon fa {{ $passedOnly ? 'fa-users' : 'fa-check-circle' }}"></i>
+                    {{ $passedOnly ? 'Show All Students' : 'Passed Students Only' }}
+                </button>
+
                 <a href="#" class="btn btn-primary btn-sm" onclick="window.print(); return false;">
                     <i class="ace-icon fa fa-print"></i> Print
                 </a>

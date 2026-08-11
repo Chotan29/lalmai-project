@@ -38,6 +38,27 @@
     .tab-meta { font-size: 14px; font-weight: bold; margin-top: 6px; color: var(--tab-brand-dark); }
     .tab-meta .group-box { border: 1px solid var(--tab-brand); background: #fff; padding: 2px 14px; display: inline-block; border-radius: 3px; }
 
+    /* Appeared / passed / rate. Prints as part of the sheet, because the figure is the first
+       thing anyone asks and the second thing anyone loses. */
+    .tab-summary {
+      margin-top: 6px;
+      font-size: 12px;
+      font-weight: normal;
+      color: var(--tab-brand-dark);
+    }
+    .tab-summary .tab-sum-item {
+      display: inline-block;
+      border: 1px solid var(--tab-brand);
+      background: #fff;
+      padding: 1px 10px;
+      margin-right: 5px;
+      border-radius: 3px;
+    }
+    .tab-summary .tab-sum-item b { font-weight: bold; margin-right: 5px; }
+    .tab-summary .tab-sum-rate { background: #eef6ef; }
+    /* Said in words, not only implied by a shorter list. */
+    .tab-summary .tab-sum-note { font-style: italic; }
+
     /* Many subjects x up to 5 component columns: every cell has to be tight. */
     .tab-main-table { width: 100%; border-collapse: collapse; font-size: 11px; table-layout: fixed; }
     .tab-main-table th, .tab-main-table td { border: 1px solid #9ec5ae; padding: 2px 1px; text-align: center; vertical-align: middle; word-wrap: break-word; }

@@ -612,11 +612,17 @@ class ExamPrintController extends CollegeBaseController
             return $data;
         }
 
+        /* A sheet of the ones who passed, for the notice board. Asked for explicitly; the full
+           sheet stays the default, because the office's own record has to hold everybody who
+           sat the exam. The appeared / passed / rate line is counted before anyone is left off,
+           so both versions of the sheet report the same exam. */
+        $passedOnly = in_array((string) $request->get('passed_only'), ['1', 'true', 'yes'], true);
+
         /* Columns, cell count and roll order all come from the trait, so this sheet and the
            row drawn on the student profile / student panel are built by the same code. */
-        $data = $this->buildTabulationView($data, $request->get('exam_schedule_id'));
+        $data = $this->buildTabulationView($data, $request->get('exam_schedule_id'), $passedOnly);
 
-        $fileName = 'Tabulation_Sheet_'
+        $fileName = ($passedOnly ? 'Tabulation_Sheet_Passed_' : 'Tabulation_Sheet_')
             . str_replace(' ', '_', ViewHelper::getExamById($data['exam']))
             . '_' . Carbon::now()->format('d-m-Y');
 

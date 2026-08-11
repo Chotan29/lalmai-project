@@ -44,6 +44,23 @@
                 <span class="group-box">Group-{{ ViewHelper::getFacultyTitle($data['faculty']) }}</span>
                 <span style="float:right;">Date: {{ \Carbon\Carbon::now()->format('d.m.Y') }}</span>
             </div>
+
+            {{-- Appeared, passed and the rate. Counted across the whole exam even on a sheet
+                 that lists only those who passed - otherwise the sheet would say 100% and
+                 mean nothing. A sheet that leaves people off says so, in writing, or a reader
+                 has no way to know the list is not everybody. --}}
+            @if(!empty($data['result_summary']))
+                @php($tabSum = $data['result_summary'])
+                <div class="tab-summary">
+                    <span class="tab-sum-item"><b>Appeared</b> {{ number_format($tabSum['appeared']) }}</span>
+                    <span class="tab-sum-item"><b>Passed</b> {{ number_format($tabSum['passed']) }}</span>
+                    <span class="tab-sum-item"><b>Failed</b> {{ number_format($tabSum['failed']) }}</span>
+                    <span class="tab-sum-item tab-sum-rate"><b>Pass Rate</b> {{ number_format($tabSum['pass_rate'], 2) }}%</span>
+                    @if(!empty($tabSum['passed_only']))
+                        <span class="tab-sum-note">This sheet lists the passed students only.</span>
+                    @endif
+                </div>
+            @endif
         </td>
         <td style="width:180px;">
             <table class="tab-scale-table">

@@ -84,14 +84,30 @@ trait StudentScopes{
         }
     }
 
+    /**
+     * Academic statuses, read once for the request.
+     *
+     * Same reason as the departments and semesters in FacultySemesterScope: a list screen calls
+     * this once per row, and there are only a few statuses. On the fee collection screen it was
+     * a hundred separate queries for a table small enough to hold in a sentence.
+     *
+     * Held for one request only, so an edited status is right on the very next page.
+     */
+    protected static $studentStatusCache = null;
+
+    protected function studentStatusList()
+    {
+        if (self::$studentStatusCache === null) {
+            self::$studentStatusCache = StudentStatus::pluck('title', 'id')->all();
+        }
+        return self::$studentStatusCache;
+    }
+
     public function getStudentAcademicStatusId($id)
     {
-        $student = StudentStatus::find($id);
-        if ($student) {
-            return $student->title;
-        }else{
-            return "Unknown";
-        }
+        $all = $this->studentStatusList();
+
+        return $all[$id] ?? "Unknown";
     }
 
     public function getStudentBatchId($id)

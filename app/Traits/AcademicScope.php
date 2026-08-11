@@ -23,14 +23,20 @@ trait AcademicScope{
         }
     }
 
+    /**
+     * The same list again, reached through a different trait. Held for the request, for the
+     * same reason: a list screen asks it once per row for a table with a handful of rows.
+     * Its own store, because a class may use this trait without StudentScopes.
+     */
+    protected static $academicStatusCache = null;
+
     public function getAcademicStatus($id)
     {
-        $status = StudentStatus::find($id);
-        if ($status) {
-            return $status->title;
-        }else{
-            return "Unknown";
+        if (self::$academicStatusCache === null) {
+            self::$academicStatusCache = StudentStatus::pluck('title', 'id')->all();
         }
+
+        return self::$academicStatusCache[$id] ?? "Unknown";
     }
 
     public function getAttendanceFullStatus($id)
