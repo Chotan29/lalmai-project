@@ -80,19 +80,22 @@ class OnlinePaymentController extends CollegeBaseController
                 ->where(function ($query) use ($request) {
                     $this->commonStudentFilterCondition($query, $request);
 
-                    if ($request->has('pay_date_start') && $request->has('pay_date_end')) {
-                        $query->whereBetween('op.date', [$request->get('pay_date_start'), $request->get('pay_date_end')]);
-                        $this->filter_query['op.pay_date_start'] = $request->get('pay_date_start');
-                        $this->filter_query['op.pay_date_end'] = $request->get('pay_date_end');
-                    } elseif ($request->has('pay_date_start')) {
-                        $query->where('op.date', '=', $request->get('pay_date_start'));
-                        $this->filter_query['op.pay_date_start'] = $request->get('pay_date_start');
-                    } elseif ($request->has('op.pay_date_end')) {
-                        $query->where('op.date', '=', $request->get('pay_date_end'));
-                        $this->filter_query['op.pay_date_end'] = $request->get('pay_date_end');
+                    /* op.date is a datetime and every payment on file carries a clock time, so a range
+                       ending on the 10th has to end at 23:59:59 or that whole day is dropped. The start
+                       date on its own was also compared with '=' - matching midnight and nothing else -
+                       and the end-date-only branch tested for a key no browser sends. Closed in one
+                       place now, in DateTimeScope, rather than four lines repeated per screen. */
+                    $this->filterDayRange($query, 'op.date',
+                        $request->get('pay_date_start'), $request->get('pay_date_end'));
+
+                    if ($request->filled('pay_date_start')) {
+                        $this->filter_query['pay_date_start'] = $request->get('pay_date_start');
+                    }
+                    if ($request->filled('pay_date_end')) {
+                        $this->filter_query['pay_date_end'] = $request->get('pay_date_end');
                     }
 
-                    if ($request->has('payment_gateway')) {
+                    if ($request->filled('payment_gateway')) {
                         $query->where('op.payment_gateway', '=', $request->payment_gateway);
                         $this->filter_query['op.payment_gateway'] = $request->payment_gateway;
                     }
@@ -158,19 +161,22 @@ class OnlinePaymentController extends CollegeBaseController
             ->where(function ($query) use ($request) {
                 $this->commonStudentFilterCondition($query, $request);
 
-                if ($request->has('pay_date_start') && $request->has('pay_date_end')) {
-                    $query->whereBetween('op.date', [$request->get('pay_date_start'), $request->get('pay_date_end')]);
-                    $this->filter_query['op.pay_date_start'] = $request->get('pay_date_start');
-                    $this->filter_query['op.pay_date_end'] = $request->get('pay_date_end');
-                } elseif ($request->has('pay_date_start')) {
-                    $query->where('op.date', '=', $request->get('pay_date_start'));
-                    $this->filter_query['op.pay_date_start'] = $request->get('pay_date_start');
-                } elseif ($request->has('op.pay_date_end')) {
-                    $query->where('op.date', '=', $request->get('pay_date_end'));
-                    $this->filter_query['op.pay_date_end'] = $request->get('pay_date_end');
+                /* op.date is a datetime and every payment on file carries a clock time, so a range
+                   ending on the 10th has to end at 23:59:59 or that whole day is dropped. The start
+                   date on its own was also compared with '=' - matching midnight and nothing else -
+                   and the end-date-only branch tested for a key no browser sends. Closed in one
+                   place now, in DateTimeScope, rather than four lines repeated per screen. */
+                $this->filterDayRange($query, 'op.date',
+                    $request->get('pay_date_start'), $request->get('pay_date_end'));
+
+                if ($request->filled('pay_date_start')) {
+                    $this->filter_query['pay_date_start'] = $request->get('pay_date_start');
+                }
+                if ($request->filled('pay_date_end')) {
+                    $this->filter_query['pay_date_end'] = $request->get('pay_date_end');
                 }
 
-                if ($request->has('payment_gateway')) {
+                if ($request->filled('payment_gateway')) {
                     $query->where('op.payment_gateway', '=', $request->payment_gateway);
                     $this->filter_query['op.payment_gateway'] = $request->payment_gateway;
                 }

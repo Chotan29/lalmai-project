@@ -40,15 +40,16 @@ class FeeCollectionReportController extends CollegeBaseController
         if($request->all()){
             if ($request->start_date && $request->end_date) {
                 $collection = FeeCollection::where(function ($query) use ($request) {
-                    if ($request->has('start_date') && $request->has('end_date')) {
-                        $query->whereBetween('date', [$request->get('start_date'), $request->get('end_date')]);
+                    /* fee_collections.date carries a clock time, so the last day of a range has to be
+                       closed at 23:59:59 or it is dropped entirely - and a start date on its own was
+                       compared with '=', matching midnight and nothing else. */
+                    $this->filterDayRange($query, 'date',
+                        $request->get('start_date'), $request->get('end_date'));
+
+                    if ($request->filled('start_date')) {
                         $this->filter_query['start_date'] = $request->get('start_date');
-                        $this->filter_query['end_date'] = $request->get('end_date');
-                    } elseif ($request->has('start_date')) {
-                        $query->where('date', '=', $request->get('start_date'));
-                        $this->filter_query['start_date'] = $request->get('start_date');
-                    } elseif ($request->has('end_date')) {
-                        $query->where('date', '=', $request->get('end_date'));
+                    }
+                    if ($request->filled('end_date')) {
                         $this->filter_query['end_date'] = $request->get('end_date');
                     }
 
@@ -79,15 +80,16 @@ class FeeCollectionReportController extends CollegeBaseController
                                                         'fee_collections.discount', 'fee_collections.fine', 'fee_collections.paid_amount',
                                                         'fee_collections.payment_method','fee_collections.note','fee_collections.response','fee_collections.status','fm.semester','fm.fee_head')
                                                     ->where(function ($query) use ($request) {
-                                                        if ($request->has('start_date') && $request->has('end_date')) {
-                                                            $query->whereBetween('date', [$request->get('start_date'), $request->get('end_date')]);
+                                                        /* fee_collections.date carries a clock time, so the last day of a range has to be
+                                                           closed at 23:59:59 or it is dropped entirely - and a start date on its own was
+                                                           compared with '=', matching midnight and nothing else. */
+                                                        $this->filterDayRange($query, 'date',
+                                                            $request->get('start_date'), $request->get('end_date'));
+
+                                                        if ($request->filled('start_date')) {
                                                             $this->filter_query['start_date'] = $request->get('start_date');
-                                                            $this->filter_query['end_date'] = $request->get('end_date');
-                                                        } elseif ($request->has('start_date')) {
-                                                            $query->where('date', '=', $request->get('start_date'));
-                                                            $this->filter_query['start_date'] = $request->get('start_date');
-                                                        } elseif ($request->has('end_date')) {
-                                                            $query->where('date', '=', $request->get('end_date'));
+                                                        }
+                                                        if ($request->filled('end_date')) {
                                                             $this->filter_query['end_date'] = $request->get('end_date');
                                                         }
 

@@ -12,6 +12,78 @@ trait DateTimeScope{
 
     use NumberToWordScope;
 
+    /**
+     * The last instant of a day, for filtering a column that stores a time as well as a date.
+     *
+     * online_payments.date and fee_collections.date are datetime, and every single row in both
+     * carries a real clock time - a payment at 14:29, not at midnight. Comparing them against
+     * a bare 'YYYY-MM-DD' compares them against 00:00:00, so a range ending on the 10th ended
+     * at midnight on the 10th and threw away that whole day's money without saying so. That is
+     * the "the date filter does nothing" that gets reported.
+     *
+     * Returns null for a blank date so a caller can tell "no date given" from "this date".
+     */
+    public function endOfDay($date)
+    {
+        $date = trim((string) $date);
+
+        if ($date === '') {
+            return null;
+        }
+
+        try {
+            return Carbon::parse($date)->format('Y-m-d') . ' 23:59:59';
+        } catch (\Exception $e) {
+            /*Something that is not a date at all. Better to filter on nothing than on rubbish.*/
+            return null;
+        }
+    }
+
+    /**
+     * The first instant of a day. The pair to endOfDay, so a range reads the same at both ends.
+     */
+    public function startOfDay($date)
+    {
+        $date = trim((string) $date);
+
+        if ($date === '') {
+            return null;
+        }
+
+        try {
+            return Carbon::parse($date)->format('Y-m-d') . ' 00:00:00';
+        } catch (\Exception $e) {
+            return null;
+        }
+    }
+
+    /**
+     * Apply a from/to day filter to a column that may carry a time.
+     *
+     * Written here rather than at each screen because the same four lines were written out at
+     * every one of them, and three of the copies had a different bug in them: one compared a
+     * start date with '=' so it only ever matched midnight, one tested for a request key that
+     * nothing sends, and none of them closed the last day.
+     *
+     * A blank box is not a filter. has() counts an empty string as present, which is how an
+     * untouched date box could still narrow a report down to nothing.
+     */
+    public function filterDayRange($query, $column, $from, $to)
+    {
+        $from = $this->startOfDay($from);
+        $to = $this->endOfDay($to);
+
+        if ($from !== null && $to !== null) {
+            $query->whereBetween($column, [$from, $to]);
+        } elseif ($from !== null) {
+            $query->where($column, '>=', $from);
+        } elseif ($to !== null) {
+            $query->where($column, '<=', $to);
+        }
+
+        return $query;
+    }
+
     public function getActiveYear()
     {
         $year = Year::where('active_status',1)->first();

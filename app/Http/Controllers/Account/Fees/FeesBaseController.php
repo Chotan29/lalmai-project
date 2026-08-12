@@ -99,17 +99,18 @@ class FeesBaseController extends CollegeBaseController
 
                 $this->commonStudentFilterCondition($query, $request);
 
-                if ($request->has('fee_collection_date_start') && $request->has('fee_collection_date_end')) {
-                    $query->whereBetween('fee_collections.date', [$request->get('fee_collection_date_start'), $request->get('fee_collection_date_end')]);
+                /* fee_collections.date is a datetime and every one of the receipts on file
+                   carries a real clock time, so a range ending on the 10th used to end at
+                   midnight on the 10th and leave that whole day's money off the report - and
+                   off the total under it. Closed at 23:59:59 through the shared helper. */
+                $this->filterDayRange($query, 'fee_collections.date',
+                    $request->get('fee_collection_date_start'),
+                    $request->get('fee_collection_date_end'));
+
+                if ($request->filled('fee_collection_date_start')) {
                     $this->filter_query['fee_collection_date_start'] = $request->get('fee_collection_date_start');
-                    $this->filter_query['fee_collection_date_end'] = $request->get('fee_collection_date_end');
                 }
-                elseif ($request->has('fee_collection_date_start')) {
-                    $query->where('fee_collections.date', '>=', $request->get('fee_collection_date_start'));
-                    $this->filter_query['fee_collection_date_start'] = $request->get('fee_collection_date_start');
-                }
-                elseif($request->has('fee_collection_date_end')) {
-                    $query->where('fee_collections.date', '<=', $request->get('fee_collection_date_end'));
+                if ($request->filled('fee_collection_date_end')) {
                     $this->filter_query['fee_collection_date_end'] = $request->get('fee_collection_date_end');
                 }
 

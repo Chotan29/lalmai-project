@@ -58,21 +58,29 @@ class OnlineFeePaymentReportController extends CollegeBaseController
         $applyFilters = function ($query) use ($request) {
             $this->commonStudentFilterCondition($query, $request);
 
-            if ($request->has('pay_date_start') && $request->has('pay_date_end')) {
-                $query->whereBetween('op.date', [$request->get('pay_date_start'), $request->get('pay_date_end')]);
-                $this->filter_query['op.pay_date_start'] = $request->get('pay_date_start');
-                $this->filter_query['op.pay_date_end'] = $request->get('pay_date_end');
-            } elseif ($request->has('pay_date_start')) {
-                $query->where('op.date', '=', $request->get('pay_date_start'));
-                $this->filter_query['op.pay_date_start'] = $request->get('pay_date_start');
-            } elseif ($request->has('op.pay_date_end')) {
-                $query->where('op.date', '=', $request->get('pay_date_end'));
-                $this->filter_query['op.pay_date_end'] = $request->get('pay_date_end');
+            /* Pay Date. op.date is a datetime and every payment on file carries a real clock
+               time, so the day has to be closed at 23:59:59 or a range ending on the 10th ends
+               at midnight and drops that whole day. Three separate things were wrong here: the
+               range never closed the last day, a start date on its own was compared with '=' so
+               it matched only midnight and always returned nothing, and the end-date-only branch
+               tested for a key called 'op.pay_date_end' that no browser has ever sent. All three
+               look the same to whoever is using it: the date does nothing. */
+            $this->filterDayRange($query, 'op.date',
+                $request->get('pay_date_start'), $request->get('pay_date_end'));
+
+            if ($request->filled('pay_date_start')) {
+                $this->filter_query['pay_date_start'] = $request->get('pay_date_start');
+            }
+            if ($request->filled('pay_date_end')) {
+                $this->filter_query['pay_date_end'] = $request->get('pay_date_end');
             }
 
-            if ($request->has('payment_gateway')) {
+            /* filled(), not has(): an untouched "Select Gateway" box sends an empty string, and
+               has() counts that as present - which narrowed the report to payments made through
+               a gateway called nothing. */
+            if ($request->filled('payment_gateway')) {
                 $query->where('op.payment_gateway', '=', $request->payment_gateway);
-                $this->filter_query['op.payment_gateway'] = $request->payment_gateway;
+                $this->filter_query['payment_gateway'] = $request->payment_gateway;
             }
         };
 
