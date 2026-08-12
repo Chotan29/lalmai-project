@@ -9,15 +9,24 @@ use Illuminate\Http\Request;
 
 trait UserScope{
 
+    use RequestLookupCache;
+
+    /**
+     * Who entered this row.
+     *
+     * Printed in the last column of every listing in the system, so it was fetched once per
+     * row for a handful of clerks. Read once per request now - the same fix, from the same
+     * shared store, as the fee heads and the department names.
+     */
     public function getUserNameId($id)
     {
-        $user = User::find($id);
+        $id = (int) $id;
 
-        if ($user) {
-            return $user->name;
-        }else{
-            return "Unknown";
-        }
+        $user = $id > 0 ? $this->lookupOnce('user:' . $id, function () use ($id) {
+            return User::find($id);
+        }) : null;
+
+        return $user ? $user->name : "Unknown";
     }
 
     public function getRoleByUserId($id)

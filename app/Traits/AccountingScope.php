@@ -22,54 +22,74 @@ trait AccountingScope{
     //use SmsEmailScope;
     //todo:
 
+    /*These five are called from inside table rows. A receive-history sheet of 5,782 receipts
+      asked which fee head each one was 5,782 times, for about a dozen distinct answers. The
+      little store that stops that is written once, in RequestLookupCache, rather than a sixth
+      time here.*/
+    use RequestLookupCache;
+
+    /**
+     * One row, fetched once per request, whatever the id is asked for.
+     *
+     * A missing id still gets remembered - as null - so a bad reference costs one query rather
+     * than one per row, and still answers "Unknown" exactly as it did before.
+     */
+    private function accountingRow($prefix, $id, callable $load)
+    {
+        $id = (int) $id;
+
+        if ($id <= 0) {
+            return null;
+        }
+
+        return $this->lookupOnce($prefix . ':' . $id, function () use ($id, $load) {
+            return $load($id);
+        });
+    }
+
     public function getFeeHeadById($id)
     {
-        $feeHead = FeeHead::find($id);
-        if ($feeHead) {
-            return $feeHead->fee_head_title;
-        }else{
-            return "Unknown";
-        }
+        $feeHead = $this->accountingRow('fee_head', $id, function ($id) {
+            return FeeHead::find($id);
+        });
+
+        return $feeHead ? $feeHead->fee_head_title : "Unknown";
     }
 
     public function getTransactionHeadById($id)
     {
-        $trHead = TransactionHead::find($id);
-        if ($trHead) {
-            return $trHead->tr_head;
-        }else{
-            return "Unknown";
-        }
+        $trHead = $this->accountingRow('tr_head', $id, function ($id) {
+            return TransactionHead::find($id);
+        });
+
+        return $trHead ? $trHead->tr_head : "Unknown";
     }
 
     public function getPayrollHeadById($id)
     {
-        $payrollHead = PayrollHead::find($id);
-        if ($payrollHead) {
-            return $payrollHead->title;
-        }else{
-            return "Unknown";
-        }
+        $payrollHead = $this->accountingRow('payroll_head', $id, function ($id) {
+            return PayrollHead::find($id);
+        });
+
+        return $payrollHead ? $payrollHead->title : "Unknown";
     }
 
     public function getBankNameById($id)
     {
-        $bank = Bank::find($id);
-        if ($bank) {
-            return $bank->bank_name;
-        }else{
-            return "Unknown";
-        }
+        $bank = $this->accountingRow('bank', $id, function ($id) {
+            return Bank::find($id);
+        });
+
+        return $bank ? $bank->bank_name : "Unknown";
     }
 
     public function getAcGroupById($id)
     {
-        $ac = AccountCategory::find($id);
-        if ($ac) {
-            return $ac->ac_name;
-        }else{
-            return "Unknown";
-        }
+        $ac = $this->accountingRow('ac_group', $id, function ($id) {
+            return AccountCategory::find($id);
+        });
+
+        return $ac ? $ac->ac_name : "Unknown";
     }
 
     /**

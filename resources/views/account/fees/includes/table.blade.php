@@ -1,7 +1,14 @@
 <div class="row">
     <div class="col-xs-12">
         <h4 class="header large lighter blue"><i class="fa fa-list" aria-hidden="true"></i>&nbsp;{{ $panel }} List</h4>
-        <div class="clearfix">
+        <div class="clearfix hidden-print">
+            {{-- Print carries the filter across unchanged and adds print=1, so the sheet that
+                 comes out is the list on screen - every row of it, not just this page. --}}
+            <a class="btn btn-primary btn-sm pull-left"
+               href="{{ $data['url'] }}?{{ http_build_query(array_merge(request()->except('page', 'print'), ['print' => 1])) }}"
+               target="_blank">
+                <i class="fa fa-print" aria-hidden="true"></i>&nbsp;Print Report
+            </a>
             <span class="pull-right tableTools-container"></span>
         </div>
         {{--<div class="table-header">
@@ -83,11 +90,15 @@
                     @endif
                     </tbody>
                     <tfoot>
+                        {{-- The whole filter, not this page of it. Adding up the rows on screen
+                             showed the sum of twenty-five receipts for a filter matching three
+                             hundred, and looked like a real answer. Counted in the database over
+                             the same query the list is drawn from. --}}
                         <tr style="font-size: 14px; background: orangered;color: white;">
-                            <td colspan="6" class="text-right">Total</td>
-                            <td  class="text-right">{{ $data['feesCollection']->sum('paid_amount') }}</td>
-                            <td> </td>
-                            <td> </td>
+                            <td colspan="6" class="text-right">Total ({{ number_format($data['totals']['row_count']) }} receipts)</td>
+                            <td class="text-right">{{ number_format($data['totals']['paid_amount'], 2) }}</td>
+                            <td class="text-right">{{ number_format($data['totals']['fine'], 2) }}</td>
+                            <td class="text-right">{{ number_format($data['totals']['discount'], 2) }}</td>
                             <td> </td>
                             <td> </td>
                             <td> </td>

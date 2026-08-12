@@ -33,61 +33,150 @@ class FeesBaseController extends CollegeBaseController
 
     }
 
+    /**
+     * What the reader is looking at, in words, for the top of the printed sheet.
+     *
+     * A report that does not say which dates and which head it covers is a page of numbers
+     * somebody has to take on trust. Read back off the request rather than off the rows, so an
+     * empty result still says what was asked for.
+     */
+    private function feeCollectionFilterSummary(Request $request)
+    {
+        $parts = [];
+
+        $from = trim((string) $request->get('fee_collection_date_start'));
+        $to = trim((string) $request->get('fee_collection_date_end'));
+
+        if ($from !== '' && $to !== '') {
+            $parts[] = 'Date: ' . $from . ' to ' . $to;
+        } elseif ($from !== '') {
+            $parts[] = 'Date: from ' . $from;
+        } elseif ($to !== '') {
+            $parts[] = 'Date: up to ' . $to;
+        }
+
+        if ($request->get('fee_heads') > 0) {
+            $parts[] = 'Fee Head: ' . ViewHelper::getFeeHeadById($request->get('fee_heads'));
+        }
+
+        if (trim((string) $request->get('payment_method')) !== '') {
+            $parts[] = 'Method: ' . $request->get('payment_method');
+        }
+
+        if ($request->get('faculty') > 0) {
+            $parts[] = 'Department: ' . ViewHelper::getFacultyTitle($request->get('faculty'));
+        }
+
+        if ($request->get('semester_select') > 0) {
+            $parts[] = 'Class: ' . ViewHelper::getSemesterTitle($request->get('semester_select'));
+        }
+
+        if (trim((string) $request->get('reg_no')) !== '') {
+            $parts[] = 'Reg. No: ' . $request->get('reg_no');
+        }
+
+        return $parts ? implode('   |   ', $parts) : 'All receipts, no filter applied';
+    }
+
+    /**
+     * The receive-history query, written once.
+     *
+     * Three things read this list - the page on screen, the total under it, and the printed
+     * report - and they must never be able to disagree about what "the filter" means. Building
+     * the query in one place is what guarantees that: a filter added here is a filter the
+     * printed sheet obeys, with nothing to remember.
+     */
+    private function feeCollectionQuery(Request $request, $ordered = true)
+    {
+        $query = FeeCollection::select('fee_collections.created_at','fee_collections.students_id', 'fee_collections.fee_masters_id',
+            'fee_collections.date', 'fee_collections.discount', 'fee_collections.fine', 'fee_collections.paid_amount',
+            'fee_collections.payment_method','fee_collections.note','fee_collections.ref_no','fee_collections.external_ref_no','fee_collections.created_by','fee_collections.status as fc_status','fee_collections.verified_at',
+            'fm.status as fm_status','fm.fee_head',
+            'students.reg_no','students.reg_date', 'students.first_name','students.middle_name', 'students.last_name','students.semester');
+
+        if ($request->all()) {
+            $query->where(function ($query) use ($request) {
+
+                $this->commonStudentFilterCondition($query, $request);
+
+                if ($request->has('fee_collection_date_start') && $request->has('fee_collection_date_end')) {
+                    $query->whereBetween('fee_collections.date', [$request->get('fee_collection_date_start'), $request->get('fee_collection_date_end')]);
+                    $this->filter_query['fee_collection_date_start'] = $request->get('fee_collection_date_start');
+                    $this->filter_query['fee_collection_date_end'] = $request->get('fee_collection_date_end');
+                }
+                elseif ($request->has('fee_collection_date_start')) {
+                    $query->where('fee_collections.date', '>=', $request->get('fee_collection_date_start'));
+                    $this->filter_query['fee_collection_date_start'] = $request->get('fee_collection_date_start');
+                }
+                elseif($request->has('fee_collection_date_end')) {
+                    $query->where('fee_collections.date', '<=', $request->get('fee_collection_date_end'));
+                    $this->filter_query['fee_collection_date_end'] = $request->get('fee_collection_date_end');
+                }
+
+                if ($request->has('fee_heads') && $request->get('fee_heads') > 0) {
+                    $query->where('fm.fee_head', '=',$request->fee_heads);
+                    $this->filter_query['fm.fee_head'] = $request->fee_heads;
+                }
+
+                if ($request->has('payment_method') && $request->get('payment_method') !=null) {
+                    $query->where('fee_collections.payment_method', 'like', '%' . $request->payment_method . '%');
+                    $this->filter_query['fee_collections.payment_method'] = $request->payment_method;
+                }
+
+            });
+        }
+
+        $query->join('students', 'students.id','=','fee_collections.students_id')
+            ->join('fee_masters as fm','fm.id','=','fee_collections.fee_masters_id');
+
+        /*The totals ask for one row of sums, and an ORDER BY on a column that is not being
+          grouped is both pointless there and something a strict MySQL will refuse outright.*/
+        if ($ordered) {
+            $query->orderBy('fee_collections.created_at','desc');
+        }
+
+        return $query;
+    }
+
+    /**
+     * What the whole filter comes to - not what one page of it comes to.
+     *
+     * The total under the table used to add up the rows it could see, so a filter matching three
+     * hundred receipts showed the sum of the twenty-five on screen and looked like a real answer.
+     * Counted in the database over the same query the list is drawn from.
+     */
+    private function feeCollectionTotals(Request $request)
+    {
+        $row = $this->feeCollectionQuery($request, false)
+            ->selectRaw('COUNT(*) as row_count, COALESCE(SUM(fee_collections.paid_amount),0) as paid_amount, COALESCE(SUM(fee_collections.fine),0) as fine, COALESCE(SUM(fee_collections.discount),0) as discount')
+            ->first();
+
+        return [
+            'row_count' => (int) ($row->row_count ?? 0),
+            'paid_amount' => (float) ($row->paid_amount ?? 0),
+            'fine' => (float) ($row->fine ?? 0),
+            'discount' => (float) ($row->discount ?? 0),
+        ];
+    }
+
     public function index(Request $request)
     {
         $data = [];
-        if($request->all()) {
-            $data['feesCollection'] = FeeCollection::select('fee_collections.created_at','fee_collections.students_id', 'fee_collections.fee_masters_id',
-                'fee_collections.date', 'fee_collections.discount', 'fee_collections.fine', 'fee_collections.paid_amount',
-                'fee_collections.payment_method','fee_collections.note','fee_collections.ref_no','fee_collections.external_ref_no','fee_collections.created_by','fee_collections.status as fc_status','fee_collections.verified_at',
-                'fm.status as fm_status','fm.fee_head',
-                'students.reg_no','students.reg_date', 'students.first_name','students.middle_name', 'students.last_name','students.semester')
-                ->where(function ($query) use ($request) {
 
-                    $this->commonStudentFilterCondition($query, $request);
+        /*The office prints this list as a report. On screen it stays paged - a clerk wants the
+          latest receipts, not three hundred rows - but a printed sheet that stopped after
+          twenty-five would be a sheet that quietly left money out, so printing takes the lot.*/
+        $printMode = (bool) $request->get('print');
 
-                    if ($request->has('fee_collection_date_start') && $request->has('fee_collection_date_end')) {
-                        $query->whereBetween('fee_collections.date', [$request->get('fee_collection_date_start'), $request->get('fee_collection_date_end')]);
-                        $this->filter_query['fee_collection_date_start'] = $request->get('fee_collection_date_start');
-                        $this->filter_query['fee_collection_date_end'] = $request->get('fee_collection_date_end');
-                    }
-                    elseif ($request->has('fee_collection_date_start')) {
-                        $query->where('fee_collections.date', '>=', $request->get('fee_collection_date_start'));
-                        $this->filter_query['fee_collection_date_start'] = $request->get('fee_collection_date_start');
-                    }
-                    elseif($request->has('fee_collection_date_end')) {
-                        $query->where('fee_collections.date', '<=', $request->get('fee_collection_date_end'));
-                        $this->filter_query['fee_collection_date_end'] = $request->get('fee_collection_date_end');
-                    }
+        $query = $this->feeCollectionQuery($request);
 
-                    if ($request->has('fee_heads') && $request->get('fee_heads') > 0) {
-                        $query->where('fm.fee_head', '=',$request->fee_heads);
-                        $this->filter_query['fm.fee_head'] = $request->fee_heads;
-                    }
+        $data['feesCollection'] = $printMode
+            ? $query->get()
+            : $query->paginate(env('PAGINATION_LIMIT',$this->pagination_limit));
 
-                    if ($request->has('payment_method') && $request->get('payment_method') !=null) {
-                        $query->where('fee_collections.payment_method', 'like', '%' . $request->payment_method . '%');
-                        $this->filter_query['fee_collections.payment_method'] = $request->payment_method;
-                    }
-
-                })
-                ->join('students', 'students.id','=','fee_collections.students_id')
-                ->join('fee_masters as fm','fm.id','=','fee_collections.fee_masters_id')
-                ->orderBy('fee_collections.created_at','desc')
-                ->paginate(env('PAGINATION_LIMIT',$this->pagination_limit));
-        }else{
-            $year = $this->getActiveYear();
-            $data['feesCollection'] = FeeCollection::select('fee_collections.created_at','fee_collections.students_id', 'fee_collections.fee_masters_id',
-                'fee_collections.date', 'fee_collections.discount', 'fee_collections.fine', 'fee_collections.paid_amount',
-                'fee_collections.payment_method','fee_collections.note','fee_collections.ref_no','fee_collections.external_ref_no','fee_collections.created_by','fee_collections.status as fc_status','fee_collections.verified_at',
-                'fm.status as fm_status','fm.fee_head',
-                'students.reg_no','students.reg_date', 'students.first_name','students.middle_name', 'students.last_name','students.semester')
-                //->whereYear('fee_collections.date', '=', $year)
-                ->join('students', 'students.id','=','fee_collections.students_id')
-                ->join('fee_masters as fm','fm.id','=','fee_collections.fee_masters_id')
-                ->orderBy('fee_collections.created_at','desc')
-                ->paginate(env('PAGINATION_LIMIT',$this->pagination_limit));
-        }
+        $data['totals'] = $this->feeCollectionTotals($request);
+        $data['print_mode'] = $printMode;
+        $data['filter_summary'] = $this->feeCollectionFilterSummary($request);
 
         $data['faculties'] = $this->activeFaculties();
         $data['batch'] = $this->activeBatch();
@@ -99,9 +188,13 @@ class FeesBaseController extends CollegeBaseController
 
         $data['url'] = URL::current();
         $data['filter_query'] = $this->filter_query;
-        //dd($data['feesCollection']->toArray());
 
-        return view(parent::loadDataToView($this->view_path.'.index'), compact('data'));
+        /*The printed sheet is its own view. Keeping it apart means the screen the office uses
+          every day is not carrying print rules it has to work around, and a change to one
+          cannot quietly break the other.*/
+        $view = $printMode ? '.print' : '.index';
+
+        return view(parent::loadDataToView($this->view_path.$view), compact('data'));
     }
 
     public function balance(Request $request)

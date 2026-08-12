@@ -1,0 +1,898 @@
+@page { margin: 0 }
+body { margin: 0 }
+.sheet {
+  margin: 0;
+  overflow: hidden;
+  position: relative;
+  box-sizing: border-box;
+  page-break-after: always;
+}
+
+/** Paper sizes **/
+body.A3               .sheet { width: 297mm; height: 419mm }
+body.A3.landscape     .sheet { width: 420mm; height: 296mm }
+body.A4               .sheet { width: 210mm; height: 296mm }
+body.A4.landscape     .sheet { width: 297mm; height: 209mm }
+body.A5               .sheet { width: 148mm; height: 209mm }
+body.A5.landscape     .sheet { width: 210mm; height: 147mm }
+body.letter           .sheet { width: 216mm; height: 279mm }
+body.letter.landscape .sheet { width: 280mm; height: 215mm }
+body.legal            .sheet { width: 216mm; height: 356mm }
+body.legal.landscape  .sheet { width: 357mm; height: 215mm }
+
+/** Padding area **/
+.sheet.padding-10mm { padding: 10mm }
+.sheet.padding-15mm { padding: 15mm }
+.sheet.padding-20mm { padding: 20mm }
+.sheet.padding-25mm { padding: 25mm }
+
+/** For screen preview **/
+@media screen {
+  body { background: #e0e0e0 }
+  .sheet {
+    background: white;
+    box-shadow: 0 .5mm 2mm rgba(0,0,0,.3);
+    margin: 5mm auto;
+  }
+
+  span.receipt-copy {
+    font-family:'Alfa+Slab+One';
+    font-size: 22px;
+    font-weight: 600;
+    /*background:   #346da5;
+    color: white;*/
+    padding: 3px 15px;
+  }
+}
+
+/** Report letterhead - every report sheet **/
+/* Wrapped in a letterhead class so this dressing reaches only the report sheets; the same
+   partial keeps its old look on the receipts and everywhere else that includes it. */
+.fg-letterhead,
+.op-letterhead,
+.report-letterhead {
+  position: relative;
+  margin: 0 0 18px;
+  padding: 0 0 14px;
+  border-bottom: 0;
+}
+/* A thin band of the college colours instead of the old flat grey rule. */
+.fg-letterhead:after,
+.op-letterhead:after,
+.report-letterhead:after {
+  content: "";
+  display: block;
+  height: 3px;
+  margin-top: 12px;
+  border-radius: 2px;
+  background: linear-gradient(90deg, #1f3550 0%, #346da5 45%, #16a085 100%);
+}
+.fg-letterhead .institution-header,
+.op-letterhead .institution-header,
+.report-letterhead .institution-header {
+  padding: 0;
+  margin: 0;
+  border-bottom: 0;
+}
+.fg-letterhead .institution-header-grid,
+.op-letterhead .institution-header-grid,
+.report-letterhead .institution-header-grid {
+  grid-template-columns: 96px 1fr 96px;
+  align-items: center;
+}
+.fg-letterhead .logo-container,
+.op-letterhead .logo-container,
+.report-letterhead .logo-container { padding: 0; }
+.fg-letterhead .institution-logo,
+.op-letterhead .institution-logo,
+.report-letterhead .institution-logo { max-height: 78px; }
+
+.fg-letterhead .institution-slogan,
+.op-letterhead .institution-slogan,
+.report-letterhead .institution-slogan {
+  font-size: 10.5px;
+  font-style: normal;
+  font-weight: 600;
+  letter-spacing: .22em;
+  text-transform: uppercase;
+  color: #16a085;
+  margin-bottom: 4px;
+}
+.fg-letterhead .institution-name,
+.op-letterhead .institution-name,
+.report-letterhead .institution-name {
+  font-family: "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  font-size: 27px;
+  font-weight: 700;
+  letter-spacing: .04em;
+  color: #1f3550;
+  margin: 0;
+}
+.fg-letterhead .institution-contact,
+.op-letterhead .institution-contact,
+.report-letterhead .institution-contact {
+  margin-top: 7px;
+  font-size: 11.5px;
+  color: #5b6b7b;
+}
+.fg-letterhead .contact-item,
+.op-letterhead .contact-item,
+.report-letterhead .contact-item { margin: 0 9px 2px 0; }
+.fg-letterhead .contact-item i,
+.op-letterhead .contact-item i,
+.report-letterhead .contact-item i { color: #346da5; margin-right: 4px; }
+
+/** Report sheets - the one design every report under Account > Reports wears **/
+/* Written once here and worn by adding .report-sheet to a report's table block. The rules reach
+   plain <table> markup on purpose: the older reports were written with bare th and td and this
+   way they are dressed without their blades being rewritten column by column. */
+
+.report-sheet {
+  max-width: 1100px;
+  margin: 0 auto;
+  color: #2c3e50;
+  font-family: "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+
+/* Whatever heading the report already prints - print_head, a date range, a panel name. */
+.report-sheet h1,
+.report-sheet h2,
+.report-sheet h3,
+.report-sheet h4 {
+  text-align: center;
+  margin: 6px 0 14px;
+  font-size: 19px;
+  font-weight: 700;
+  letter-spacing: .02em;
+  text-transform: uppercase;
+  color: #1f3550;
+}
+
+/* The grid is drawn in the college colours rather than in grey. The frame is navy, the lines
+   between the columns a blue tint and the lines between the rows a lighter one - so a reader
+   following a row across the page keeps their place, and the eye still travels down a column
+   without the ruling shouting over the figures. */
+.report-sheet table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+  color: #333;
+  border: 2px solid #1f3550;
+}
+.report-sheet thead th,
+.report-sheet thead td {
+  background: #346da5;
+  color: #fff;
+  font-weight: 600;
+  font-size: 11px;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  padding: 9px 10px;
+  border: 1px solid #2c5c8a;
+  /* A teal rule under the heading: the band that closes the letterhead, repeated where the
+     figures begin. custom.css draws a red 2px rule under every th in the application and marks
+     it !important, so this has to answer in kind - on the report sheets only. */
+  border-bottom: 2px solid #16a085 !important;
+  vertical-align: middle;
+}
+.report-sheet tbody td,
+.report-sheet tbody th {
+  padding: 6px 10px;
+  border-left: 1px solid #cbdcec;
+  border-right: 1px solid #cbdcec;
+  border-top: 1px solid #e4eef7;
+  border-bottom: 1px solid #e4eef7;
+  vertical-align: middle;
+}
+.report-sheet tbody tr:nth-child(even) td { background: #f5f9fc; }
+
+.report-sheet tfoot td,
+.report-sheet tfoot th {
+  background: #1f3550;
+  color: #fff;
+  font-size: 15px;
+  font-weight: 700;
+  padding: 10px;
+  border: 1px solid #1f3550;
+  border-top: 2px solid #16a085;
+}
+
+/* Figures line up digit under digit, so a column of money can be read down the page. The older
+   reports mark those cells with Bootstrap's text-right, the newer ones with their own class. */
+.report-sheet .text-right,
+.report-sheet .align-right { text-align: right; }
+.report-sheet td.text-right,
+.report-sheet th.text-right {
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum";
+}
+
+/* Some of these reports were written with their colours inline - an orangered total row, a
+   black bar for the heading. Inline styles win over a stylesheet, so these are the one place
+   !important earns its keep; without it the shared design would stop at the door of the older
+   screens and each report would go on looking like a different system. */
+.report-sheet tr[style*="orangered"] td,
+.report-sheet tr[style*="orangered"] th {
+  background: #1f3550 !important;
+  color: #fff !important;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+/* The heading each of the older reports already prints, in its own inline colours. */
+.report-sheet span.receipt-copy {
+  display: inline-block;
+  background: transparent !important;
+  color: #1f3550 !important;
+  font-size: 17px !important;
+  font-weight: 700;
+  letter-spacing: .02em;
+  padding: 2px 0 !important;
+}
+
+/** Fee Head Collection - a whole fee, head by head **/
+/* Kept here with the rest of the print design rather than inline in the blade, so the report
+   picks up any later change to paper.css instead of drifting away from it. */
+
+.fg-sheet {
+  max-width: 1100px;
+  margin: 0 auto;
+  color: #2c3e50;
+  font-family: "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+
+.fg-title { text-align: center; margin: 6px 0 18px; }
+.fg-title h2 {
+  margin: 0;
+  font-size: 19px;
+  font-weight: 700;
+  letter-spacing: .02em;
+  text-transform: uppercase;
+  color: #1f3550;
+}
+.fg-title .fg-sub {
+  margin-top: 5px;
+  font-size: 12.5px;
+  color: #6b7a8c;
+  letter-spacing: .04em;
+}
+
+/* The three figures the office reads first. */
+.fg-summary {
+  display: table;
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 10px 0;
+  margin: 0 0 16px;
+}
+.fg-card {
+  display: table-cell;
+  width: 33.33%;
+  padding: 10px 14px;
+  border: 1px solid #dde3ea;
+  border-top: 3px solid #346da5;
+  border-radius: 3px;
+  background: #fbfcfd;
+  text-align: center;
+}
+.fg-card-h {
+  display: block;
+  font-size: 10.5px;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: #7b8a99;
+  margin-bottom: 3px;
+}
+.fg-card-v {
+  display: block;
+  font-size: 19px;
+  font-weight: 700;
+  color: #1f3550;
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum";
+}
+.fg-card-grand { border-top-color: #2c3e50; background: #f4f6f8; }
+
+.fg-empty { padding: 18px 10px; text-align: center; color: #8a8a8a; }
+
+/* Signature strip - a report that leaves the office gets signed. */
+.fg-sign {
+  display: none;
+  width: 100%;
+  margin-top: 34px;
+}
+.fg-sign-box {
+  display: table-cell;
+  width: 33.33%;
+  text-align: center;
+  font-size: 11px;
+  color: #333;
+  padding-top: 6px;
+  border-top: 1px solid #555;
+}
+
+.fg-print-foot { display: none; }
+
+.fee-group-report {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+  color: #333;
+}
+.fee-group-report thead th {
+  background: #346da5;
+  color: #fff;
+  font-weight: 600;
+  font-size: 11px;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  padding: 9px 10px;
+  border: 1px solid #2c5c8a;
+  white-space: nowrap;
+}
+.fee-group-report tbody td {
+  padding: 6px 10px;
+  border: 1px solid #e2e6ea;
+  vertical-align: middle;
+}
+.fee-group-report tbody tr:nth-child(even) td { background: #fafbfc; }
+.fee-group-report .fg-sn    { width: 5%;  text-align: center; color: #8a8a8a; }
+.fee-group-report .fg-head  { text-align: left; }
+.fee-group-report .fg-by    { width: 13%; text-align: center; }
+.fee-group-report .fg-fee,
+.fee-group-report .fg-amt   { width: 15%; text-align: right; }
+/* Figures line up digit under digit, so a column of money can be read down the page. */
+.fee-group-report .fg-fee,
+.fee-group-report .fg-amt,
+.fee-group-report .fg-total-val {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum";
+}
+.fee-group-report .fg-amt { font-weight: 600; }
+.fee-group-report .fg-zero { color: #b0b0b0; font-weight: 400; }
+
+/* Where the college heads end and the department heads begin. */
+.fee-group-report tr.fg-subtotal td {
+  background: #eef2f7 !important;
+  font-weight: 600;
+  border-top: 1px solid #c9d4e0;
+  border-bottom: 1px solid #c9d4e0;
+}
+.fee-group-report tr.fg-subtotal .fg-total-lbl { text-align: right; letter-spacing: .03em; }
+
+.fee-group-report tfoot td {
+  background: #2c3e50;
+  color: #fff;
+  font-size: 15px;
+  font-weight: 700;
+  padding: 10px;
+  border: 1px solid #2c3e50;
+}
+.fee-group-report tfoot .fg-total-lbl { text-align: right; letter-spacing: .04em; }
+
+/* A quiet tag rather than a loud badge: the column already says what it means. */
+.fee-group-report .fg-tag {
+  display: inline-block;
+  padding: 1px 8px;
+  border-radius: 10px;
+  font-size: 11px;
+  border: 1px solid #cfd8e3;
+  background: #f4f7fa;
+  color: #4a5b6d;
+}
+.fee-group-report .fg-tag-dept { border-color: #e0cfd0; background: #fbf5f5; color: #7d4b4b; }
+
+/* Two tables on one sheet now, so each gets a heading - without them the second table reads
+   like a continuation of the first. */
+.fg-section-h {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: .07em;
+  text-transform: uppercase;
+  color: #5b6b7b;
+  margin: 22px 0 8px;
+  padding-bottom: 4px;
+  border-bottom: 1px solid #e2e6ea;
+}
+.fg-sheet .fg-section-h:first-of-type { margin-top: 6px; }
+
+/* Counts are read across a row against money, so they sit centred and in the same tabular
+   figures as the amounts - a count that jitters against the column above it is hard to scan. */
+.fee-group-report .fg-count {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum";
+  font-weight: 600;
+  text-align: center;
+}
+/* Fewer students paid the department part than paid at all: money the departments are owed. */
+.fee-group-report .fg-short { color: #b03a2e; }
+
+.fg-dept-table tfoot td { font-size: 13px; }
+
+/* The heading carries the download links on its right. */
+.fg-section-h-with-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.fg-actions { display: inline-flex; gap: 6px; }
+.fg-dl {
+  display: inline-block;
+  padding: 3px 11px;
+  border: 1px solid #cfd8e3;
+  border-radius: 4px;
+  background: #f7f9fb;
+  color: #35485c;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: .03em;
+  text-transform: none;
+  text-decoration: none;
+}
+.fg-dl:hover { background: #eef3f8; border-color: #a9bccf; color: #1f3550; text-decoration: none; }
+
+.fg-note {
+  margin-top: 8px;
+  padding: 7px 11px;
+  border-left: 3px solid #b9770e;
+  background: #fdf6ec;
+  font-size: 12px;
+  color: #6b5324;
+}
+
+@media print {
+  /* Browsers drop background colour when printing; these carry meaning, so keep them. */
+  .fg-sheet,
+  .fee-group-report thead th,
+  .fee-group-report tfoot td,
+  .fee-group-report tr.fg-subtotal td,
+  .fee-group-report tbody tr:nth-child(even) td,
+  .fg-card, .fg-tag, .fg-note {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  /* The department list is a working aid, not part of the statement that gets signed and
+     filed, so it does not print. It is downloaded as a file instead. */
+  .fg-screen-only { display: none !important; }
+
+  /* A table row broken across a page break loses its meaning half way down the sheet. */
+  .fee-group-report tr { page-break-inside: avoid; }
+  .fg-section-h { page-break-after: avoid; }
+
+  /* paper.css sets @page margin to 0 for the receipt layouts, so the sheet would otherwise
+     start at the very edge of the paper. The margin is put back here, on this report only. */
+  .fg-sheet {
+    max-width: none;
+    width: auto;
+    margin: 0;
+    padding: 10mm 12mm 8mm;
+    font-size: 10.5pt;
+  }
+
+  .fg-title { margin: 0 0 10px; }
+  .fg-title h2 { font-size: 14pt; }
+  .fg-title .fg-sub { font-size: 9pt; }
+
+  .fg-summary { border-spacing: 6px 0; margin-bottom: 10px; }
+  .fg-card { padding: 6px 8px; }
+  .fg-card-h { font-size: 7.5pt; }
+  .fg-card-v { font-size: 12pt; }
+
+  .fee-group-report { font-size: 9pt; table-layout: fixed; }
+  .fee-group-report thead th { padding: 5px 6px; font-size: 7.5pt; }
+  .fee-group-report tbody td { padding: 3px 6px; }
+  .fee-group-report tfoot td { font-size: 10.5pt; padding: 6px; }
+  /* Long head names wrap inside the cell instead of pushing the money columns out of line. */
+  .fee-group-report .fg-head { word-wrap: break-word; overflow-wrap: break-word; }
+  .fee-group-report .fg-tag { padding: 0 5px; font-size: 7.5pt; }
+
+  /* A long fee runs past one page; the headings repeat so the columns stay readable, and no
+     row is split down the middle. */
+  .fee-group-report thead { display: table-header-group; }
+  .fee-group-report tfoot { display: table-footer-group; }
+  .fee-group-report tr { page-break-inside: avoid; }
+  /* A subtotal stranded at the top of a fresh page reads as if it belonged to nothing. */
+  .fee-group-report tr.fg-subtotal { page-break-before: avoid; }
+
+  .fg-print-foot {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 8px;
+    padding-top: 5px;
+    border-top: 1px solid #d5dbe1;
+    font-size: 7.5pt;
+    color: #6b7a8c;
+  }
+
+  .fg-sign { display: table; margin-top: 22mm; page-break-inside: avoid; }
+  .fg-sign-box { font-size: 8.5pt; }
+
+  /* The letterhead, sized for paper. The colour band is kept: it is what makes a printed
+     sheet look like it came from the college rather than from a spreadsheet. */
+  .fg-letterhead { margin-bottom: 10px; padding: 0; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .fg-letterhead:after { height: 2.5px; margin-top: 8px; }
+  .fg-letterhead .institution-header-grid { grid-template-columns: 74px 1fr 74px; }
+  .fg-letterhead .institution-logo { max-height: 56px !important; }
+  .fg-letterhead .institution-name { font-size: 18pt !important; }
+  .fg-letterhead .institution-slogan { font-size: 7pt !important; letter-spacing: .2em; }
+  .fg-letterhead .institution-contact { font-size: 8pt !important; margin-top: 4px; }
+
+  /* The shared receipt heading pads itself by 150px when printing, which shoves this report's
+     title off centre. Neutralised inside this sheet only. */
+  .fg-sheet span.receipt-copy { padding: 0 !important; }
+}
+
+/** Fix for Chrome issue #273306 **/
+@media print {
+           body.A3.landscape { width: 420mm }
+  body.A3, body.A4.landscape { width: 297mm }
+  body.A4, body.A5.landscape { width: 210mm }
+  body.A5                    { width: 148mm }
+  body.letter, body.legal    { width: 216mm }
+  body.letter.landscape      { width: 280mm }
+  body.legal.landscape       { width: 357mm }
+
+  .table-bordered, .table-bordered>tbody>tr>td, .table-bordered>tbody>tr>th, .table-bordered>tfoot>tr>td, .table-bordered>tfoot>tr>th, .table-bordered>thead>tr>td, .table-bordered>thead>tr>th {
+    /*border: 0.5px solid #7e7d7d1c !important;
+    border: 0.5px solid #444 !important;
+    padding: 0px 3px 0px 5px;*/
+
+
+  }
+  .table-bordered, .table-bordered>tbody>tr>td, .table-bordered>tbody>tr>th, .table-bordered>tfoot>tr>td, .table-bordered>tfoot>tr>th, .table-bordered>thead>tr>td, .table-bordered>thead>tr>th {
+    border: 1px solid #ddd;
+  }
+
+  .table>tbody>tr>td, .table>tbody>tr>th, .table>tfoot>tr>td, .table>tfoot>tr>th, .table>thead>tr>td, .table>thead>tr>th {
+    padding: 5px;
+    line-height: 1.42857143;
+    vertical-align: top;
+    border-top: 1px solid #ddd;
+  }
+
+  span.receipt-copy {
+    font-size: 22px;
+    font-weight: 600;
+    /*background: black;
+    color: white;*/
+    padding: 3px 150px;
+  }
+
+}
+
+/** Online Fee Payment report **/
+/* Same approach as the fee-head sheet: everything scoped to .op-sheet so this report can be
+   dressed without touching the other screens that share the same partials. */
+.op-sheet {
+  max-width: 1100px;
+  margin: 0 auto;
+  color: #2c3e50;
+  font-family: "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+
+.op-title { text-align: center; margin: 6px 0 16px; }
+.op-title h2 {
+  margin: 0;
+  font-size: 19px;
+  font-weight: 700;
+  letter-spacing: .02em;
+  text-transform: uppercase;
+  color: #1f3550;
+}
+.op-title .op-sub {
+  margin-top: 5px;
+  font-size: 12.5px;
+  color: #6b7a8c;
+  letter-spacing: .03em;
+}
+
+/* The department the sheet covers. Set apart from the title so a reader holding the paper
+   knows in one glance whose money is on it. */
+.op-title .op-dept-name {
+  display: inline-block;
+  margin-top: 8px;
+  padding: 4px 18px;
+  border-radius: 14px;
+  background: #eef4fa;
+  border: 1px solid #cfe0ef;
+  font-size: 14.5px;
+  font-weight: 700;
+  letter-spacing: .04em;
+  color: #1f3550;
+}
+
+/* Whatever else was filtered for, one item to a chip. Dates, batch, gateway and verify state
+   are part of what the sheet means, and none of it survives on paper otherwise. */
+.op-meta,
+.report-meta {
+  margin-top: 9px;
+  font-size: 11.5px;
+  color: #5b6b7b;
+  line-height: 1.7;
+}
+.op-meta-item,
+.report-meta-item { display: inline-block; margin: 0 7px; white-space: nowrap; }
+.op-meta-l,
+.report-meta-l {
+  text-transform: uppercase;
+  letter-spacing: .09em;
+  font-size: 9.5px;
+  color: #98a5b3;
+  margin-right: 4px;
+}
+.op-meta-v,
+.report-meta-v { font-weight: 600; color: #35485c; }
+
+/* Four figures across the top: how many, how much cleared, how much still waiting. */
+.op-summary {
+  display: table;
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 10px 0;
+  margin: 0 0 16px;
+}
+.op-card {
+  display: table-cell;
+  width: 25%;
+  padding: 10px 12px;
+  border: 1px solid #dde3ea;
+  border-top: 3px solid #7b8a99;
+  border-radius: 3px;
+  background: #fbfcfd;
+  text-align: center;
+  vertical-align: top;
+}
+.op-card-h {
+  display: block;
+  font-size: 10.5px;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: #7b8a99;
+  margin-bottom: 3px;
+}
+.op-card-v {
+  display: block;
+  font-size: 18px;
+  font-weight: 700;
+  color: #1f3550;
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum";
+}
+.op-card-n { display: block; margin-top: 2px; font-size: 10.5px; color: #98a5b3; }
+.op-card-ok    { border-top-color: #16a085; }
+.op-card-wait  { border-top-color: #e0a800; }
+.op-card-grand { border-top-color: #2c3e50; background: #f4f6f8; }
+
+/* The grid itself - frame, ruling, banded rows - comes from the shared .report-sheet block
+   above, which this table also carries. Only what is particular to this report is set here. */
+.op-report thead th { white-space: nowrap; }
+/* The money column is what the sheet is for - given its own edge so it reads as a column of
+   its own rather than the last thing on a wide row. */
+.op-report tbody .op-amt,
+.op-report thead .op-amt { border-left: 2px solid #16a085; }
+
+.op-report .op-sn     { text-align: center; color: #8a8a8a; }
+.op-report .op-date,
+.op-report .op-gw,
+.op-report .op-status { text-align: center; }
+/* Figures line up digit under digit, so a column of money can be read down the page. */
+.op-report .op-amt {
+  text-align: right;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum";
+}
+
+/* Name above, roll below - two facts in the width of one column. */
+.op-report .op-name { display: block; }
+.op-report .op-reg  { display: block; font-size: 11px; color: #8a99a8; margin-top: 1px; }
+
+.op-pill {
+  display: inline-block;
+  padding: 1px 9px;
+  border-radius: 10px;
+  font-size: 11px;
+  border: 1px solid #cfd8e3;
+  background: #f4f7fa;
+  color: #4a5b6d;
+  white-space: nowrap;
+}
+.op-pill-ok   { border-color: #b8e0d5; background: #eef8f5; color: #14705f; }
+.op-pill-wait { border-color: #ecd9a6; background: #fdf8ec; color: #8a6400; }
+
+.op-report tfoot .op-total-lbl { text-align: right; letter-spacing: .04em; }
+
+.op-empty { padding: 18px 10px; text-align: center; color: #8a8a8a; }
+
+.op-sign,
+.report-sign { display: none; width: 100%; margin-top: 34px; }
+.op-sign-box,
+.report-sign-box {
+  display: table-cell;
+  width: 33.33%;
+  text-align: center;
+  font-size: 11px;
+  color: #333;
+  padding-top: 6px;
+  border-top: 1px solid #555;
+}
+.op-print-foot,
+.report-print-foot { display: none; }
+
+/* A4 for the report screens.
+   This file opens with @page { margin: 0 } for the receipt layouts, and a plain @page cannot be
+   narrowed to one screen - setting a size there would drag every other print page onto A4 with
+   it. A named page can be asked for by name, so the receipts keep the paper they had.
+   The margin belongs on the page box rather than on padding: padding pads the first and last
+   page only, so a list that runs to page two would print against the edge of the sheet. */
+@page op-a4 { size: A4 portrait; margin: 12mm 10mm 14mm; }
+/* The balance statement is eight columns wide and has always been printed on its side. */
+@page report-a4-landscape { size: A4 landscape; margin: 10mm 12mm 12mm; }
+
+@media print {
+  /* The name is claimed by the wrapper that holds the whole printed page, not by the report
+     block itself. Naming only the report put it in a different page context from the wrapper
+     around it, and the browser has to close one page and open another to change context - the
+     empty sheet that came out of the printer was that page. */
+  .op-print-page,
+  .report-print-page { page: op-a4; }
+  .report-print-page.landscape { page: report-a4-landscape; }
+
+  .op-print-page,
+  .op-print-page .page-content,
+  .op-print-page .main-content-inner,
+  .report-print-page,
+  .report-print-page .page-content,
+  .report-print-page .main-content-inner {
+    min-height: 0 !important;
+    height: auto !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    overflow: visible !important;
+  }
+
+  /* A browser too old for named pages falls back to the margin 0 above, so a little padding
+     stays behind as a floor. Where the named page works the two simply add up. */
+  .op-letterhead,
+  .report-letterhead,
+  .op-sheet,
+  .report-sheet { padding-left: 4mm; padding-right: 4mm; }
+
+  /* Backgrounds carry meaning here - the heading band, the total row, the banded rows - and
+     browsers drop them when printing unless told otherwise. */
+  .report-sheet,
+  .report-sheet thead th,
+  .report-sheet thead td,
+  .report-sheet tfoot td,
+  .report-sheet tfoot th,
+  .report-sheet tbody tr:nth-child(even) td {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  /* This file's own print block gives every .table-bordered cell a grey 1px border, and that
+     selector is more specific than a plain .report-sheet one - the ruling would go back to grey
+     the moment the page was printed. Written as a child chain here so the report sheets win. */
+  .report-sheet table > thead > tr > th,
+  .report-sheet table > thead > tr > td {
+    border: 1px solid #2c5c8a;
+    border-bottom: 2px solid #16a085 !important;
+  }
+  .report-sheet table > tbody > tr > td,
+  .report-sheet table > tbody > tr > th {
+    border-left: 1px solid #cbdcec;
+    border-right: 1px solid #cbdcec;
+    border-top: 1px solid #e4eef7;
+    border-bottom: 1px solid #e4eef7;
+  }
+  .report-sheet table > tfoot > tr > td,
+  .report-sheet table > tfoot > tr > th {
+    border: 1px solid #1f3550;
+    border-top: 2px solid #16a085;
+  }
+
+  /* A long list runs past one page: the headings repeat so the columns stay readable, and no
+     row is split down the middle. */
+  .report-sheet table { font-size: 9pt; }
+  .report-sheet thead { display: table-header-group; }
+  .report-sheet tfoot { display: table-footer-group; }
+  .report-sheet tr { page-break-inside: avoid; }
+  .report-sheet thead th,
+  .report-sheet thead td { padding: 5px 6px; font-size: 7.5pt; }
+  .report-sheet tbody td,
+  .report-sheet tbody th { padding: 3px 6px; }
+  .report-sheet tfoot td,
+  .report-sheet tfoot th { font-size: 10.5pt; padding: 6px; }
+  .report-sheet h1,
+  .report-sheet h2,
+  .report-sheet h3,
+  .report-sheet h4 { font-size: 13pt; margin: 0 0 8px; }
+
+  /* On screen the report sheets are held to 1100px so a wide table stays readable. A sheet
+     printed sideways has the whole width of the paper and should use it, or a thirteen-column
+     list is squeezed into the middle of the page with empty margins either side. */
+  .report-print-page.landscape .report-sheet,
+  .report-print-page.landscape .report-letterhead {
+    max-width: none;
+    width: auto;
+  }
+
+  .report-letterhead { margin-bottom: 10px; padding-bottom: 8px; }
+  .report-letterhead .institution-name { font-size: 17pt; }
+  .report-letterhead .institution-slogan { font-size: 7.5pt; }
+  .report-letterhead .institution-contact { font-size: 8pt; margin-top: 4px; }
+  .report-letterhead .institution-logo { max-height: 62px; }
+
+  /* Browsers drop background colour when printing; these carry meaning, so keep them. */
+  .op-sheet,
+  .op-report thead th,
+  .op-report tfoot td,
+  .op-report tbody tr:nth-child(even) td,
+  .op-card, .op-pill {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .op-sheet {
+    max-width: none;
+    width: auto;
+    margin: 0;
+    padding-top: 0;
+    padding-bottom: 0;
+    font-size: 10.5pt;
+  }
+  .op-letterhead { margin-bottom: 10px; padding-bottom: 8px; }
+  .op-letterhead .institution-name { font-size: 17pt; }
+  .op-letterhead .institution-slogan { font-size: 7.5pt; }
+  .op-letterhead .institution-contact { font-size: 8pt; margin-top: 4px; }
+  .op-letterhead .institution-logo { max-height: 62px; }
+
+  .op-title { margin: 0 0 10px; }
+  .op-title h2 { font-size: 14pt; }
+  .op-title .op-sub { font-size: 9pt; }
+  .op-title .op-dept-name { margin-top: 5px; padding: 2px 12px; font-size: 11pt; }
+  .op-meta,
+  .report-meta { margin-top: 5px; font-size: 8pt; line-height: 1.5; }
+  .op-meta-l,
+  .report-meta-l { font-size: 7pt; }
+
+  .op-summary { border-spacing: 6px 0; margin-bottom: 10px; }
+  .op-card { padding: 6px 8px; }
+  .op-card-h { font-size: 7.5pt; }
+  .op-card-v { font-size: 11pt; }
+  .op-card-n { font-size: 7pt; }
+
+  .op-report { font-size: 9pt; table-layout: fixed; }
+  .op-report thead th { padding: 5px 6px; font-size: 7.5pt; }
+  .op-report tbody td { padding: 3px 6px; }
+  .op-report tfoot td { font-size: 10.5pt; padding: 6px; }
+  .op-report .op-reg { font-size: 7.5pt; }
+  .op-report .op-pill { padding: 0 5px; font-size: 7.5pt; }
+  /* Long names wrap inside the cell instead of pushing the money column out of line. */
+  .op-report .op-stu, .op-report .op-dept { word-wrap: break-word; overflow-wrap: break-word; }
+
+  /* A long list runs past one page; the headings repeat so the columns stay readable, and no
+     row is split down the middle. */
+  .op-report thead { display: table-header-group; }
+  .op-report tfoot { display: table-footer-group; }
+  .op-report tr { page-break-inside: avoid; }
+
+  .op-print-foot,
+  .report-print-foot {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 8px;
+    padding-top: 5px;
+    border-top: 1px solid #d5dbe1;
+    font-size: 7.5pt;
+    color: #6b7a8c;
+  }
+
+  .op-sign,
+  .report-sign { display: table; margin-top: 18mm; page-break-inside: avoid; }
+  .op-sign-box,
+  .report-sign-box { font-size: 8.5pt; }
+}
