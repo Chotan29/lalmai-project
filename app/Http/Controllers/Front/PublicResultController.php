@@ -262,11 +262,29 @@ class PublicResultController extends CollegeBaseController
             return $fail($notFound);
         }
 
-        $student = Student::select('id', 'reg_no', 'first_name', 'middle_name', 'last_name',
-                'date_of_birth', 'faculty', 'semester')
-            ->whereRaw('TRIM(reg_no) = ?', [$roll])
-            ->where('semester', $group->semesters_id)
-            ->whereRaw('DATE(date_of_birth) = ?', [$parsedDob])
+        /* Found by the exam they sat, not by the class they are in today.
+           It used to match on students.semester, which meant a student promoted to the next
+           year could no longer look up the exam they had just passed: 146 of the 740 who sat
+           the Eleventh Final were already in Class Twelve, and every one of them would have
+           been told "not found" while their name sat on the published class sheet.
+           Narrowing to the students who have marks in this exam's own schedules is also the
+           safer test - it cannot be widened by two classes happening to share a roll number,
+           and it is exactly how the class sheet already decides who belongs on it. */
+        $student = Student::select('students.id', 'students.reg_no', 'students.first_name',
+                'students.middle_name', 'students.last_name', 'students.date_of_birth',
+                'students.faculty', 'students.semester')
+            ->whereRaw('TRIM(students.reg_no) = ?', [$roll])
+            ->whereRaw('DATE(students.date_of_birth) = ?', [$parsedDob])
+            ->whereIn('students.id', function ($q) use ($group) {
+                $q->select('l.students_id')
+                    ->from('exam_mark_ledgers as l')
+                    ->join('exam_schedules as es', 'es.id', '=', 'l.exam_schedule_id')
+                    ->where('es.years_id', $group->years_id)
+                    ->where('es.months_id', $group->months_id)
+                    ->where('es.exams_id', $group->exams_id)
+                    ->where('es.faculty_id', $group->faculty_id)
+                    ->where('es.semesters_id', $group->semesters_id);
+            })
             ->first();
 
         if (!$student) {
