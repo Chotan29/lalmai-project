@@ -1249,6 +1249,30 @@ class StudentController extends CollegeBaseController
             ->all();
     }
 
+    /**
+     * Did the office actually enter a guardian, or is the block simply empty?
+     *
+     * Worth asking before creating a record. Saving any edit of a student who has no guardian
+     * would otherwise mint a blank guardian row for them - 227 of them on first edit - and a
+     * blank row is harder to spot afterwards than no row at all.
+     *
+     * The image is ignored: a picture with no name behind it is not a guardian.
+     */
+    private function guardianDetailsGiven(array $info)
+    {
+        foreach ($info as $field => $value) {
+            if ($field === 'guardian_image') {
+                continue;
+            }
+
+            if (trim((string) $value) !== '') {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     public function update(EditValidation $request, $id)
     {
 
@@ -1462,8 +1486,31 @@ class StudentController extends CollegeBaseController
                     'guardian_address' => $request->guardian_address,
                     'guardian_image' => $guardian_image_name
                 ];
-                if ($sgd) {
-                    GuardianDetail::where('id', $sgd->guardians_id)->update($guardiansInfo);
+                /* A student registered without a guardian has no row in student_guardians, and
+                   this used to be an `if` with no `else`: nothing was written, nothing said so,
+                   and the page still reported success because the student's own row had saved.
+                   Reopening the form then found guardian_relation empty and fell back to Self -
+                   which is how "I set Father, it says updated, it comes back as Self" happens.
+                   227 of 1,464 students on file are in that position.
+
+                   The guardian is created and linked here instead, the same way registering a
+                   new student does it. The dangling case - a link pointing at a guardian record
+                   that is no longer there - is caught by the same branch. */
+                $existing = $sgd ? GuardianDetail::find($sgd->guardians_id) : null;
+
+                if ($existing) {
+                    GuardianDetail::where('id', $existing->id)->update($guardiansInfo);
+                } elseif ($this->guardianDetailsGiven($guardiansInfo)) {
+                    $guardian = GuardianDetail::create($guardiansInfo);
+
+                    if ($sgd) {
+                        StudentGuardian::where('id', $sgd->id)->update(['guardians_id' => $guardian->id]);
+                    } else {
+                        StudentGuardian::create([
+                            'students_id' => $row->id,
+                            'guardians_id' => $guardian->id,
+                        ]);
+                    }
                 }
             } else {
                 $studentGuardian = StudentGuardian::where('students_id', $row->id)->update([
