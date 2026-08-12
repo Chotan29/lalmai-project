@@ -70,7 +70,51 @@
     <button type="button" class="btn btn-sm btn-success" id="add-sub-head">
         <i class="fa fa-plus" aria-hidden="true"></i>&nbsp;Add Sub Head
     </button>
+
+    {{-- Creating a sub head used to mean leaving this page for Fees Head and starting the whole
+         fee again from an empty form. Only offered to whoever may create fee heads anyway - the
+         route carries the same permission, so hiding the button is courtesy, not the guard. --}}
+    @if(auth()->user() && (auth()->user()->ability('super-admin', 'fees-head-add')))
+        <button type="button" class="btn btn-sm btn-default" id="toggle-new-sub-head">
+            <i class="fa fa-plus-square-o" aria-hidden="true"></i>&nbsp;Not on the list? Create a Sub Head
+        </button>
+    @endif
 </div>
+
+@if(auth()->user() && (auth()->user()->ability('super-admin', 'fees-head-add')))
+    {{-- Plain inputs, not a nested form: this block sits inside the Main Fee Head form, and a
+         form inside a form is not valid markup - the browser drops the inner one and the Enter
+         key would submit the fee instead. Saved by ajax. --}}
+    <div id="new-sub-head-panel" class="well" style="display:none; margin-top:10px;">
+        <div class="row">
+            <div class="col-sm-5">
+                <label for="new_sub_head_title">Sub Head Name</label>
+                <input type="text" id="new_sub_head_title" class="form-control" maxlength="100"
+                       placeholder="e.g. LIBRARY FEE">
+            </div>
+            <div class="col-sm-3">
+                <label for="new_sub_head_collected_by">Collected By</label>
+                <select id="new_sub_head_collected_by" class="form-control">
+                    <option value="college">College</option>
+                    <option value="department">Department</option>
+                </select>
+                <span class="grey small">Decides which side of the fee head report it counts on.</span>
+            </div>
+            <div class="col-sm-2">
+                <label for="new_sub_head_amount">Default Amount</label>
+                <input type="number" id="new_sub_head_amount" class="form-control" min="0" step="1"
+                       placeholder="0">
+            </div>
+            <div class="col-sm-2">
+                <label class="hidden-xs">&nbsp;</label>
+                <button type="button" class="btn btn-primary btn-block" id="save-new-sub-head">
+                    <i class="fa fa-save" aria-hidden="true"></i>&nbsp;Save
+                </button>
+            </div>
+        </div>
+        <div id="new_sub_head_error" class="text-danger small" style="margin-top:6px;"></div>
+    </div>
+@endif
 
 <div class="hr hr-24"></div>
 

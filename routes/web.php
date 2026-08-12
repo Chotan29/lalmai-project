@@ -712,6 +712,10 @@ Route::group(['prefix' => 'account/',                                   'as' => 
     Route::get('fees/fee-head-group/{id}/duplicate',     ['as' => 'fees.fee-head-group.duplicate',       'middleware' => ['ability:super-admin,fees-fee-head-group-add'],     'uses' => 'Fees\FeeHeadGroupController@duplicate']);
     Route::get('fees/fee-head-group/{id}/active',        ['as' => 'fees.fee-head-group.active',          'middleware' => ['ability:super-admin,fees-fee-head-group-edit'],    'uses' => 'Fees\FeeHeadGroupController@active']);
     Route::get('fees/fee-head-group/{id}/in-active',     ['as' => 'fees.fee-head-group.in-active',       'middleware' => ['ability:super-admin,fees-fee-head-group-edit'],    'uses' => 'Fees\FeeHeadGroupController@inActive']);
+    /*A sub head that is not on the list yet, created without leaving the Main Fee Head being
+      built. Guarded by fees-head-add - the same permission the Fees Head screen itself uses, so
+      this cannot become a side door into creating heads.*/
+    Route::post('fees/fee-head-group/sub-head/store',    ['as' => 'fees.fee-head-group.sub-head.store',  'middleware' => ['ability:super-admin,fees-head-add'],               'uses' => 'Fees\FeeHeadGroupController@storeSubHead']);
 
     /*Fee Master*/
     Route::get('fees/master',                    ['as' => 'fees.master',                  'middleware' => ['ability:super-admin,fees-master-index'],            'uses' => 'Fees\FeesMasterController@index']);

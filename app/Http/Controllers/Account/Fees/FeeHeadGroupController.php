@@ -148,6 +148,82 @@ class FeeHeadGroupController extends CollegeBaseController
     }
 
     /**
+     * A sub head the office needs but which is not on the list yet.
+     *
+     * Building a fee of twenty-six heads used to stop dead the moment one was missing: leave the
+     * page for Fees Head, create it, come back, and start the fee again from an empty form. This
+     * creates the same ordinary fee_heads row without leaving, and hands it back so the browser
+     * can drop it into every sub head dropdown at once.
+     *
+     * Collected By is asked for and not defaulted. It decides whether the money is counted as
+     * the college's or the department's, and a head filed on the wrong side is a reconciliation
+     * that will not add up months later - by which time nobody remembers this screen.
+     *
+     * The route carries fees-head-add, the same permission the Fees Head screen uses, so this is
+     * not a way round it.
+     */
+    public function storeSubHead(Request $request)
+    {
+        $title = trim((string) $request->get('fee_head_title'));
+        $collectedBy = trim((string) $request->get('collected_by'));
+        $amount = $request->get('fee_head_amount');
+
+        $fail = function ($field, $message) {
+            return response()->json(['ok' => false, 'field' => $field, 'message' => $message], 422);
+        };
+
+        if ($title === '') {
+            return $fail('fee_head_title', 'Please type the sub head name.');
+        }
+
+        if (mb_strlen($title) > 100) {
+            return $fail('fee_head_title', 'The name cannot be longer than 100 characters.');
+        }
+
+        if (!in_array($collectedBy, ['college', 'department'], true)) {
+            return $fail('collected_by', 'Please choose whether the college or the department collects this.');
+        }
+
+        /*The column is unique, so a duplicate would be a database error rather than something the
+          office could read. Told plainly, and the existing head handed back so the row can simply
+          be pointed at it - which is what the office wanted anyway.*/
+        $existing = FeeHead::whereRaw('LOWER(TRIM(fee_head_title)) = ?', [mb_strtolower($title)])->first();
+
+        if ($existing) {
+            return response()->json([
+                'ok' => false,
+                'field' => 'fee_head_title',
+                'message' => 'That sub head already exists' . ($existing->status ? '' : ' but is switched off') . '.',
+                'existing' => [
+                    'id' => $existing->id,
+                    'title' => $existing->fee_head_title,
+                    'amount' => (int) $existing->fee_head_amount,
+                    'collected_by' => $existing->collected_by,
+                    'active' => (bool) $existing->status,
+                ],
+            ], 409);
+        }
+
+        $head = FeeHead::create([
+            'created_by' => auth()->user()->id,
+            'fee_head_title' => $title,
+            'fee_head_amount' => (int) $amount,
+            'collected_by' => $collectedBy,
+            'status' => 1,
+        ]);
+
+        return response()->json([
+            'ok' => true,
+            'head' => [
+                'id' => $head->id,
+                'title' => $head->fee_head_title,
+                'amount' => (int) $head->fee_head_amount,
+                'collected_by' => $head->collected_by,
+            ],
+        ]);
+    }
+
+    /**
      * Next session's copy: same sub heads, same amounts, switched off until the office has
      * checked the new figures. This is how amounts change year to year without touching a fee
      * students have already paid against.
