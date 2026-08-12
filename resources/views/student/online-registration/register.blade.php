@@ -3201,6 +3201,13 @@
                 f.guardian_first_name.value = f.first_name.value;
                 f.guardian_middle_name.value = f.middle_name.value;
                 f.guardian_last_name.value = f.last_name.value;
+                /* Cleared, not left alone. These four belong to whoever the guardian was a
+                   moment ago - press Father, then Self, and the father's occupation stayed
+                   sitting under the student's own name and saved that way. */
+                f.guardian_eligibility.value = "";
+                f.guardian_occupation.value = "";
+                f.guardian_office.value = "";
+                f.guardian_office_number.value = "";
                 f.guardian_residence_number.value = f.home_phone.value;
                 f.guardian_mobile_1.value = f.mobile_1.value;
                 f.guardian_mobile_2.value = f.mobile_2.value;
