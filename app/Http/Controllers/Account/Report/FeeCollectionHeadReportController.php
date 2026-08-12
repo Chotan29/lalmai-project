@@ -285,19 +285,11 @@ class FeeCollectionHeadReportController extends CollegeBaseController
         return Carbon::parse($row->date)->format('Y-m-d');
     }
 
-    /**
-     * The last moment of the closing day of a range.
-     *
-     * fee_collections.date carries a time, and the weekly and monthly reports build their end
-     * date as "start + one period - one day", which is midnight. whereBetween then stopped at
-     * 00:00:00 and dropped every payment taken during that final day, so those two reports
-     * quietly under-reported. Daily was unaffected because it compares whole dates, and yearly
-     * only looked right because no money happened to land on the closing day.
-     */
-    private function endOfDay($date)
-    {
-        return Carbon::parse($date)->format('Y-m-d') . ' 23:59:59';
-    }
+    /* endOfDay used to live here as a private method. The same day-closing was then needed by
+       four more screens, so it moved to DateTimeScope, which this controller already has
+       through CollegeBaseController - and a private copy in a subclass of a class that now
+       offers it publicly is a fatal error, not an override. Same behaviour, one definition.
+       Every caller below is reached only when start_date and end_date are both set. */
 
     /**
      * A whole fee, head by head: what landed in each of its sub heads over the range.
