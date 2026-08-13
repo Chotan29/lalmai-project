@@ -10,6 +10,24 @@
         /* row background: teacher-locked = cream, still owned = light grey,
            unlocked / no owner (created_by = 0) = white */
         $rowBg = $isLocked ? '#f6f0e3' : ($hasOwner ? 'lightgrey' : '#ffffff');
+
+        /* A "Not enrolled" row is a saved mark for a student this subject's list does not
+           include. Their absent boxes were once pre-ticked so the office would not have to tick
+           them one by one; the office has now asked for the opposite - a student who never took
+           the subject is not "absent" from it, and carrying the tick makes them look like a
+           candidate who failed to turn up.
+
+           So the boxes are drawn clear, and the tick already saved against them goes when the
+           office presses Save. That is deliberate: nothing is written by looking at the screen.
+
+           Only where the row carries no real mark. A mark on a not-enrolled row means the
+           student did sit the paper and it is their subject list that is incomplete - that row
+           is left exactly as it stands, red flag and all, for the office to look at. */
+        $isNotEnrolled = isset($notEnrolledIds) && in_array((int) $student->student_id, $notEnrolledIds, true);
+        $hasRealMark = (float) $student->obtain_mark_theory > 0
+            || (float) ($student->obtain_mark_mcq ?? 0) > 0
+            || (float) $student->obtain_mark_practical > 0;
+        $clearAbsent = $isNotEnrolled && !$hasRealMark && !$isLocked;
     @endphp
     <tr class="option_value {{ $isLocked ? 'ledger-locked-row' : '' }}" data-student-id="{{ $student->student_id }}" data-reg="{{ $student->reg_no }}" style="background: {{ $rowBg }}">
         <td>
@@ -38,7 +56,7 @@
             @endif
         </td>
         <td>
-            {!! Form::checkbox('absent_theory[]', $student->student_id, in_array($student->student_id, $absent_theory), array_merge(['class' => 'form-control'], $isLocked ? ['disabled' => 'disabled'] : [])) !!}
+            {!! Form::checkbox('absent_theory[]', $student->student_id, $clearAbsent ? false : in_array($student->student_id, $absent_theory), array_merge(['class' => 'form-control'], $isLocked ? ['disabled' => 'disabled'] : [])) !!}
         </td>
         <td>
             @include('examination.mark-ledger.includes.mark-input', [
@@ -53,7 +71,7 @@
             ])
         </td>
         <td>
-            {!! Form::checkbox('absent_practical[]', $student->student_id, in_array($student->student_id, $absent_practical), array_merge(['class' => 'form-control'], ($isLocked || (float)($markLimits['practical'] ?? 0) <= 0) ? ['disabled' => 'disabled'] : [])) !!}
+            {!! Form::checkbox('absent_practical[]', $student->student_id, $clearAbsent ? false : in_array($student->student_id, $absent_practical), array_merge(['class' => 'form-control'], ($isLocked || (float)($markLimits['practical'] ?? 0) <= 0) ? ['disabled' => 'disabled'] : [])) !!}
         </td>
         <td>
             @include('examination.mark-ledger.includes.mark-input', [
