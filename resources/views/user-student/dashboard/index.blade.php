@@ -324,8 +324,18 @@ body { font-family: 'Inter', sans-serif !important; background: #f0f4f9 !importa
         <div class="sd-stat-icon"><i class="fa fa-check-circle"></i></div>
         <div class="sd-stat-body">
             <div class="sd-stat-label">Paid</div>
-            <div class="sd-stat-value">৳ {{ number_format($paid + $disc, 0) }}</div>
-            <div class="sd-stat-sub">Paid + Discount</div>
+            {{-- What the student actually handed over. It used to show paid plus discount under
+                 the word "Paid", so a student who paid 7,000 with a 400 discount read 7,400 and
+                 had no way to see what they had really given. The discount is still shown, but
+                 as what it is and only when there is one. --}}
+            <div class="sd-stat-value">৳ {{ number_format($paid, 0) }}</div>
+            <div class="sd-stat-sub">
+                @if ($disc > 0)
+                    Plus ৳ {{ number_format($disc, 0) }} discount
+                @else
+                    Total paid so far
+                @endif
+            </div>
         </div>
     </div>
     <div class="sd-stat red">

@@ -128,9 +128,26 @@ class HomeController extends CollegeBaseController
         $feeMaster = FeeMaster::where('students_id',$data['student']->id)->where('status', 1)->sum('fee_amount');
         $feeCollection = FeeCollection::where('students_id',$data['student']->id)->where('status', 1)->sum('paid_amount');
         $dueFee = $feeMaster - $feeCollection;
+
+        /* The three cards at the top of the dashboard - Total Fees, Paid, Balance Due - read
+           these off the student. Nothing here was setting them, so every student saw three
+           zeroes however much they had paid; the figures above existed only for the chart.
+           Worked out the same way the fees page does it, from receipts that were not cancelled,
+           so the dashboard and the fees page cannot tell a student two different things. */
+        $data['student']->fee_amount  = $feeMaster;
+        $data['student']->paid_amount = $feeCollection;
+        $data['student']->discount    = FeeCollection::where('students_id', $data['student']->id)
+            ->where('status', 1)->sum('discount');
+        $data['student']->fine        = FeeCollection::where('students_id', $data['student']->id)
+            ->where('status', 1)->sum('fine');
+        $data['student']->balance     =
+            ($data['student']->fee_amount
+                - ($data['student']->paid_amount + $data['student']->discount))
+            + $data['student']->fine;
+
         //get installment amount
-        
-        $data['current_unpaid_installment'] = $this->currentUnpaidInstallment($data['student']->reg_no);        
+
+        $data['current_unpaid_installment'] = $this->currentUnpaidInstallment($data['student']->reg_no);
 
 
         /*chart*/
