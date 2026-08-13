@@ -120,9 +120,14 @@
                         </tr>
                         @if (isset($data['fee_collection']) && $data['fee_collection']->count() > 0)
                             @php($i = 1)
-                            @foreach ($data['fee_collection'] as $fee_collection)
-                                {{-- Payments against any head inside this fee belong under its one line. --}}
-                                @if (in_array($fee_collection->fee_masters_id, $feerow->ids))
+                            {{-- One line per receipt, not per head. Paying one fee of 4,270 writes a
+                                 collection row for every sub head it fills, so this used to draw the
+                                 same payment twenty-six times - 30.00, 50.00, 50.00, 40.00, all on one
+                                 date with one reference - with the college's head numbers showing in
+                                 the remark. A student is billed one fee and pays it once, and that is
+                                 what they should read. The grouping lives in AccountingScope so the
+                                 guardian page and the office profile cannot drift from this. --}}
+                            @foreach (ViewHelper::paymentRowsFor($data['fee_collection'], $feerow->ids) as $fee_collection)
                                     <tr class="white-td even" role="row">
                                         <td></td>
                                         <td></td>
@@ -132,10 +137,10 @@
                                             {{-- <td></td> --}}
                                         <td class="align-right"><i class="fa fa-arrow-right"></i></td>
                                         <td>
-                                            <!-- <a href="#" data-toggle="popover" class="detail_popover" data-original-title="" title=""> {{ $i . ' of ' . $fee_collection->fee_masters_id }}</a>
-                                                    <div class="fee_detail_popover" style="display: none">
-                                                        <p class="text text-danger">{{ $fee_collection->note }}</p>
-                                                    </div> -->
+                                            {{-- The commented-out popover that used to live here still
+                                                 printed fee_masters_id: Blade renders what is inside an
+                                                 HTML comment, and a line that now stands for several
+                                                 heads has no single master id to print. --}}
                                             {{ $fee_collection->installment_number }}
                                         </td>
                                         <td>{{ $fee_collection->payment_method }}</td>
@@ -152,9 +157,6 @@
 
                                         </td>
                                         <td>
-                                            <!-- {{ $fee_collection->note }} -
-                                                    Verified:{{ $fee_collection->verified_at }}
-                                                            {{--  {{ ViewHelper::getUserNameId($fee_collection->created_by) }} --}} -->
                                             @if ($fee_collection->status == 1)
                                                 {{-- <span class="label label-success">Success</span> --}}
                                                 @if ($fee_collection->payment_method == 'Bank')
@@ -172,14 +174,27 @@
                                                         class="ace-icon fa fa-certificate"></i></span>
                                             @endif
                                         </td>
-                                        <td>
-                                            {{ $fee_collection->note }}
-
+                                        <td class="small">
+                                            {{-- The note is written per head - "Installment #1 Payment |
+                                                 Semester: 161 | Fee Head: 80" - so on a line standing for
+                                                 several heads it would name one of them and mean nothing.
+                                                 A student is told what they paid for, not which of the
+                                                 college's internal heads it filled. --}}
+                                            @if (($fee_collection->head_count ?? 1) > 1)
+                                                @if (trim((string) $fee_collection->installment_number) !== '')
+                                                    Installment {{ $fee_collection->installment_number }} payment
+                                                @else
+                                                    {{-- No instalment number on this receipt; do not print
+                                                         a bare hash where a number should be. --}}
+                                                    Payment received
+                                                @endif
+                                            @else
+                                                {{ $fee_collection->note }}
+                                            @endif
                                         </td>
 
                                     </tr>
                                     @php($i++)
-                                @endif
                             @endforeach
                         @endif
                     @endforeach

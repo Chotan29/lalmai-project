@@ -594,8 +594,19 @@
                                 </div>
 
                                 <div id="pay-online" class="tab-pane">
-                                    @if ($data['student']->balance > 0)
+                                    {{-- This tab is the student's record of what they have paid online,
+                                         and every row of it carries the receipt. It used to be hidden the
+                                         moment the balance reached zero - so the student who had just
+                                         paid in full, the one most likely to want the receipt, was the
+                                         one person who could not reach it. Shown whenever there is
+                                         anything to show; the "nothing owing" note is only for a student
+                                         who has never paid online at all. --}}
+                                    @if (isset($data['onlinePayments']) && $data['onlinePayments']->count() > 0)
                                         @include($view_path . '.fees.includes.online-payment-table')
+                                    @elseif ($data['student']->balance > 0)
+                                        <div class="alert alert-info">
+                                            <i class="fas fa-info-circle mr-2"></i> No online payment yet.
+                                        </div>
                                     @else
                                         <div class="alert alert-info">
                                             <i class="fas fa-info-circle mr-2"></i> No outstanding balance for online

@@ -205,6 +205,66 @@ trait AccountingScope{
         return $rows;
     }
 
+    /**
+     * The payments made against one fee, one line per receipt rather than one per head.
+     *
+     * feeRowsFromMasters() already draws a Main Fee Head as the single charge it is. What sat
+     * underneath it did not: paying one fee of 4,270 writes a fee_collections row for every sub
+     * head it fills, so the student read a page of lines - 30.00, 50.00, 50.00, 40.00 - all with
+     * the same date and the same reference, and the head numbers showing in the remark. One
+     * payment, drawn twenty-six times, with the college's internal breakdown on display.
+     *
+     * A receipt is what the student actually did: a date, a reference, a method, an instalment.
+     * Rows sharing all four are one payment and are added together. The money is untouched -
+     * this only decides how it is read.
+     *
+     * Shared rather than written into the student's table, because the guardian's page and the
+     * office profile draw the same fee and must not tell three different stories about it.
+     */
+    public function paymentRowsFor($feeCollections, array $masterIds)
+    {
+        $mine = collect($feeCollections)->filter(function ($c) use ($masterIds) {
+            return in_array($c->fee_masters_id, $masterIds);
+        });
+
+        return $mine
+            ->groupBy(function ($c) {
+                return implode('|', [
+                    (string) $c->date,
+                    (string) $c->ref_no,
+                    (string) $c->external_ref_no,
+                    (string) $c->payment_method,
+                    (string) $c->installment_number,
+                    /* A cancelled row must never be folded in with a successful one. */
+                    (string) $c->status,
+                ]);
+            })
+            ->map(function ($rows) {
+                /* The first row carries everything the line shows except the money, and every
+                   row in the group agrees on all of it - that is what made them a group. */
+                $first = $rows->first();
+
+                return (object) [
+                    'date'               => $first->date,
+                    'ref_no'             => $first->ref_no,
+                    'external_ref_no'    => $first->external_ref_no,
+                    'payment_method'     => $first->payment_method,
+                    'installment_number' => $first->installment_number,
+                    'status'             => $first->status,
+                    'verified_at'        => $first->verified_at ?? null,
+                    'note'               => $first->note ?? null,
+                    'paid_amount'        => $rows->sum('paid_amount'),
+                    'discount'           => $rows->sum('discount'),
+                    'fine'               => $rows->sum('fine'),
+                    /* How many heads this one payment filled. Not shown to a student, but the
+                       office profile can say "26 heads" without listing them. */
+                    'head_count'         => $rows->count(),
+                ];
+            })
+            ->sortBy('date')
+            ->values();
+    }
+
     public function activeFeeHead()
     {
         $feeHead = FeeHead::select('id', 'fee_head_title')->Active()->orderBy('fee_head_title')->pluck('fee_head_title','id')->toArray();
