@@ -202,16 +202,19 @@ class ExamMarkLedgerController extends CollegeBaseController
         $skippedLocked = 0;
         $invalidRows = [];
 
+        $absentTheoryIds = array_map('intval', (array) $request->get('absent_theory', []));
+        $absentPracticalIds = array_map('intval', (array) $request->get('absent_practical', []));
+
         if($request->has('students_id')) {
             foreach ($request->get('students_id') as $key => $student) {
 
-                if($request->has('absent_theory') && in_array($student, $request->get('absent_theory'))) {
+                if (in_array((int) $student, $absentTheoryIds, true)) {
                     $trAbsentStudent = 1;
                 }else {
                     $trAbsentStudent = 0;
                 }
 
-                if($request->has('absent_practical') && in_array($student, $request->get('absent_practical'))) {
+                if (in_array((int) $student, $absentPracticalIds, true)) {
                     $prAbsentStudent = 1;
                 }else {
                     $prAbsentStudent = 0;
@@ -231,7 +234,11 @@ class ExamMarkLedgerController extends CollegeBaseController
                 /*Look in BOTH schedules (main + Optional twin) so a legacy row saved
                   under the wrong one is found, updated and migrated - never duplicated.*/
                 $pairScheduleIds = array_values(array_filter([$examScheduleId->id, $optionalScheduleId]));
-                $ledgerExist = ExamMarkLedger::select('id', 'created_by', 'exam_schedule_id')
+                $ledgerExist = ExamMarkLedger::select(
+                        'id', 'created_by', 'exam_schedule_id',
+                        'obtain_mark_theory', 'obtain_mark_mcq', 'obtain_mark_practical',
+                        'absent_theory', 'absent_practical', 'sorting_order'
+                    )
                     ->whereIn('exam_schedule_id', $pairScheduleIds)
                     ->where('students_id', $student)
                     ->orderByRaw('exam_schedule_id = ? desc', [$targetScheduleId])
@@ -250,6 +257,9 @@ class ExamMarkLedgerController extends CollegeBaseController
                     $skippedLocked++;
                     continue;
                 }
+
+                $wasTheoryAbsent = $ledgerExist ? ((int) $ledgerExist->absent_theory === 1) : false;
+                $wasPracticalAbsent = $ledgerExist ? ((int) $ledgerExist->absent_practical === 1) : false;
 
                 $thMark = (float) ($thRaw !== '' ? $thRaw : 0);
                 $mcqMark = (float) ($mcqRaw !== '' ? $mcqRaw : 0);
@@ -293,21 +303,24 @@ class ExamMarkLedgerController extends CollegeBaseController
                       their previously saved value. This lets a teacher enter theory first
                       and add practical/MCQ later (even in a separate session) without the
                       blank boxes wiping the marks entered earlier.*/
-                    $theoryTouched    = ($thRaw !== '' || $trAbsentStudent == 1);
-                    $mcqTouched       = ($mcqRaw !== '');
-                    $practicalTouched = ($prRaw !== '' || $prAbsentStudent == 1);
+                    $theoryTouched = (
+                        $thRaw !== ''
+                        || $trAbsentStudent == 1
+                        || ($wasTheoryAbsent && $thRaw === '' && $trAbsentStudent === 0)
+                    );
+                    $mcqTouched = ($mcqRaw !== '');
+                    $practicalTouched = (
+                        $prRaw !== ''
+                        || $prAbsentStudent == 1
+                        || ($wasPracticalAbsent && $prRaw === '' && $prAbsentStudent === 0)
+                    );
 
                     /*Nothing filled for this existing row -> leave it untouched.*/
                     if (!$theoryTouched && !$mcqTouched && !$practicalTouched) {
                         continue;
                     }
 
-                    $ledgerUpdate = [
-                        'sorting_order' => $key+1,
-                        'last_updated_by' => $userId,
-                        /*migrate a legacy wrong-schedule row to the student's own subject*/
-                        'exam_schedule_id' => $targetScheduleId,
-                    ];
+                    $ledgerUpdate = [];
 
                     if ($theoryTouched) {
                         $ledgerUpdate['obtain_mark_theory'] = $thMark;
@@ -320,6 +333,38 @@ class ExamMarkLedgerController extends CollegeBaseController
                         $ledgerUpdate['obtain_mark_practical'] = $prMark;
                         $ledgerUpdate['absent_practical'] = $prAbsentStudent;
                     }
+
+                    if ($ledgerExist->exam_schedule_id != $targetScheduleId) {
+                        $ledgerUpdate['exam_schedule_id'] = $targetScheduleId;
+                    }
+
+                    if ((int) $ledgerExist->sorting_order !== ($key + 1)) {
+                        $ledgerUpdate['sorting_order'] = $key + 1;
+                    }
+
+                    $isChanged = false;
+                    foreach ($ledgerUpdate as $field => $value) {
+                        if ($field === 'obtain_mark_theory' || $field === 'obtain_mark_mcq' || $field === 'obtain_mark_practical') {
+                            if ((float) $ledgerExist->{$field} !== (float) $value) {
+                                $isChanged = true;
+                                break;
+                            }
+                        } elseif ($field === 'absent_theory' || $field === 'absent_practical' || $field === 'exam_schedule_id' || $field === 'sorting_order') {
+                            if ((int) $ledgerExist->{$field} !== (int) $value) {
+                                $isChanged = true;
+                                break;
+                            }
+                        } else {
+                            $isChanged = true;
+                            break;
+                        }
+                    }
+
+                    if (!$isChanged) {
+                        continue;
+                    }
+
+                    $ledgerUpdate['last_updated_by'] = $userId;
 
                     $ledgerExist->update($ledgerUpdate);
 
@@ -372,7 +417,8 @@ class ExamMarkLedgerController extends CollegeBaseController
                 }
             }
 
-            $message = $this->panel.': '.$savedCount.' student(s) saved.';
+            $rowLabel = $savedCount === 1 ? 'row' : 'rows';
+            $message = $this->panel.': '.$savedCount.' '.$rowLabel.' saved.';
             if ($skippedLocked > 0) {
                 $message .= ' '.$skippedLocked.' student(s) skipped (entered by another teacher).';
             }

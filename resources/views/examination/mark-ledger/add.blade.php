@@ -19,6 +19,45 @@
         @media (min-width: 768px) {
             #ledger-table-wrap { overflow: visible !important; }
         }
+
+        /* Desktop: keep the action bar always reachable while scrolling long ledgers. */
+        .ledger-action-bar {
+            background: #fff;
+            border-top: 1px solid #ddd;
+            box-shadow: 0 -2px 12px rgba(0, 0, 0, 0.08);
+            padding: 10px 15px;
+        }
+        .ledger-action-bar .form-actions {
+            margin: 0;
+            padding: 0;
+            background: transparent;
+            border: 0;
+        }
+        .ledger-action-spacer {
+            height: 78px;
+        }
+        @media (min-width: 768px) {
+            .ledger-action-bar {
+                position: fixed;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                z-index: 1040;
+            }
+        }
+        @media (max-width: 767px) {
+            .ledger-action-bar {
+                position: static;
+                margin-top: 15px;
+                box-shadow: none;
+            }
+            .ledger-action-spacer {
+                display: none;
+            }
+            .ledger-action-bar .align-right .btn {
+                margin-bottom: 8px;
+            }
+        }
     </style>
 @endsection
 
@@ -56,8 +95,10 @@
 
                         @include($view_path.'.includes.form')
 
-                        <div class="clearfix form-actions">
-                            <div class="align-right">
+                        <div class="ledger-action-spacer" aria-hidden="true"></div>
+                        <div class="ledger-action-bar">
+                            <div class="clearfix form-actions">
+                                <div class="align-right">
                                 <button class="btn" type="reset">
                                     <i class="fa fa-undo bigger-110"></i>
                                     Reset
@@ -88,6 +129,7 @@
                                     <i class="fa fa-unlock-alt bigger-110"></i>
                                     Unlock All
                                 </button>
+                                </div>
                             </div>
                         </div>
 
@@ -641,4 +683,3 @@
     @include('includes.scripts.table_tr_sort')
 
 @endsection
-
