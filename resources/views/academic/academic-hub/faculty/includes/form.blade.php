@@ -52,6 +52,40 @@
     </div>
 </div>
 
+{{-- ID card validity. The card used to work the expiry out one way for every department -
+     31 December of the year after the session - which is right for HSC and wrong for a three or
+     four year course. These two boxes let each department say how long its course runs and which
+     month it ends in; the card prints the last day of that month. --}}
+<div class="form-group">
+    {!! Form::label('id_card_valid_years', 'ID Card Valid (Years)', ['class' => 'col-sm-4 control-label']) !!}
+    <div class="col-sm-8">
+        {!! Form::number('id_card_valid_years', null, ["class" => "form-control border-form", "min" => 1, "max" => 10, "placeholder" => "e.g. 2 for HSC, 3 for Degree, 4 for Hon's"]) !!}
+        <span class="help-block small">
+            Course length in years. The ID card expires this many years after the session begins,
+            so a 2025-2026 four year course expires in 2029.
+        </span>
+        @include('includes.form_fields_validation_message', ['name' => 'id_card_valid_years'])
+    </div>
+</div>
+
+<div class="form-group">
+    {!! Form::label('id_card_expiry_month', 'ID Card Expiry Month', ['class' => 'col-sm-4 control-label']) !!}
+    <div class="col-sm-8">
+        {!! Form::select('id_card_expiry_month', [
+                '' => '-- not set --',
+                1 => 'January', 2 => 'February', 3 => 'March', 4 => 'April',
+                5 => 'May', 6 => 'June', 7 => 'July', 8 => 'August',
+                9 => 'September', 10 => 'October', 11 => 'November', 12 => 'December',
+            ], null, ["class" => "form-control border-form"]) !!}
+        <span class="help-block small">
+            The card prints the last day of this month - June gives 30 June, December gives
+            31 December. Leave both boxes empty and the card falls back to the college-wide
+            setting, then to its old rule, so it is never printed without a date.
+        </span>
+        @include('includes.form_fields_validation_message', ['name' => 'id_card_expiry_month'])
+    </div>
+</div>
+
 <div class="form-group">
     {!! Form::label('sorting', 'Sorting Order', ['class' => 'col-sm-4 control-label']) !!}
     <div class="col-sm-8">

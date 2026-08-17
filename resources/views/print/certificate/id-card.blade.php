@@ -178,11 +178,16 @@
                     $session = 'HSC '.$session;
                 }
                 $dob = $student->date_of_birth ? \Carbon\Carbon::parse($student->date_of_birth)->format('d-m-Y') : '';
-                /*Expiry: 31 December of (last batch year + 1), e.g. 2025-2026 -> 2027*/
-                $expiry = '';
-                if (preg_match_all('/(20\d{2})/', (string) $student->batch_title, $ym) && count($ym[1]) > 0) {
-                    $expiry = '31 December '.((int) max($ym[1]) + 1);
-                }
+                /* Validity, worked out from the student's own department: session start year plus
+                   the course length, ending on the last day of the month that course finishes in.
+                   A department with nothing set falls back to the rule the card used before, so
+                   no card is ever printed without a date. The arithmetic lives in AcademicScope,
+                   not here. */
+                $expiry = ViewHelper::idCardExpiryDate(
+                    $student->batch_title,
+                    $student->id_card_valid_years,
+                    $student->id_card_expiry_month
+                );
                 $studentMobile = trim((string) $student->mobile_1) ?: trim((string) $student->home_phone);
                 /* Father/mother mobile are optional on the registration form while the guardian
                    number is mandatory, so fall back through all of them before giving up. */

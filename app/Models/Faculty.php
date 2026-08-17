@@ -7,7 +7,8 @@ use Illuminate\Database\Eloquent\Model;
 class Faculty extends BaseModel
 {
     protected $table = 'faculties';
-    protected $fillable = ['created_by', 'last_updated_by', 'faculty', 'faculty_code', 'gradingType_id', 'scale', 'sorting', 'duration', 'credit_required', 'registration_validate', 'status'];
+    protected $fillable = ['created_by', 'last_updated_by', 'faculty', 'faculty_code', 'gradingType_id', 'scale', 'sorting', 'duration', 'credit_required', 'registration_validate',
+        'id_card_valid_years', 'id_card_expiry_month', 'status'];
 
     public function departments()
     {

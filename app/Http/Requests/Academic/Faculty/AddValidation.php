@@ -34,6 +34,10 @@ class AddValidation extends FormRequest
         return [
             'faculty'       => 'required | max:100 | unique:faculties,faculty',
             'faculty_code'      => 'required | unique:faculties,faculty_code',
+            /* Both optional. Bounded because they date an identity card: a stray 40 in the years
+               box would print a card valid until 2065. */
+            'id_card_valid_years'  => 'nullable | integer | min:1 | max:10',
+            'id_card_expiry_month' => 'nullable | integer | min:1 | max:12',
         ];
     }
 

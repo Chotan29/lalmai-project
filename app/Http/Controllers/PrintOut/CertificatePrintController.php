@@ -164,6 +164,9 @@ class CertificatePrintController extends CollegeBaseController
             'students.last_name', 'students.date_of_birth', 'students.blood_group', 'students.email',
             'students.student_image',
             'f.faculty as faculty_name', 'b.title as batch_title', 'sem.semester as semester_name',
+            /* Per-department ID card validity: how many years the course runs and which month it
+               ends in. One rule for all ten departments printed the wrong date on seven of them. */
+            'f.id_card_valid_years', 'f.id_card_expiry_month',
             'ai.address', 'ai.state', 'ai.mobile_1', 'ai.home_phone',
             'pd.father_first_name', 'pd.father_middle_name', 'pd.father_last_name', 'pd.father_mobile_1',
             'pd.mother_first_name', 'pd.mother_middle_name', 'pd.mother_last_name', 'pd.mother_mobile_1',

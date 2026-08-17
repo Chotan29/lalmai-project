@@ -116,4 +116,60 @@ trait AcademicScope{
         //return array_prepend($degrees,'Select Degrees','');
     }
 
+    /**
+     * The validity date to print on a student's ID card.
+     *
+     * The rule the college uses is the session start year plus the length of the course, ending on
+     * the last day of the month that course finishes in - June for HSC, December for degree and
+     * honours. So a 2025-2026 admission reads:
+     *
+     *     HSC      2 years, June      -> 30 June 2027
+     *     Degree   3 years, December  -> 31 December 2028
+     *     Honours  4 years, December  -> 31 December 2029
+     *
+     * Only the month is stored against the department; the last day is worked out here, so nobody
+     * has to remember that June has 30 days and February moves.
+     *
+     * A department with its two boxes empty falls back to the rule the card used before any of
+     * this existed - 31 December of the year after the session ends - so a newly created
+     * department cannot produce a card with no date on it.
+     *
+     * Kept here rather than in the card view because arithmetic on a student's identity document
+     * does not belong in a template, and because a copy in the view would have to be found again
+     * the next time the rule changes.
+     *
+     * @param  string   $sessionTitle   the batch title, e.g. '2025-2026'
+     * @param  int|null $years          course length from the department
+     * @param  int|null $month          1-12, the month the course ends in
+     * @return string                   e.g. '30 June 2027', or '' if nothing can be worked out
+     */
+    public function idCardExpiryDate($sessionTitle, $years = null, $month = null)
+    {
+        $years = (int) $years;
+        $month = (int) $month;
+
+        /* The session title carries two years - '2025-2026'. The first is when the course began,
+           and that is what the count runs from. max() would take 2026 and shift every card a
+           year late, which is the mistake the old rule made. */
+        $startYear = 0;
+        if (preg_match_all('/(20\d{2})/', (string) $sessionTitle, $found) && count($found[1]) > 0) {
+            $startYear = (int) min($found[1]);
+        }
+
+        if ($startYear > 0 && $years >= 1 && $month >= 1 && $month <= 12) {
+            /* Last day of that month, whatever its length. */
+            return \Carbon\Carbon::createFromDate($startYear + $years, $month, 1)
+                ->endOfMonth()
+                ->format('j F Y');
+        }
+
+        /* The department has not been set up. The card behaves exactly as it did before this was
+           built, so switching this on cannot leave a card blank. */
+        if (preg_match_all('/(20\d{2})/', (string) $sessionTitle, $found) && count($found[1]) > 0) {
+            return '31 December '.((int) max($found[1]) + 1);
+        }
+
+        return '';
+    }
+
 }
