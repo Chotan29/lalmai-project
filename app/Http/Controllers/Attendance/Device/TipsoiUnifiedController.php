@@ -90,8 +90,64 @@ class TipsoiUnifiedController extends CollegeBaseController
 
     /* ---------------- Devices ---------------- */
 
+    /**
+     * The devices this college runs, and whether each one is talking to us.
+     *
+     * Read from our own table, not from the manufacturer's cloud. The cloud only knows about
+     * devices registered with them; a device pointed at this server is invisible to it, which is
+     * why a perfectly healthy reader was showing as inactive on this screen.
+     *
+     * "Connected" means it has sent a heartbeat recently. Not a live probe of the device: this
+     * screen is opened from the office and from the live server, and neither can reach inside the
+     * college network to knock on the device's door. The heartbeat is the device telling us, and
+     * that reaches us wherever we are.
+     */
     public function getAllDevices()
     {
+        $manager = app(\App\Services\Attendance\DeviceManager::class);
+
+        /* Anything that has gone quiet stops counting as connected before we report. */
+        app(\App\Services\Attendance\DeviceRegistry::class)
+            ->markStaleAsOffline((int) config('devices.offline_after_minutes', 5));
+
+        $local = [];
+        foreach (\App\Models\TipsoiDevice::orderBy('id')->get() as $d) {
+            $up = (bool) $d->connected;
+
+            $local[] = [
+                'id'         => $d->id,
+                'identifier' => $d->identifier,
+                'name'       => $d->name ?: 'Device',
+                'vendor'     => $d->vendor,
+                'ip'         => $d->ip_address,
+                'location'   => $d->location,
+                'status'     => $up ? 'active' : 'inactive',
+                'connected'  => $up ? 1 : 0,
+                'last_seen'  => $d->last_seen ? $d->last_seen->diffForHumans() : 'never',
+                'enrolling'  => (bool) $d->enrol_students,
+                'source'     => 'local',
+            ];
+        }
+
+        /*
+         * The vendor cloud as well, but only when it has been given a token. Asking without one
+         * returns an empty list that looks exactly like "no devices" - which is how this screen
+         * came to report nothing at all for weeks.
+         */
+        $list = [];
+        if (trim((string) config('tipsoi.cs.api_token')) !== '') {
+            try {
+                $cloud = $this->api->devices();
+                if (is_array($cloud)) { $list = $cloud; }
+            } catch (\Throwable $e) {
+                Log::warning('Vendor cloud device list failed', ['error' => $e->getMessage()]);
+            }
+        }
+
+        if ($local) {
+            return response()->json(['success' => true, 'data' => array_merge($local, $list)]);
+        }
+
         $list = $this->api->devices();
         // array:1 [
         //   0 => array:24 [
@@ -122,6 +178,199 @@ class TipsoiUnifiedController extends CollegeBaseController
         //   ]
         // ]
         return response()->json(['success'=>true,'data'=>$list]);
+    }
+
+    /* ---------------- Managing devices from the application ---------------- */
+
+    protected function devices()
+    {
+        return app(\App\Services\Attendance\DeviceManager::class);
+    }
+
+    /**
+     * Add a device, or update one already known by that serial.
+     *
+     * The serial is the device's own deviceKey - the value it puts in every heartbeat. It is not
+     * ours to invent: type it wrong and the device's reports will create a second row rather than
+     * updating this one. It is printed on the device and shown in its Device Information screen.
+     */
+    public function storeDevice(Request $request)
+    {
+        $data = $request->validate([
+            'identifier'     => 'required|string|max:191',
+            'name'           => 'nullable|string|max:191',
+            'vendor'         => 'nullable|string|max:40',
+            'ip_address'     => 'nullable|string|max:64',
+            'location'       => 'nullable|string|max:191',
+            'notes'          => 'nullable|string|max:255',
+            'enrol_students' => 'nullable|boolean',
+        ]);
+
+        try {
+            $device = $this->devices()->add($data);
+        } catch (\InvalidArgumentException $e) {
+            return response()->json(['success' => false, 'message' => $e->getMessage()], 422);
+        }
+
+        return response()->json(['success' => true, 'data' => $device]);
+    }
+
+    /**
+     * Write our callback addresses into the device, so it starts reporting here.
+     *
+     * Reaches out to the device over the local network, which is the one thing in this whole
+     * arrangement that does not work from the live server: the college router does not let the
+     * internet in. Run this from a computer at the college. It is a one-time job - afterwards the
+     * device calls us and nobody needs to be near it again.
+     */
+    public function connectDevice(Request $request)
+    {
+        $data = $request->validate([
+            'identifier' => 'required|string|max:191',
+            'base_url'   => 'nullable|string|max:191',
+            'password'   => 'nullable|string|max:191',
+        ]);
+
+        $device = \App\Models\TipsoiDevice::where('identifier', $data['identifier'])->first();
+        if (!$device) {
+            return response()->json(['success' => false, 'message' => 'No device with that serial.'], 404);
+        }
+
+        try {
+            $results = $this->devices()->connect(
+                $device,
+                $data['base_url'] ?? null,
+                $data['password'] ?? null
+            );
+        } catch (\Throwable $e) {
+            return response()->json(['success' => false, 'message' => $e->getMessage()], 422);
+        }
+
+        $accepted = count(array_filter($results, function ($r) { return $r['accepted']; }));
+
+        return response()->json([
+            'success' => $accepted === count($results),
+            'message' => $accepted . ' of ' . count($results) . ' addresses accepted',
+            'data'    => $results,
+        ]);
+    }
+
+    /**
+     * What the device is currently pointed at. Read this before connecting - it is the only
+     * record of where its punches were going, and connecting overwrites it.
+     */
+    public function readDeviceCallbacks(Request $request)
+    {
+        $device = \App\Models\TipsoiDevice::where('identifier', $request->get('identifier'))->first();
+        if (!$device) {
+            return response()->json(['success' => false, 'message' => 'No device with that serial.'], 404);
+        }
+
+        $current = $this->devices()->readCallbacks($device, $request->get('password'));
+
+        return response()->json([
+            'success' => $current !== null,
+            'message' => $current === null ? 'The device could not be reached from here.' : 'ok',
+            'data'    => $current,
+        ]);
+    }
+
+    /**
+     * Take a device out of service. Not a delete - its punches are somebody's attendance.
+     */
+    public function retireDevice(Request $request)
+    {
+        $device = $this->devices()->retire($request->get('identifier'));
+
+        return response()->json([
+            'success' => (bool) $device,
+            'message' => $device ? 'Taken out of service.' : 'No device with that serial.',
+        ]);
+    }
+
+    /* ---------------- Enrolling students onto the device ---------------- */
+
+    /**
+     * Put students in the queue the device collects from.
+     *
+     * Nothing is sent to the device here, and nothing can be: it sits behind the college wifi
+     * where this server cannot reach it. Rows go into device_tasks and the device asks for them,
+     * one at a time, of its own accord. So this returns as soon as the queue is written and the
+     * device catches up over the following minutes.
+     *
+     * Three modes, and the order matters. Check reports without writing - it is the only way to
+     * find out how many photos the device will refuse before it refuses them one by one. Twenty
+     * is a rehearsal. Everybody is everybody.
+     */
+    public function enrolStudents(Request $request)
+    {
+        $mode = $request->input('mode', 'check');
+
+        $args = ['--check' => true];
+        if ($mode === 'small') { $args = ['--limit' => 20]; }
+        if ($mode === 'all')   { $args = []; }
+
+        if (!in_array($mode, ['check', 'small', 'all'], true)) {
+            return response()->json(['success' => false, 'message' => 'Unknown mode.'], 422);
+        }
+
+        /* A thousand students is a few thousand rows and a lot of photo checks. */
+        @set_time_limit(900);
+
+        try {
+            \Artisan::call('attendance:enrol-students', $args);
+            $output = \Artisan::output();
+        } catch (\Throwable $e) {
+            Log::error('Enrolment run failed', ['mode' => $mode, 'error' => $e->getMessage()]);
+            return response()->json([
+                'success' => false,
+                'message' => 'Enrolment failed: ' . $e->getMessage(),
+            ], 500);
+        }
+
+        return response()->json(['success' => true, 'output' => $output]);
+    }
+
+    /**
+     * How much of the queue is left, and anything the device refused.
+     *
+     * The refusals matter more than the numbers: a task the device rejected names the student and
+     * says why, and that is where a photo the camera cannot use shows up.
+     */
+    public function enrolmentStatus()
+    {
+        $counts = [];
+        foreach (['queued', 'sent', 'done', 'failed'] as $s) {
+            $counts[$s] = \App\Models\DeviceTask::where('status', $s)->count();
+        }
+
+        $out = "the queue\n";
+        foreach ($counts as $k => $v) { $out .= sprintf("  %-8s %d\n", $k, $v); }
+
+        $out .= "\ndevices\n";
+        foreach (\App\Models\TipsoiDevice::orderBy('id')->get() as $d) {
+            $out .= sprintf("  %-24s connected=%s  last seen %s\n",
+                $d->identifier, $d->connected ? 'yes' : 'no',
+                $d->last_seen ? $d->last_seen->diffForHumans() : 'never');
+        }
+
+        $failed = \App\Models\DeviceTask::where('status', 'failed')->orderBy('id', 'desc')->limit(15)->get();
+        if ($failed->count()) {
+            $out .= "\nthe device refused these\n";
+            foreach ($failed as $f) {
+                $p = is_array($f->payload) ? $f->payload : [];
+                $who = $p['id'] ?? $p['personId'] ?? '?';
+                $out .= sprintf("  student %-8s %-18s %s\n", $who, $f->action,
+                    mb_substr((string) $f->last_error, 0, 140));
+            }
+        }
+
+        if ($counts['queued'] > 0) {
+            $out .= "\n" . $counts['queued'] . " still waiting. The device takes one at a time and asks\n";
+            $out .= "for the next straight away, so this should fall steadily. Press again to look.\n";
+        }
+
+        return response()->json(['success' => true, 'output' => $out]);
     }
 
     /* ---------------- Search (active only — optional API if you need it) ---------------- */

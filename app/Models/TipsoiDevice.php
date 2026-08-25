@@ -10,18 +10,22 @@ class TipsoiDevice extends BaseModel
     protected $table = 'tipsoi_devices';
     protected $fillable = [
         'identifier',
+        'vendor',
         'name',
         'status',
+        'enrol_students',
         'model',
         'ip_address',
         'location',
+        'notes',
         'last_seen',
         'connected'
     ];
 
     protected $casts = [
-        'connected' => 'boolean',
-        'last_seen' => 'datetime'
+        'connected'      => 'boolean',
+        'enrol_students' => 'boolean',
+        'last_seen'      => 'datetime'
     ];
 
     public function persons()

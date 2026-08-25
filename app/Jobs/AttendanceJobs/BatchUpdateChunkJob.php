@@ -47,6 +47,63 @@ class BatchUpdateChunkJob implements ShouldQueue
         $this->onQueue('attendance');
     }
 
+    /**
+     * Send one person wherever the device actually is.
+     *
+     * Batch Update was written when the device lived on the manufacturer's cloud: it uploaded
+     * people there and the cloud passed them down. The college has since taken the device off
+     * that cloud and pointed it at this server, so uploading to the cloud now succeeds and
+     * reaches nobody - the worst kind of failure, because the screen says it worked.
+     *
+     * So the destination is decided by where the device is, not by what this job used to do. If
+     * a device is registered here and set to take people, the person is queued and the device
+     * collects them itself. If there is no such device, the old cloud path is used unchanged, so
+     * a college still on the cloud keeps working exactly as before.
+     *
+     * The same routing lives in BatchUpdateRunJob. That class is the older single-job version and
+     * is no longer what the screen dispatches - the controller sends chunks here - so a change
+     * made only there had no effect at all. Both are kept in step deliberately.
+     */
+    protected function sendPerson($type, $model, $identifier, array $payload, $img, InovaceApi $api)
+    {
+        $queue = app(\App\Services\Attendance\EnrolmentQueue::class);
+
+        if (!$queue->hasTargets()) {
+            /* No device of our own - behave as this job always has. */
+            return $api->upsertPersonSafe($payload, $img);
+        }
+
+        /*
+         * The id must be the one the device reports back when it recognises the face, and that has
+         * to be the id the attendance side looks people up by - the person's own id, not the
+         * registration number. PunchIngestor resolves either, but the id is exact.
+         */
+        $personId = (string) $model->id;
+
+        /*
+         * The device downloads the photo itself, so it needs an address IT can reach - a public
+         * url on this site, not a path on the server's disk. photoPath() returns a disk path,
+         * which is right for the cloud upload and useless to the device.
+         *
+         * And not the original: the device refuses a photo over 1080 pixels tall and abandons a
+         * download that takes too long. DevicePhoto hands over a copy cut to size and leaves the
+         * original alone, because the original is what prints on the ID card.
+         */
+        $url = null;
+        if ($img) {
+            $url = app(\App\Services\Attendance\DevicePhoto::class)
+                ->urlFor($type, $model->id, basename((string) $img));
+        }
+
+        $queued = $queue->enrolPerson($personId, $payload['name'] ?? $identifier, $url, $identifier);
+
+        if (!$queued) {
+            return ['ok' => false, 'message' => 'Nothing queued - the person had no name, or no device is taking people.'];
+        }
+
+        return ['ok' => true];
+    }
+
     public function handle(InovaceApi $api): void
     {
         $run = IntegrationRun::find($this->runId);
@@ -96,7 +153,7 @@ class BatchUpdateChunkJob implements ShouldQueue
                     ];
                     $img = $withPhotos ? $this->photoPath($this->type, $m) : null;
 
-                    $up = $api->upsertPersonSafe($payload, $img);
+                    $up = $this->sendPerson($this->type, $m, $identifier, $payload, $img, $api);
                     if (!empty($up['ok'])) {
                         $chunk['upserted']++;
                         $activeIdentifiers[] = $identifier;
@@ -118,8 +175,15 @@ class BatchUpdateChunkJob implements ShouldQueue
             }
         }
 
+        /*
+         * Allocation is a cloud idea: it tells the manufacturer's cloud which of its devices a
+         * person belongs to. A device of our own is sent the person directly, so there is nothing
+         * left to allocate and asking the cloud would only add errors to the report.
+         */
+        $ownDevice = app(\App\Services\Attendance\EnrolmentQueue::class)->hasTargets();
+
         /* allocate this chunk's active people to selected devices */
-        if (count($activeIdentifiers) && count($devices)) {
+        if (!$ownDevice && count($activeIdentifiers) && count($devices)) {
             $chunk['alloc_total'] = count($activeIdentifiers) * count($devices);
             try {
                 $alloc = $api->batchAllocations('allocate', $activeIdentifiers, $devices);

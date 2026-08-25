@@ -60,9 +60,18 @@ class Kernel extends ConsoleKernel
             ->timezone($tz)
             ->withoutOverlapping();
 
-        // (Optional) separate notifications worker (short-lived, background).
-        // You can remove this if you set --with-notifications=1 in the pipeline above.
-        $schedule->command('queue:work --queue=notifications,default --timeout=120 --tries=3 --stop-when-empty')
+        /*
+         * A short-lived worker every minute, all day, for every queue that matters.
+         *
+         * attendance and long are here on purpose. The pipeline above also drains attendance, but
+         * only between 05:00 and 23:59 - so a Batch Update started at ten past midnight sat in
+         * the queue untouched until five in the morning, with the screen showing "running" and
+         * nothing reaching the device. Nobody would guess that from looking at it.
+         *
+         * Work queued at any hour is now picked up within the minute. --stop-when-empty keeps
+         * each run short, which is what shared hosting wants.
+         */
+        $schedule->command('queue:work --queue=notifications,default,attendance,long --timeout=120 --tries=3 --stop-when-empty')
             ->everyMinute()
             ->timezone($tz)
             ->runInBackground()

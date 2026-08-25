@@ -24,3 +24,61 @@ Homestead.yaml
 npm-debug.log
 yarn-error.log
 .env
+
+# ---- scratch, not history ----
+#
+# Working with this project leaves a lot behind in the root: one-off probes, the text file each
+# one writes its answer into, and a deploy folder holding a copy of every live file replaced since
+# May. None of it is source - it is the sawdust - and committed once it never comes out again.
+#
+# Kept out by shape rather than by name, so tomorrow's probe is ignored without anybody
+# remembering to add it.
+
+# every probe writes its result to a _name.txt or a name_out.txt in the root
+/_*.txt
+/*_out.txt
+/_*.json
+
+# the deploy helper's backup of what was on live before each upload, and the restore points
+/deploy/
+/restore_points/
+*.tar.gz
+
+# throwaway scripts: one-off checks, live hotfix runners, and the test_* family
+/test_*.php
+/tmp_*
+/scratch_*.php
+/artisan_clear.php
+/clear_cache_live.php
+/quick_cache_test.php
+/manual_test_callback.php
+/composer-setup.php
+/get_faculty.php
+/get_subject.php
+/set_ngrok_app_url.sh
+
+# plans and reconciliations written to a text file while working something out
+/audit_*.txt
+/split*.txt
+/ten_taka_*.txt
+/unverify_*.txt
+/pay_audit*.txt
+/head_recon*.txt
+/recon_*.txt
+/speed_cache*.txt
+/host_facts*.txt
+/health_now*.txt
+/hosting-support-email.txt
+/extra_subjects_live.tsv
+
+# spreadsheets, photographs and mockups dropped in the root to be read once
+/*.xlsx
+/*.jpeg
+/*.png
+/*.svg
+
+# a vendor demo, unpacked here to try it
+/Fast_Face_python_demo/
+
+# the printed brochure - a pdf and four page images. Marketing, not source, and binary.
+/brochure/

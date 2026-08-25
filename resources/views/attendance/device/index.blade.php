@@ -329,6 +329,32 @@
             </div>
         </div>
 
+        {{-- ENROL STUDENTS ONTO THE DEVICE
+             Nothing is sent to the device from this screen. Students are put in a queue and the
+             device collects them itself - it asks once a minute whether there is work, then takes
+             one task at a time. So this button finishes immediately and the device catches up
+             over the next few minutes. --}}
+        <div class="card tabpane" id="tab-devices-enrol">
+            <div class="card-hd">
+                <div><b>Enrol students</b> <span class="small">(the device collects them itself)</span></div>
+                <div class="flex">
+                    <button class="btn" id="btn-enrol-check"><i class="fas fa-search"></i> Check first</button>
+                    <button class="btn" id="btn-enrol-20">Send 20</button>
+                    <button class="btn btn-primary" id="btn-enrol-all">Send everybody</button>
+                    <button class="btn" id="btn-enrol-status"><i class="fas fa-sync"></i> Queue status</button>
+                </div>
+            </div>
+            <div class="card-bd">
+                <div id="enrol-wrap">
+                    <div class="empty">
+                        Start with <b>Check first</b> - it sends nothing and reports how many photos
+                        the device will accept.
+                    </div>
+                </div>
+                <pre id="enrol-out" class="small" style="display:none;white-space:pre-wrap;background:#f7f7f7;padding:10px;border-radius:4px;max-height:420px;overflow:auto"></pre>
+            </div>
+        </div>
+
         {{-- PUSH PERSON --}}
         <div class="card tabpane" id="tab-push" style="display:none">
             <div class="card-hd">
@@ -575,6 +601,9 @@
             // Legacy kept:
             var R_LIVE_LIST = @json(route('attendance.live.list'));
             var R_TIPSOI_SEARCH = @json(route('attendance.tipsoi.search'));
+            // Enrolment onto the device
+            var R_ENROL = @json(route('attendance.tipsoi.devices.enrol'));
+            var R_ENROL_STATUS = @json(route('attendance.tipsoi.devices.enrol-status'));
 
             $.ajaxSetup({
                 headers: {
@@ -678,6 +707,68 @@
                 }).join('');
                 $('#bu-devices').html(bu);
             }
+
+            /* ---------- Enrolling students onto the device ---------- */
+
+            function enrolButtons(disabled) {
+                $('#btn-enrol-check, #btn-enrol-20, #btn-enrol-all, #btn-enrol-status')
+                    .prop('disabled', disabled);
+            }
+
+            function enrolShow(text) {
+                $('#enrol-wrap').hide();
+                $('#enrol-out').show().text(text);
+            }
+
+            function enrolRun(mode, label) {
+                enrolButtons(true);
+                enrolShow(label + '...\n\nThis can take a minute for a thousand students. Please wait.');
+
+                $.post(R_ENROL, { mode: mode }).always(function() {
+                    enrolButtons(false);
+                }).done(function(res) {
+                    enrolShow((res && res.output) ? res.output : 'No output.');
+                }).fail(function(xhr) {
+                    var msg = 'Failed.';
+                    if (xhr && xhr.responseJSON && xhr.responseJSON.message) {
+                        msg = xhr.responseJSON.message;
+                    }
+                    enrolShow(msg);
+                });
+            }
+
+            $(document).on('click', '#btn-enrol-check', function() {
+                enrolRun('check', 'Checking - nothing is being sent');
+            });
+
+            $(document).on('click', '#btn-enrol-20', function() {
+                /* A small batch first: if a photo or a permission is wrong, twenty is a much
+                   easier thing to look at than a thousand. */
+                Swal.fire({
+                    title: 'Send 20 students?',
+                    text: 'They go into a queue. The device collects them on its own.',
+                    icon: 'question', showCancelButton: true, confirmButtonText: 'Send 20'
+                }).then(function(r) { if (r.isConfirmed) { enrolRun('small', 'Queueing 20 students'); } });
+            });
+
+            $(document).on('click', '#btn-enrol-all', function() {
+                Swal.fire({
+                    title: 'Send every student?',
+                    text: 'Run the check first if you have not. Students already on the device are skipped.',
+                    icon: 'warning', showCancelButton: true, confirmButtonText: 'Send everybody'
+                }).then(function(r) { if (r.isConfirmed) { enrolRun('all', 'Queueing every student'); } });
+            });
+
+            $(document).on('click', '#btn-enrol-status', function() {
+                enrolButtons(true);
+                $.get(R_ENROL_STATUS).always(function() {
+                    enrolButtons(false);
+                }).done(function(res) {
+                    enrolShow((res && res.output) ? res.output : 'No output.');
+                }).fail(function() {
+                    enrolShow('Could not read the queue.');
+                });
+            });
 
             function loadDevices() {
                 $('#btn-refresh-devices').prop('disabled', true);

@@ -109,7 +109,13 @@ class SendAttendanceNotification implements ShouldQueue
                     if (!empty($numbers)) {
                         $smsRes = $this->sendSMS($numbers, $finalBody);
                         $sentAny = ($smsRes === true) ?: $sentAny;
-                        if ($smsRes !== true) $lastErr = is_string($smsRes) ? $smsRes : 'sms_send_failed';
+                        if ($smsRes !== true) {
+                            /* Prefer whatever the gateway actually said. "sms_send_failed" is our
+                               word for it and tells nobody anything - running out of credit and a
+                               dead number both used to record exactly the same thing. */
+                            $lastErr = is_string($smsRes) ? $smsRes
+                                : ($this->lastSmsError ?: 'sms_send_failed');
+                        }
                     }
                 } catch (\Throwable $e) {
                     Log::warning('Attendance SMS error', ['id'=>$att->id, 'error'=>$e->getMessage()]);

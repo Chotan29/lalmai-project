@@ -2,13 +2,18 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+
+/*
+ * HasFactory was imported and used here, but that trait arrived in Laravel 8 and this is 5.8 -
+ * so the class could never be loaded at all: touching it threw "Trait
+ * Illuminate\Database\Eloquent\Factories\HasFactory not found" before any code ran. It only went
+ * unnoticed because nothing had ever written a punch. Removed rather than replaced; it exists
+ * only to provide ::factory() for tests, which this version has no notion of.
+ */
 
 class TipsoiAttendanceLog extends Model
 {
-    use HasFactory;
-
     protected $table = 'tipsoi_attendance_logs';
 
     protected $casts = [

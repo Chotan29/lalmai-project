@@ -53,6 +53,33 @@ class SdkClient
         }
     }
 
+    /**
+     * Write one callback address into the device.
+     *
+     * Generic on purpose: the device has five of these and they do not share a parameter name -
+     * the recognition one wants callbackUrl and an extra base64Enable, the rest want url. Rather
+     * than five near-identical methods, the driver says which setter and which fields, and this
+     * sends them.
+     *
+     * Only reachable from a machine on the same network as the device. Shared hosting cannot get
+     * inside the college network, so connecting a device is done once from a computer there.
+     */
+    public function setCallback(string $ip, string $setter, array $params, string $password = null)
+    {
+        if ($password !== null && $password !== '') { $params['pass'] = $password; }
+
+        return $this->form($ip, ltrim($setter, '/'), $params);
+    }
+
+    /** Read the addresses the device is currently holding. */
+    public function getCallbacks(string $ip, string $password = null)
+    {
+        $q = [];
+        if ($password !== null && $password !== '') { $q['pass'] = $password; }
+
+        return $this->getQ($ip, 'device/callback', $q);
+    }
+
     // === Heartbeat callback address on device ===
     public function setDeviceHeartbeat(string $ip, string $callbackUrl = null, int $intervalSec = null){
         // POST /setDeviceHeartBeat (device calls platform every minute; we set 'url' here). :contentReference[oaicite:11]{index=11}
