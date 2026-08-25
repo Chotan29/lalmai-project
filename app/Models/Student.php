@@ -25,6 +25,35 @@ class Student extends BaseModel
         return "{$this->first_name} {$this->middle_name} {$this->last_name}";
     }
 
+    /**
+     * Students whose admission actually went ahead.
+     *
+     * Somebody who paid and then did not take admission stays in this table - the application, the
+     * photo and the payment all happened and may have to be shown later - but they are not a
+     * student of this college and must not be counted as one. Lifting the mark brings them back
+     * with nothing lost.
+     */
+    public function scopeAdmitted($query)
+    {
+        return $query->whereNull('admission_cancelled_at');
+    }
+
+    /** The other side of it: paid, then withdrew. */
+    public function scopeAdmissionCancelled($query)
+    {
+        return $query->whereNotNull('admission_cancelled_at');
+    }
+
+    public function getAdmissionCancelledAttribute()
+    {
+        return $this->admission_cancelled_at !== null;
+    }
+
+    public function refunds()
+    {
+        return $this->hasMany(PaymentRefund::class, 'students_id');
+    }
+
 
     public function address()
     {

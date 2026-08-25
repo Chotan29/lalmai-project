@@ -57,9 +57,24 @@
                 <span class="op-card-n">{{ $pending->count() }} payment(s)</span>
             @endif
         </div>
+        {{-- Money that came in and then went back out, to someone who paid and did not take
+             admission. The payment rows above are left exactly as they were, so the Total is
+             still what was received; this says how much of it the college no longer holds. --}}
+        @if(!empty($data['op_refunded']))
+            <div class="op-card op-card-wait">
+                <span class="op-card-h">Refunded</span>
+                <span class="op-card-v">&#2547;{{ number_format($data['op_refunded']['sum'], 2) }}</span>
+                <span class="op-card-n">{{ $data['op_refunded']['count'] }} refund(s) &mdash; paid back</span>
+            </div>
+        @endif
         <div class="op-card op-card-grand">
             <span class="op-card-h">Total</span>
             <span class="op-card-v">&#2547;{{ number_format($totalAmount, 2) }}</span>
+            @if(!empty($data['op_refunded']))
+                <span class="op-card-n">
+                    net of refunds &#2547;{{ number_format($totalAmount - $data['op_refunded']['sum'], 2) }}
+                </span>
+            @endif
         </div>
     </div>
     @endif

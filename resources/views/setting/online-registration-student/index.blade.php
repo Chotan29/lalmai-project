@@ -61,6 +61,16 @@
                     </div>
                 </div>
 
+                {{-- Shown rather than hidden: the figures above leave these people out, and a number
+                     that has quietly gone missing is worse than one that is accounted for. --}}
+                @if(!empty($data['cancelled_students']))
+                    <div class="alert alert-warning">
+                        <i class="fa fa-user-times"></i>
+                        <strong>{{ $data['cancelled_students'] }}</strong>
+                        paid but did not take admission, so they are not included in the counts above.
+                    </div>
+                @endif
+
                 <!-- Filter Form -->
                 <div class="card mb-4">
                     <div class="card-header">

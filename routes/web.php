@@ -437,6 +437,10 @@ Route::post('online-registration/prepare-payment',  ['as' => 'online-registratio
 Route::post('online-registration/find-semester',     ['as' => 'online-registration.find-semester',      'uses' => 'Student\OnlineRegistrationController@findSemester']);
 Route::post('online-registration/find-subject',      ['as' => 'online-registration.find-subject',       'uses' => 'Student\OnlineRegistrationController@findSubject']);
 Route::post('online-registration/check-email',       ['as' => 'online-registration.check-email',        'uses' => 'Student\OnlineRegistrationController@checkEmail']);
+/* Keeps a long application from timing out mid-way and returns a fresh csrf token. */
+Route::get('online-registration/keep-alive',         ['as' => 'online-registration.keep-alive',         'uses' => 'Student\OnlineRegistrationController@keepAlive']);
+/* Solves the host's one-time POST bot check before the real registration/payment submit. */
+Route::post('online-registration/warmup-submit',     ['as' => 'online-registration.warmup-submit',      'uses' => 'Student\OnlineRegistrationController@warmupSubmit']);
 //print registration
 Route::get('online-registration/find',             ['as' => 'online-registration.find',         'uses' => 'Student\OnlineRegistrationController@findRegistration']);
 Route::get('online-registration/{id}/print',       ['as' => 'online-registration.print',        'uses' => 'Student\OnlineRegistrationController@print']);
@@ -677,6 +681,8 @@ Route::group(['prefix' => 'account/',                                   'as' => 
     Route::get('report/fee-collection-head',            ['as' => 'report.fee-collection-head',        'middleware' => ['ability:super-admin,report-fee-collection-head'],       'uses' => 'Report\FeeCollectionHeadReportController@feeCollectionHead']);
     //the department list from that report as a file - same permission, it is the same data
     Route::get('report/fee-collection-head/departments/export', ['as' => 'report.fee-collection-head.departments.export', 'middleware' => ['ability:super-admin,report-fee-collection-head'], 'uses' => 'Report\FeeCollectionHeadReportController@feeGroupDepartmentExport']);
+    /* The Sonali Bank transfer letters for whatever the report is currently showing. */
+    Route::get('report/fee-collection-head/bank-letter',         ['as' => 'report.fee-collection-head.bank-letter',        'middleware' => ['ability:super-admin,report-fee-collection-head'], 'uses' => 'Report\FeeCollectionHeadReportController@bankLetter']);
     Route::get('report/fee-online-payment',             ['as' => 'report.fee-online-payment',         'middleware' => ['ability:super-admin,report-fee-online-payment'],        'uses' => 'Report\OnlineFeePaymentReportController@onlinePayments']);
     Route::get('report/balance-fee',                    ['as' => 'report.balance-fee',                'middleware' => ['ability:super-admin,report-balance-fee'],               'uses' => 'Report\BalanceFeeReportController@balanceFees']);
 
@@ -716,6 +722,11 @@ Route::group(['prefix' => 'account/',                                   'as' => 
       built. Guarded by fees-head-add - the same permission the Fees Head screen itself uses, so
       this cannot become a side door into creating heads.*/
     Route::post('fees/fee-head-group/sub-head/store',    ['as' => 'fees.fee-head-group.sub-head.store',  'middleware' => ['ability:super-admin,fees-head-add'],               'uses' => 'Fees\FeeHeadGroupController@storeSubHead']);
+
+    /* Which bank account each head's money is transferred into. One screen for all of them -
+       twenty-six heads opened one at a time is how half of them never get filled in. */
+    Route::get('fees/fee-head-bank-account',             ['as' => 'fees.fee-head-bank-account',          'middleware' => ['ability:super-admin,fees-fee-head-group-index'],   'uses' => 'Fees\FeeHeadBankAccountController@index']);
+    Route::post('fees/fee-head-bank-account/store',      ['as' => 'fees.fee-head-bank-account.store',    'middleware' => ['ability:super-admin,fees-fee-head-group-edit'],    'uses' => 'Fees\FeeHeadBankAccountController@store']);
 
     /*Fee Master*/
     Route::get('fees/master',                    ['as' => 'fees.master',                  'middleware' => ['ability:super-admin,fees-master-index'],            'uses' => 'Fees\FeesMasterController@index']);
@@ -1106,6 +1117,42 @@ Route::prefix('attendance')
             Route::get('search',             [TipsoiUnifiedController::class, 'searchPeople'])
                 ->name('search')
                 ->middleware(['ability:super-admin,tipsoi-search']);
+
+            /*
+             * Adding and connecting devices from the application, rather than by editing files.
+             *
+             * store/retire work from anywhere. connect and read-callbacks reach out to the device
+             * over the local network, so they only work when the application is being used from
+             * inside the college - shared hosting cannot get through the router. Doing it once
+             * from a machine there is enough; after that the device calls us.
+             */
+            Route::post('devices/store',     [TipsoiUnifiedController::class, 'storeDevice'])
+                ->name('devices.store')
+                ->middleware(['ability:super-admin,tipsoi-devices-index']);
+
+            Route::post('devices/connect',   [TipsoiUnifiedController::class, 'connectDevice'])
+                ->name('devices.connect')
+                ->middleware(['ability:super-admin,tipsoi-devices-index']);
+
+            Route::get('devices/callbacks',  [TipsoiUnifiedController::class, 'readDeviceCallbacks'])
+                ->name('devices.callbacks')
+                ->middleware(['ability:super-admin,tipsoi-devices-index']);
+
+            Route::post('devices/retire',    [TipsoiUnifiedController::class, 'retireDevice'])
+                ->name('devices.retire')
+                ->middleware(['ability:super-admin,tipsoi-devices-index']);
+
+            /*
+             * Enrolling students onto the device. These only write to the queue - the device
+             * collects the work itself, so they finish quickly however many students there are.
+             */
+            Route::post('devices/enrol',       [TipsoiUnifiedController::class, 'enrolStudents'])
+                ->name('devices.enrol')
+                ->middleware(['ability:super-admin,tipsoi-sdk-push-person']);
+
+            Route::get('devices/enrol-status', [TipsoiUnifiedController::class, 'enrolmentStatus'])
+                ->name('devices.enrol-status')
+                ->middleware(['ability:super-admin,tipsoi-devices-index']);
 
             Route::post('sdk/push-person',   [TipsoiUnifiedController::class, 'pushPersonToDevice'])
                 ->name('sdk.push-person')
@@ -2397,6 +2444,12 @@ Route::group(['prefix' => 'setting/',                                   'as' => 
     Route::get('online-registration-student/{id}',         ['as' => '.online-registration-student.show',                    'middleware' => ['ability:super-admin|admin,web-setting-registration-index'],            'uses' => 'OnlineRegistrationStudentController@show']);
     Route::post('online-registration-student/{id}/payment', ['as' => '.online-registration-student.payment',                'middleware' => ['ability:super-admin|admin,web-setting-registration-index'],            'uses' => 'OnlineRegistrationStudentController@initiatePayment']);
 
+    /* Paid, then did not take admission: mark it, put it back, and record money returned.
+       Kept behind the edit permission - these change money and headcount, not just a view. */
+    Route::post('online-registration-student/{id}/cancel-admission',  ['as' => '.online-registration-student.cancel-admission',  'middleware' => ['ability:super-admin|admin,web-setting-registration-edit'], 'uses' => 'OnlineRegistrationStudentController@cancelAdmission']);
+    Route::post('online-registration-student/{id}/restore-admission', ['as' => '.online-registration-student.restore-admission', 'middleware' => ['ability:super-admin|admin,web-setting-registration-edit'], 'uses' => 'OnlineRegistrationStudentController@restoreAdmission']);
+    Route::post('online-registration-student/{id}/refund',            ['as' => '.online-registration-student.refund',            'middleware' => ['ability:super-admin|admin,web-setting-registration-edit'], 'uses' => 'OnlineRegistrationStudentController@storeRefund']);
+
     /* Alert Setting Routes */
     Route::get('alert',                    ['as' => '.alert',                   'middleware' => ['ability:super-admin,alert-setting-index'],        'uses' => 'AlertSettingController@index']);
     Route::get('alert/add',                ['as' => '.alert.add',               'middleware' => ['ability:super-admin,alert-setting-add'],          'uses' => 'AlertSettingController@add']);
@@ -3225,4 +3278,3 @@ Route::group(['prefix' => 'webportal',                                   'as' =>
 
     Route::get('/{page?}',         ['as' => '404',                'uses' => 'ErrController@pageNotFound'])->where('page','.*');
 });
-

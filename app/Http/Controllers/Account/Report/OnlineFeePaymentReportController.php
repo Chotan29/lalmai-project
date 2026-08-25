@@ -128,6 +128,33 @@ class OnlineFeePaymentReportController extends CollegeBaseController
             }
         }
 
+        /*
+         * Money that was received and then handed back.
+         *
+         * Somebody who paid and did not take admission is refunded, and that refund is recorded
+         * beside the payment rather than as a change to it - so the payment total above is still
+         * what came in, and stays the same figure it was when the month was first reported. What
+         * would be wrong is to stop there: the college does not have that money any more. It is
+         * shown as its own line so the reader can see both, rather than one number that quietly
+         * means neither.
+         */
+        $data['op_refunded'] = null;
+        try {
+            $refunds = \Illuminate\Support\Facades\DB::table('payment_refunds')
+                ->join('students', 'students.id', '=', 'payment_refunds.students_id')
+                ->where('payment_refunds.status', 1)
+                ->where($applyFilters)
+                ->select('payment_refunds.amount')
+                ->get();
+
+            if ($refunds->count()) {
+                $data['op_refunded'] = ['count' => $refunds->count(), 'sum' => $refunds->sum('amount')];
+            }
+        } catch (\Throwable $e) {
+            /* Before the refunds table exists this report must still open. */
+            $data['op_refunded'] = null;
+        }
+
 
        /* $filteredStudent  = $students->filter(function ($student) {
             $student->fee_amount = $student->feeMaster()->sum('fee_amount');

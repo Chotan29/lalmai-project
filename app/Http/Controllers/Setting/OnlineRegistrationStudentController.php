@@ -6,6 +6,8 @@ use App\Http\Controllers\CollegeBaseController;
 use App\Models\Student;
 use App\Models\OnlineRegistrationSetting;
 use App\Models\OnlinePayment;
+use App\Models\PaymentRefund;
+use App\Services\Admission\AdmissionCancellation;
 use Illuminate\Http\Request;
 use Carbon\Carbon;
 
@@ -57,11 +59,21 @@ class OnlineRegistrationStudentController extends CollegeBaseController
                 ->first();
         }
 
-        // Count stats
-        $data['total_online_students'] = Student::whereNotNull('student_type')->count();
-        $data['new_students'] = Student::where('student_type', 'new')->count();
-        $data['old_students'] = Student::where('student_type', 'old')->count();
-        $data['active_students'] = Student::whereNotNull('student_type')->where('status', 1)->count();
+        /*
+         * Count stats.
+         *
+         * Somebody who paid and then did not take admission is still a row here - the application,
+         * the photo and the payment all happened - but they are not a student of this college and
+         * counting them would overstate every one of these figures. admitted() leaves them out;
+         * lifting the mark brings them straight back.
+         */
+        $data['total_online_students'] = Student::whereNotNull('student_type')->admitted()->count();
+        $data['new_students'] = Student::where('student_type', 'new')->admitted()->count();
+        $data['old_students'] = Student::where('student_type', 'old')->admitted()->count();
+        $data['active_students'] = Student::whereNotNull('student_type')->admitted()->where('status', 1)->count();
+
+        /* Shown separately rather than hidden, so the number is accounted for and not just missing. */
+        $data['cancelled_students'] = Student::whereNotNull('student_type')->admissionCancelled()->count();
 
         return view(parent::loadDataToView($this->view_path.'.index'), compact('data'));
     }
@@ -95,7 +107,82 @@ class OnlineRegistrationStudentController extends CollegeBaseController
             $data['fees'] = [];
         }
 
+        /* Money in, money back, and what is left - the three figures the office actually asks for. */
+        $admission = app(AdmissionCancellation::class);
+        $data['refunds']         = PaymentRefund::where('students_id', $id)->orderBy('id', 'desc')->get();
+        $data['paid_total']      = $admission->paidTotal($id);
+        $data['refunded_total']  = $admission->refundedTotal($id);
+        $data['refundable']      = max(0, $data['paid_total'] - $data['refunded_total']);
+        $data['refund_methods']  = PaymentRefund::methods();
+
         return view(parent::loadDataToView($this->view_path.'.show'), compact('data'));
+    }
+
+    /**
+     * The admission did not go ahead.
+     *
+     * A mark, not a deletion. The application, the photo and the payment all happened and the
+     * college may have to show that later; what changes is that the person stops being counted as
+     * a student and comes off the attendance device.
+     */
+    public function cancelAdmission(Request $request, $id)
+    {
+        $student = Student::findOrFail($id);
+
+        $done = app(AdmissionCancellation::class)->cancel(
+            $student,
+            $request->input('note', ''),
+            auth()->id()
+        );
+
+        if (!$done) {
+            $this->message = 'This admission was already marked as not taken.';
+        } else {
+            $this->message = 'Marked as admission not taken. The student is out of the counts and off the device.';
+        }
+
+        return redirect()->route($this->base_route . '.show', $id);
+    }
+
+    /** Put them back exactly as they were. */
+    public function restoreAdmission($id)
+    {
+        $student = Student::findOrFail($id);
+
+        app(AdmissionCancellation::class)->restore($student, auth()->id());
+
+        $this->message = 'Admission restored. The student is counted again and goes back on the device.';
+
+        return redirect()->route($this->base_route . '.show', $id);
+    }
+
+    /**
+     * Record money handed back.
+     *
+     * The payment row is left alone - the money really did come in that day. This is a second row
+     * saying it went out again, so the month's collection is the difference and both halves can
+     * still be shown to anyone who asks.
+     */
+    public function storeRefund(Request $request, $id)
+    {
+        $student = Student::findOrFail($id);
+
+        $result = app(AdmissionCancellation::class)->refund($student, [
+            'amount'            => $request->input('amount'),
+            'date'              => $request->input('date') ?: now()->toDateString(),
+            'method'            => $request->input('method', 'cash'),
+            'ref_no'            => $request->input('ref_no'),
+            'note'              => $request->input('note'),
+            'online_payment_id' => $request->input('online_payment_id'),
+        ], auth()->id());
+
+        if (empty($result['ok'])) {
+            $this->error = $result['message'] ?? 'The refund could not be recorded.';
+        } else {
+            $this->message = 'Refund recorded, voucher ' . $result['refund']->voucher_no . '.';
+        }
+
+        return redirect()->route($this->base_route . '.show', $id);
     }
 
     /**

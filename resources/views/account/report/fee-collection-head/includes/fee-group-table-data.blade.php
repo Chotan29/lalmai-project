@@ -5,26 +5,72 @@
 
     <div class="fg-title">
         <h2>{{ $data['fee_title'] ?? $data['print_head'] }}</h2>
+        {{-- Whose sheet this is, said on the sheet itself. A one-programme report and the
+             whole-college one are the same page with different numbers, and once it is printed
+             there is nothing left to tell them apart. --}}
+        @if(!empty($data['fg_programme_title']))
+            <div class="fg-sub"><strong>{{ $data['fg_programme_title'] }}</strong> only</div>
+        @endif
         @if(!empty($data['fg_period']))
-            <div class="fg-sub">Collection period&nbsp; {{ $data['fg_period'] }}</div>
+            {{-- When no dates were asked for, the span is the one the money itself covers. Saying
+                 so matters: otherwise two sheets printed months apart carry different totals under
+                 headings that look identical. --}}
+            <div class="fg-sub">
+                Collection period&nbsp; {{ $data['fg_period'] }}
+                @if(!empty($data['fg_whole_period']))
+                    &nbsp;<em>(everything collected against this fee)</em>
+                @endif
+            </div>
         @endif
     </div>
 
     {{-- The three figures the office actually reads, before the detail. On paper they land at
          the top of page one, so the answer is visible without turning the sheet over. --}}
+    {{-- The card labels change when one programme is chosen, and they have to.
+         The college heads - transport, library, seminar - are paid by every student in the
+         college. Narrowed to one programme this card holds that programme's share of them, which
+         is a real figure and a useful one, but it is not the college's total. Left saying
+         "College" it would be read as exactly that, and a printed sheet gives the reader nothing
+         to correct the impression with. --}}
+    {{-- Several fees only add up while no student sits in two of them. They are meant to be one
+         admission split by department, and a student belongs to one department. Where that does
+         not hold, every figure below counts those students twice - so it is said here, on the
+         sheet, and not left for somebody to discover at the bank. Screen only: a printed sheet
+         carrying this warning would be filed and the warning forgotten. --}}
+    @if(!empty($data['fg_overlap']))
+        <div class="alert alert-danger fg-screen-only">
+            <strong>These fees overlap.</strong>
+            {{ $data['fg_overlap'] }} student(s) paid into more than one of the fees chosen, so
+            every total below counts them twice. Choose fees that do not share students - the
+            bank transfer letter will refuse until you do.
+        </div>
+    @endif
+
     <div class="fg-summary">
         <div class="fg-card">
-            <span class="fg-card-h">College</span>
+            <span class="fg-card-h">{{ !empty($data['fg_programme_title']) ? 'College heads (this programme)' : 'College' }}</span>
             <span class="fg-card-v">{{ number_format($data['college_total'] ?? 0, 2) }}</span>
         </div>
         <div class="fg-card">
-            <span class="fg-card-h">Department</span>
+            <span class="fg-card-h">{{ !empty($data['fg_programme_title']) ? 'Department heads (this programme)' : 'Department' }}</span>
             <span class="fg-card-v">{{ number_format($data['department_total'] ?? 0, 2) }}</span>
         </div>
         <div class="fg-card fg-card-grand">
             <span class="fg-card-h">Grand Total</span>
             <span class="fg-card-v">{{ number_format($data['fee_collection_total'] ?? 0, 2) }}</span>
         </div>
+    </div>
+
+    {{-- The letters that move this money out of the college account and into the heads' own.
+         Screen only - it is a download button, not part of the statement. --}}
+    <div class="fg-screen-only" style="margin-bottom:12px">
+        <a class="fg-dl" target="_blank"
+           href="{{ route('account.report.fee-collection-head.bank-letter', request()->only(['fee_heads', 'start_date', 'end_date', 'programme'])) }}">
+            <i class="fa fa-university" aria-hidden="true"></i>&nbsp;Bank transfer letter
+        </a>
+        <small class="text-muted" style="margin-left:8px">
+            One sheet, every account &mdash; for exactly what is shown here.
+        </small>
     </div>
 
     {{-- Whose money this is. The head table says how much landed in each head; this says how
@@ -153,10 +199,30 @@
                     <td class="fg-by">
                         <span class="fg-tag {{ $feeRow->collected_by == 'department' ? 'fg-tag-dept' : '' }}">{{ ucfirst($feeRow->collected_by) }}</span>
                     </td>
-                    <td class="fg-fee">{{ number_format($feeRow->fee_amount, 2) }}</td>
+                    {{-- Two fees can charge the same head at different rates. There is then no one
+                         rate to print, and printing either of them invites the reader to multiply
+                         it by the student count and find the total does not match. --}}
+                    <td class="fg-fee">{{ $feeRow->fee_amount === null ? '—' : number_format($feeRow->fee_amount, 2) }}</td>
                     {{-- A head that received nothing is greyed rather than removed: twenty-six
-                         heads that quietly become twenty-three cannot be reconciled. --}}
-                    <td class="fg-amt {{ $feeRow->amount == 0 ? 'fg-zero' : '' }}">{{ number_format($feeRow->amount, 2) }}</td>
+                         heads that quietly become twenty-three cannot be reconciled.
+
+                         Where money has been handed back, the head shows what it is left holding
+                         with the refund written underneath - subtracting it silently would leave
+                         the accounts unable to explain why a head is short. --}}
+                    <td class="fg-amt {{ $feeRow->amount == 0 ? 'fg-zero' : '' }}">
+                        {{ number_format($feeRow->amount, 2) }}
+                        @if(!empty($feeRow->refunded))
+                            {{-- On screen only. The printed sheet is the statement that gets
+                                 signed and filed, and it should carry the figure the head is
+                                 actually left holding - not working notes underneath every line.
+                                 The refund is still accounted for on paper: it has its own line
+                                 in the totals at the foot. --}}
+                            <br><small class="text-danger fg-screen-only">
+                                &minus;{{ number_format($feeRow->refunded, 2) }} refunded
+                                (of {{ number_format($feeRow->collected, 2) }})
+                            </small>
+                        @endif
+                    </td>
                 </tr>
                 @php($i++)
             @endforeach
@@ -174,6 +240,19 @@
         @endif
         </tbody>
         <tfoot>
+            @php($refundedTotal = isset($data['fee_group_rows']) ? $data['fee_group_rows']->sum('refunded') : 0)
+            @if($refundedTotal > 0)
+                {{-- Both halves, so the sheet can be reconciled against the receipts. Collected is
+                     what came in and does not change; the grand total is what is left. --}}
+                <tr class="fg-subtotal">
+                    <td colspan="4" class="fg-total-lbl">Collected before refunds</td>
+                    <td class="fg-total-val fg-amt">{{ number_format($data['fee_group_rows']->sum('collected'), 2) }}</td>
+                </tr>
+                <tr class="fg-subtotal">
+                    <td colspan="4" class="fg-total-lbl">Refunded</td>
+                    <td class="fg-total-val fg-amt text-danger">&minus;{{ number_format($refundedTotal, 2) }}</td>
+                </tr>
+            @endif
             <tr>
                 <td colspan="4" class="fg-total-lbl">Grand Total</td>
                 <td class="fg-total-val fg-amt">{{ number_format($data['fee_collection_total'] ?? 0, 2) }}</td>

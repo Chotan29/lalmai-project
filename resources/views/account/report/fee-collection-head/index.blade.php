@@ -66,7 +66,10 @@
                 var report_type = $('select[name="report_type"]').val();
                 var start_date = $('input[name="start_date"]').val();
                 var end_date = $('input[name="end_date"]').val();
-                var fee_heads = $('select[name="fee_heads"]').val();
+                /* Read by id, not by name: the box is a multiple select now and its name carries
+                   the [] suffix, so the old name selector matched nothing and every chosen fee
+                   was quietly dropped from the url. */
+                var fee_heads = $('#fee_heads').val();
 
                 if (report_type !== '') {
                     url += '?report_type=' + report_type;
@@ -103,14 +106,31 @@
 
                 /* A Main Fee Head comes through as "GROUP:3", and "GROUP:3" > 0 is false in
                    JavaScript, so the old numeric test silently dropped it from the URL and the
-                   report came back unfiltered. Test for a real choice instead. */
-                if (fee_heads && fee_heads !== '0') {
+                   report came back unfiltered. Test for a real choice instead.
+
+                   Several are joined with commas rather than repeated as fee_heads[] so that a
+                   link written when only one could be chosen still reads as a list of one - every
+                   bookmark and print link in the office keeps working. */
+                var chosen = $.isArray(fee_heads) ? fee_heads : (fee_heads ? [fee_heads] : []);
+                chosen = $.grep(chosen, function (v) { return v && v !== '0'; });
+
+                if (chosen.length) {
+                    var joined = encodeURIComponent(chosen.join(','));
                     if (flag) {
-                        url += '&fee_heads=' + encodeURIComponent(fee_heads);
+                        url += '&fee_heads=' + joined;
                     } else {
-                        url += '?fee_heads=' + encodeURIComponent(fee_heads);
+                        url += '?fee_heads=' + joined;
                         flag = true;
                     }
+                }
+
+                /* The programme box only exists once a report has been drawn, so it is read
+                   rather than assumed. Empty means the whole college, which is the report as it
+                   has always been. */
+                var programme = $('select[name="programme"]').val();
+                if (programme) {
+                    url += (flag ? '&' : '?') + 'programme=' + encodeURIComponent(programme);
+                    flag = true;
                 }
 
                 location.href = url;

@@ -28,6 +28,10 @@ trait AccountingScope{
       time here.*/
     use RequestLookupCache;
 
+    /* Reading the fee filter and matching money against it. Held apart because the bank letter,
+       which is a plain service and not a controller, needs the same rule. */
+    use FeeGroupFilter;
+
     /**
      * One row, fetched once per request, whatever the id is asked for.
      *
@@ -306,26 +310,36 @@ trait AccountingScope{
     /** Group id when the picked filter is a Main Fee Head, otherwise null. */
     public function feeHeadGroupIdFromFilter($value)
     {
-        $value = (string) $value;
+        $ids = $this->feeGroupIdsFromFilter($value);
 
-        if (strpos($value, 'GROUP:') !== 0) {
-            return null;
-        }
-
-        return (int) substr($value, 6);
+        return $ids ? $ids[0] : null;
     }
 
     /** Heading for whatever the filter picked, head or whole fee. */
     public function feeFilterTitle($value)
     {
-        $groupId = $this->feeHeadGroupIdFromFilter($value);
+        $groupIds = $this->feeGroupIdsFromFilter($value);
 
-        if ($groupId === null) {
+        if (!$groupIds) {
             return $this->getFeeHeadById($value);
         }
 
-        $group = FeeHeadGroup::find($groupId);
-        return $group ? $group->title : 'Unknown Main Fee Head';
+        $titles = FeeHeadGroup::whereIn('id', $groupIds)->pluck('title', 'id');
+
+        /* Named in the order they were picked, not the order the database returns them - the
+           reader chose that order and the sheet should not silently rearrange it. */
+        $named = [];
+        foreach ($groupIds as $id) {
+            $named[] = $titles[$id] ?? 'Unknown Main Fee Head';
+        }
+
+        if (count($named) === 1) {
+            return $named[0];
+        }
+
+        /* Two or three fit on a printed heading. Beyond that the heading becomes longer than the
+           report it sits on, so it says how many instead and the sheet lists them below. */
+        return count($named) <= 3 ? implode(' + ', $named) : (count($named) . ' fees');
     }
 
     /**
@@ -337,19 +351,13 @@ trait AccountingScope{
      */
     public function applyFeeHeadFilter($query, $value)
     {
-        $groupId = $this->feeHeadGroupIdFromFilter($value);
+        $groupIds = $this->feeGroupIdsFromFilter($value);
 
-        if ($groupId === null) {
+        if (!$groupIds) {
             return $query->where('fm.fee_head', $value);
         }
 
-        /* A recurring run tags the period on the end ("GROUP-3-2026-08") while a one-off does
-           not, so both shapes have to match - and matching the prefix alone would let GROUP-1
-           swallow GROUP-10. */
-        return $query->where(function ($q) use ($groupId) {
-            $q->where('fm.billing_period_key', 'GROUP-' . $groupId)
-              ->orWhere('fm.billing_period_key', 'like', 'GROUP-' . $groupId . '-%');
-        });
+        return $this->applyFeeGroups($query, $groupIds);
     }
 
     public function activePayrollHead()
