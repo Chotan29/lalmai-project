@@ -76,13 +76,24 @@ class BaseModel extends Model implements AuditableContract
         return $status;
     }
 
+    /**
+     * Compared with === on purpose.
+     *
+     * With == this could not switch anything off. On PHP 7 a non-numeric string compared against
+     * an integer becomes 0, so `0 == 'active'` is TRUE - and setting status to 0 stored 1.
+     * Every model on BaseModel was affected: $row->status = 0 followed by save() left the row
+     * active, silently, and the only way anything ever got deactivated was by going round the
+     * model with a query builder update.
+     *
+     * === keeps the two labels working exactly as before and lets 0 through as 0.
+     */
     public function setStatusAttribute($value)
     {
         //$this->attributes['status'] = $value == 'active'?1:0;
 
-        if($value == 'active'){
+        if($value === 'active'){
             $status = 1;
-        }elseif($value == 'in-active'){
+        }elseif($value === 'in-active'){
             $status = 0;
         }else{
             $status = $value;

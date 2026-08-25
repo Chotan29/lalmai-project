@@ -2630,8 +2630,98 @@
             image.src = imageSource;
         }
 
+        /*
+         * Keep the session alive while the form is open.
+         *
+         * Sessions last an hour and end when the browser closes, and this form takes most people
+         * longer than that - seven tabs, a photo, a subject list. When it expired the post came
+         * back 419 with an empty body and the page could only say "Submission failed", so
+         * everything typed was lost and nothing was recorded anywhere.
+         *
+         * Every ten minutes the session is touched and the token replaced. The token still has to
+         * match on submit, so nothing is loosened - the form simply stops going stale under
+         * someone who is still filling it in.
+         */
+        (function keepRegistrationSessionAlive() {
+            const KEEP_ALIVE_MINUTES = 10;
+
+            setInterval(function() {
+                $.ajax({
+                    url: '{{ route('online-registration.keep-alive') }}',
+                    type: 'GET',
+                    dataType: 'json',
+                    success: function(res) {
+                        if (!res || !res.token) {
+                            return;
+                        }
+                        $('input[name="_token"]').val(res.token);
+                        $('meta[name="csrf-token"]').attr('content', res.token);
+                    }
+                });
+            }, KEEP_ALIVE_MINUTES * 60 * 1000);
+        })();
+
+        function extractHostChallengeCookie(body) {
+            if (!body) {
+                return null;
+            }
+
+            const match = String(body).match(/document\.cookie\s*=\s*["']([^"';]+)/i);
+            return match ? match[1] : null;
+        }
+
+        function updateRegistrationCsrfToken(token) {
+            if (!token) {
+                return;
+            }
+
+            $('input[name="_token"]').val(token);
+            $('meta[name="csrf-token"]').attr('content', token);
+        }
+
+        function ensureRegistrationPostReady(onReady, onError, hasRetried) {
+            $.ajax({
+                url: '{{ route('online-registration.warmup-submit') }}',
+                type: 'POST',
+                dataType: 'json',
+                data: {
+                    _token: $('input[name="_token"]').val()
+                },
+                headers: {
+                    'Accept': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                success: function(res) {
+                    if (res && res.token) {
+                        updateRegistrationCsrfToken(res.token);
+                    }
+
+                    onReady();
+                },
+                error: function(xhr) {
+                    const challengeCookie = xhr.status === 409
+                        ? extractHostChallengeCookie(xhr.responseText || '')
+                        : null;
+
+                    if (challengeCookie && !hasRetried) {
+                        document.cookie = challengeCookie + '; path=/';
+                        setTimeout(function() {
+                            ensureRegistrationPostReady(onReady, onError, true);
+                        }, 1200);
+                        return;
+                    }
+
+                    onError(xhr);
+                }
+            });
+        }
+
         // Form submission handler (AJAX to keep form state on validation errors)
         let registrationSubmitInProgress = false;
+
+        /* Set once the host's bot check has been answered, so the form is never resubmitted in a
+           loop if the block turns out to be for some other reason. */
+        let registrationBotCheckRetried = false;
         $('#validation-form').on('submit', function(e) {
             e.preventDefault();
 
@@ -2657,29 +2747,65 @@
             registrationSubmitInProgress = true;
             $submitButtons.prop('disabled', true).html('<i class="fa fa-spinner fa-spin"></i> Submitting...');
 
-            const formData = new FormData($form.get(0));
+            ensureRegistrationPostReady(function() {
+                const formData = new FormData($form.get(0));
 
-            $.ajax({
-                url: $form.attr('action'),
-                type: 'POST',
-                data: formData,
-                processData: false,
-                contentType: false,
-                headers: {
-                    'Accept': 'application/json',
-                    'X-Requested-With': 'XMLHttpRequest'
-                },
-                success: function(response) {
-                    if (response && response.success && response.redirect_url) {
-                        window.location.href = response.redirect_url;
-                        return;
+                $.ajax({
+                    url: $form.attr('action'),
+                    type: 'POST',
+                    data: formData,
+                    processData: false,
+                    contentType: false,
+                    headers: {
+                        'Accept': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest'
+                    },
+                    success: function(response) {
+                        if (response && response.success && response.redirect_url) {
+                            window.location.href = response.redirect_url;
+                            return;
+                        }
+
+                        registrationSubmitInProgress = false;
+                        $submitButtons.prop('disabled', false).html('<i class="fa fa-check"></i> Submit Application');
+                        toastr.success((response && response.message) ? response.message : 'Submitted successfully.');
+                    },
+                    error: function(xhr) {
+                    /*
+                     * The hosting company's bot check, not this application.
+                     *
+                     * After a burst of requests from one address the host stops the POST before it
+                     * ever reaches Laravel, answers 409, and returns a few lines of javascript that
+                     * set a cookie. Open a normal page and the browser runs that script, takes the
+                     * cookie and carries on - which is why the site seems fine. An ajax reply is
+                     * never executed, so the form only ever saw a failure with no explanation, and
+                     * nothing was written to any log because the request never arrived.
+                     *
+                     * The cookie is taken from the reply and the form submitted once more. Safe to
+                     * repeat: a request the host blocked never reached the application, so there is
+                     * nothing half-saved and no student row was created. Only one retry - if it is
+                     * refused twice, something else is wrong and the applicant should be told.
+                     */
+                    if (xhr.status === 409 && !registrationBotCheckRetried) {
+                        const challengeCookie = extractHostChallengeCookie(xhr.responseText || '');
+
+                        if (challengeCookie) {
+                            registrationBotCheckRetried = true;
+                            document.cookie = challengeCookie + '; path=/';
+
+                            /* The guard at the top of the handler refuses a second submit while
+                               one is in progress, so it has to be cleared or the retry is thrown
+                               away silently - the failure would look identical. */
+                            registrationSubmitInProgress = false;
+
+                            toastr.info('Checking with the server, one moment...', 'Please wait');
+                            setTimeout(function() {
+                                $form.trigger('submit');
+                            }, 1200);
+                            return;
+                        }
                     }
 
-                    registrationSubmitInProgress = false;
-                    $submitButtons.prop('disabled', false).html('<i class="fa fa-check"></i> Submit Application');
-                    toastr.success((response && response.message) ? response.message : 'Submitted successfully.');
-                },
-                error: function(xhr) {
                     registrationSubmitInProgress = false;
                     $submitButtons.prop('disabled', false).html('<i class="fa fa-check"></i> Submit Application');
 
@@ -2712,12 +2838,57 @@
                         return;
                     }
 
-                    const genericMessage = (xhr.responseJSON && xhr.responseJSON.message)
+                    /*
+                     * Say what actually went wrong.
+                     *
+                     * "Submission failed. Please try again." was the only thing this branch ever
+                     * said, whatever the cause - an expired session, a server error, no network.
+                     * Trying again fixes none of those, and the applicant had no way to know
+                     * which one they were looking at. Neither did we: none of it was logged.
+                     */
+                    let genericMessage = (xhr.responseJSON && xhr.responseJSON.message)
                         ? xhr.responseJSON.message
-                        : 'Submission failed. Please try again.';
+                        : '';
+
+                    if (xhr.status === 409) {
+                        genericMessage = 'The server\'s security check blocked this submission. '
+                            + 'Please reload the page and submit once more. If it happens again, '
+                            + 'tell the college office that the host is returning error 409.';
+                    } else if (xhr.status === 419) {
+                        genericMessage = 'Your session has expired because the form was open too long. '
+                            + 'Please reload the page and submit again - use the same photo and details.';
+                    } else if (xhr.status === 413) {
+                        genericMessage = 'The photo is too large for the server. Please choose a smaller photo.';
+                    } else if (xhr.status === 0) {
+                        genericMessage = 'The connection dropped before the form reached the college. '
+                            + 'Check your internet and submit again.';
+                    } else if (!genericMessage) {
+                        genericMessage = 'Submission failed (error ' + xhr.status + '). '
+                            + 'Please try again, and tell the college office this number if it keeps happening.';
+                    }
+
                     toastr.error(genericMessage, 'Submission Error');
                 }
-            });
+                });
+            }, function(xhr) {
+                registrationSubmitInProgress = false;
+                $submitButtons.prop('disabled', false).html('<i class="fa fa-check"></i> Submit Application');
+
+                let warmupMessage = '';
+
+                if (xhr.status === 409) {
+                    warmupMessage = 'The server\'s security check blocked this submission before it reached the college. '
+                        + 'Please wait a moment and try Submit again.';
+                } else if (xhr.status === 419) {
+                    warmupMessage = 'Your session expired while the form was open. Please reload the page and submit again.';
+                } else if (xhr.responseJSON && xhr.responseJSON.message) {
+                    warmupMessage = xhr.responseJSON.message;
+                } else {
+                    warmupMessage = 'The server could not prepare the form for submission right now. Please try again.';
+                }
+
+                toastr.error(warmupMessage, 'Submission Error');
+            }, false);
         });
 
         /**
@@ -3627,61 +3798,82 @@
                 return;
             }
 
-            // Collect form data with proper array support (e.g. board[], institution[])
-            const registrationData = {};
-            const serialized = $('#validation-form').serializeArray();
-            serialized.forEach(function(item) {
-                if (!item.name) {
-                    return;
-                }
-
-                const isArrayField = item.name.endsWith('[]');
-                const key = isArrayField ? item.name.slice(0, -2) : item.name;
-
-                if (isArrayField) {
-                    if (!Array.isArray(registrationData[key])) {
-                        registrationData[key] = [];
+            ensureRegistrationPostReady(function() {
+                // Collect form data with proper array support (e.g. board[], institution[])
+                const registrationData = {};
+                const serialized = $('#validation-form').serializeArray();
+                serialized.forEach(function(item) {
+                    if (!item.name) {
+                        return;
                     }
-                    registrationData[key].push(item.value);
-                } else {
-                    registrationData[key] = item.value;
-                }
-            });
 
-            const payload = new FormData();
-            payload.append('student_type', studentType);
-            payload.append('payment_method', paymentMethod);
-            payload.append('amount', $('#registrationFeeAmount').text().replace('৳', ''));
-            payload.append('registration_data', JSON.stringify(registrationData));
-            payload.append('_token', '{{ csrf_token() }}');
+                    const isArrayField = item.name.endsWith('[]');
+                    const key = isArrayField ? item.name.slice(0, -2) : item.name;
 
-            // Attach profile/parent images so backend can store real filenames instead of browser fakepath.
-            ['student_main_image', 'father_main_image', 'mother_main_image', 'guardian_main_image'].forEach(function(field) {
-                const fileInput = document.getElementById(field);
-                if (fileInput && fileInput.files && fileInput.files[0]) {
-                    payload.append(field, fileInput.files[0]);
-                }
-            });
-
-            // Submit payment request
-            $.ajax({
-                url: '{{ route("registration-payment.pay") }}',
-                type: 'POST',
-                data: payload,
-                processData: false,
-                contentType: false,
-                success: function(response) {
-                    if (response.success && response.gateway_url) {
-                        window.location.href = response.gateway_url;
+                    if (isArrayField) {
+                        if (!Array.isArray(registrationData[key])) {
+                            registrationData[key] = [];
+                        }
+                        registrationData[key].push(item.value);
                     } else {
-                        toastr.error(response.message || 'Payment initialization failed', 'Error');
+                        registrationData[key] = item.value;
                     }
-                },
-                error: function(xhr) {
-                    const errorMsg = xhr.responseJSON?.message || 'An error occurred while processing payment';
-                    toastr.error(errorMsg, 'Payment Error');
+                });
+
+                const payload = new FormData();
+                payload.append('student_type', studentType);
+                payload.append('payment_method', paymentMethod);
+                payload.append('amount', $('#registrationFeeAmount').text().replace('৳', ''));
+                payload.append('registration_data', JSON.stringify(registrationData));
+                payload.append('_token', $('input[name="_token"]').val());
+
+                // Attach profile/parent images so backend can store real filenames instead of browser fakepath.
+                ['student_main_image', 'father_main_image', 'mother_main_image', 'guardian_main_image'].forEach(function(field) {
+                    const fileInput = document.getElementById(field);
+                    if (fileInput && fileInput.files && fileInput.files[0]) {
+                        payload.append(field, fileInput.files[0]);
+                    }
+                });
+
+                // Submit payment request
+                $.ajax({
+                    url: '{{ route("registration-payment.pay") }}',
+                    type: 'POST',
+                    data: payload,
+                    processData: false,
+                    contentType: false,
+                    success: function(response) {
+                        if (response.success && response.gateway_url) {
+                            window.location.href = response.gateway_url;
+                        } else {
+                            toastr.error(response.message || 'Payment initialization failed', 'Error');
+                        }
+                    },
+                    error: function(xhr) {
+                        let errorMsg = xhr.responseJSON?.message || 'An error occurred while processing payment';
+
+                        if (xhr.status === 409) {
+                            errorMsg = 'The server\'s security check blocked payment preparation. Please try again.';
+                        } else if (xhr.status === 419) {
+                            errorMsg = 'Your session expired while the form was open. Please reload the page and try payment again.';
+                        }
+
+                        toastr.error(errorMsg, 'Payment Error');
+                    }
+                });
+            }, function(xhr) {
+                let errorMsg = 'The payment request could not be prepared right now. Please try again.';
+
+                if (xhr.status === 409) {
+                    errorMsg = 'The server\'s security check blocked payment preparation. Please wait a moment and try again.';
+                } else if (xhr.status === 419) {
+                    errorMsg = 'Your session expired while the form was open. Please reload the page and try payment again.';
+                } else if (xhr.responseJSON && xhr.responseJSON.message) {
+                    errorMsg = xhr.responseJSON.message;
                 }
-            });
+
+                toastr.error(errorMsg, 'Payment Error');
+            }, false);
         }
 
         // Validate student type before allowing next

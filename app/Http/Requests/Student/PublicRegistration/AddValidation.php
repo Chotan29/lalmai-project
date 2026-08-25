@@ -3,7 +3,9 @@
 namespace App\Http\Requests\Student\PublicRegistration;
 
 use App\Rules\AttendanceProfilePhotoRule;
+use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Support\Facades\Log;
 
 class AddValidation extends FormRequest
 {
@@ -63,6 +65,31 @@ class AddValidation extends FormRequest
 
     }
 
+
+    /**
+     * Write down why a registration was turned away.
+     *
+     * A rejected form is invisible from this side: the applicant sees a message, gives up or tries
+     * again, and nothing is recorded anywhere. So "registration is failing" cannot be answered
+     * except by guessing, and the photo rule alone can refuse a form for six different reasons.
+     *
+     * Only the field names and the messages are written. No photo, no address, no phone number -
+     * enough to see which rule is turning people away, and nothing that would put an applicant's
+     * details in a log file.
+     */
+    protected function failedValidation(Validator $validator)
+    {
+        try {
+            Log::warning('Online registration rejected', [
+                'fields' => array_keys($validator->errors()->toArray()),
+                'why'    => array_slice($validator->errors()->all(), 0, 6),
+            ]);
+        } catch (\Throwable $e) {
+            /* Diagnostics must never be the reason a form fails. */
+        }
+
+        parent::failedValidation($validator);
+    }
 
     public function messages()
     {

@@ -492,6 +492,7 @@ class ExamMarkLedgerController extends CollegeBaseController
         $response['error'] = false;
         $response['unlocked'] = $affected;
         $response['student_ids'] = array_values($studentIds);
+        $response['exam_schedule_id'] = $examSchedule->id;
         $response['message'] = $affected.' mark row(s) unlocked. Any teacher can now edit them.';
 
         return response()->json($response);

@@ -123,10 +123,45 @@ Route::group(['prefix' => 'v1'], function () {
 //         : "Password is invalid. Stored hash: " . $user->password;
 // });
 
-use App\Http\Controllers\Api\TipsoiLanController;
+/*
+ * Under Attendance/Device, not API/. That folder is spelled with capitals while its namespaces
+ * say Api - Windows treats the two as the same, Linux does not, and on live psr-4 could not find
+ * the class at all. See the note in the controller.
+ */
+use App\Http\Controllers\Attendance\Device\TipsoiLanController;
 
-// FastFace LAN callbacks (SDK)
-Route::post('tipsoi/lan/heartBeatCallback', [TipsoiLanController::class,'heartBeatCallback']); // returns {"result":bool} per SDK. :contentReference[oaicite:30]{index=30}
-Route::post('tipsoi/lan/tasks',            [TipsoiLanController::class,'tasks']);
-Route::post('tipsoi/lan/task-result',      [TipsoiLanController::class,'taskResult']);
-Route::post('tipsoi/lan/finger-reg-callback', [TipsoiLanController::class,'fingerRegCallback']); // after successful finger enroll. :contentReference[oaicite:31]{index=31}
+/*
+ * Tipsoi FastFace, calling in.
+ *
+ * These five paths are not ours to choose - they are what the device is configured to post to,
+ * and they are the same paths the manufacturer's own cloud serves under api-inovace360.com.
+ * Serving them here is what lets the college point the device at its own server and stop paying
+ * for somebody else's. Taken from the vendor's demo, Fast_Face_python_demo/configure_callbacks.py.
+ *
+ * Another brand gets its own group beside this one, with its own controller. Both end up in the
+ * same shared PunchIngestor, so attendance and the guardian message are written once.
+ *
+ * No auth middleware: the device cannot present a token or a session. It is identified by the
+ * serial number it sends, and an unknown serial is recorded and otherwise ignored.
+ */
+Route::prefix('face/uface5/v1')->group(function () {
+    Route::post('/',            [TipsoiLanController::class, 'heartbeat']);
+    Route::post('recog',        [TipsoiLanController::class, 'recognition']);
+    Route::post('img-reg',      [TipsoiLanController::class, 'imgReg']);
+    Route::post('get-task',     [TipsoiLanController::class, 'getTask']);
+    Route::post('task-result',  [TipsoiLanController::class, 'taskResult']);
+
+    /* Some firmware sends GET for the polling calls. Answering both costs nothing and saves a
+       silent failure that would look exactly like a dead device. */
+    Route::get('/',             [TipsoiLanController::class, 'heartbeat']);
+    Route::get('get-task',      [TipsoiLanController::class, 'getTask']);
+});
+
+/*
+ * The earlier LAN paths, before the vendor demo showed what the device really calls. Kept so
+ * anything already pointed at them keeps working; they forward to the same handlers.
+ */
+Route::post('tipsoi/lan/heartBeatCallback',   [TipsoiLanController::class,'heartBeatCallback']);
+Route::post('tipsoi/lan/tasks',               [TipsoiLanController::class,'tasks']);
+Route::post('tipsoi/lan/task-result',         [TipsoiLanController::class,'taskResult']);
+Route::post('tipsoi/lan/finger-reg-callback', [TipsoiLanController::class,'fingerRegCallback']);

@@ -5,6 +5,19 @@ use Illuminate\Support\Facades\Log;
 
 trait SslWirelessSMS
 {
+    /**
+     * What the gateway said the last time it refused.
+     *
+     * The send methods have to keep returning true or false - callers all over the application
+     * test the result for truth, and handing them a string would make a failure read as success.
+     * So the reason is left here instead, where whoever wants it can pick it up.
+     *
+     * It matters because the gateway is specific and we are not: it answers "Insufficient SMS
+     * balance", and all that reached the attendance record was "sms_send_failed". Running out of
+     * credit and a wrong phone number are not the same problem and should not look the same.
+     */
+    public $lastSmsError = null;
+
     /* SSL Wireless SMS */
     public function sslWirelessSMS($contactNumbers, $message, $providerKey = 'SslWireless')
     {
@@ -181,11 +194,23 @@ trait SslWirelessSMS
             return true;
         }
         
+        /* The gateway puts its reason in description, not error_message - reading only
+           error_message reported "No error message" for a refusal that plainly stated
+           "Insufficient SMS balance". Take whichever is filled in. */
+        $reason = $data['description']
+            ?? $data['error_message']
+            ?? $data['status_meaning']
+            ?? 'no reason given';
+
+        $this->lastSmsError = trim(sprintf('%s (%s): %s',
+            $data['status'] ?? '?', $data['status_code'] ?? '?', $reason));
+
         Log::error('SSL Wireless API Error', [
-            'status' => $data['status'],
-            'code' => $data['status_code'],
-            'message' => $data['error_message'] ?? 'No error message'
+            'status'  => $data['status'] ?? null,
+            'code'    => $data['status_code'] ?? null,
+            'message' => $reason,
         ]);
+
         return false;
     }
 

@@ -627,6 +627,23 @@
             };
         }
 
+        function unlockRowInPlace(studentId) {
+            var $row = $('#student_wrapper tr[data-student-id="' + studentId + '"]');
+            if (!$row.length) return;
+
+            $row.removeClass('ledger-locked-row').css('background', '#ffffff');
+            $row.find('td:first .btn').first()
+                .removeClass('btn-warning')
+                .addClass('btn-primary')
+                .find('i')
+                .removeClass('fa-lock')
+                .addClass('fa-arrows');
+
+            $row.find('.unlock-chk').closest('label').remove();
+            $row.find('.unlock-one-btn').remove();
+            $row.find('td:last').html('<span class="label label-success">Unlocked</span>');
+        }
+
         function doUnlock(studentIds) {
             if (!studentIds || !studentIds.length) {
                 toastr.info('Please select at least one locked row.', 'Info:');
@@ -644,8 +661,11 @@
                         toastr.warning(data.message, 'Warning:');
                     } else {
                         toastr.success(data.message, 'Success:');
-                        /*reload the student list so unlocked rows become editable*/
-                        loadStudent(null);
+                        $.each(data.student_ids || studentIds, function (_, studentId) {
+                            unlockRowInPlace(studentId);
+                        });
+                        $('#unlock-selected-btn').toggle($('.unlock-chk').length > 0);
+                        $('#unlock-all-btn').toggle($('.unlock-chk').length > 0);
                     }
                 },
                 error: function () {

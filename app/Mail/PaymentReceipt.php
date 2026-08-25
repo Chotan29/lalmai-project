@@ -16,11 +16,43 @@ class PaymentReceipt extends Mailable
     public $student;
     public $institutionName;
 
+    /** College letterhead for the email body - the same thing generatePDF() puts on the pdf. */
+    public $generalSetting;
+
     public function __construct(OnlinePayment $payment, Student $student)
     {
         $this->payment = $payment;
         $this->student = $student;
         $this->institutionName = config('app.name');
+
+        /*
+         * build() has always asked for $this->generalSetting and nothing ever set it, so every
+         * receipt died on "Undefined property" - caught and logged in sendPaymentReceipt(), which
+         * is why payments looked fine while not one receipt was ever delivered.
+         *
+         * The college's own settings row is used where there is one, and the config values
+         * otherwise, so an installation without that table still sends a sensible receipt.
+         */
+        $this->generalSetting = $this->settings();
+    }
+
+    protected function settings()
+    {
+        try {
+            $row = \App\Models\GeneralSetting::first();
+            if ($row) { return $row; }
+        } catch (\Throwable $e) {
+            /* fall through to the config values below */
+        }
+
+        return (object) [
+            'logo'      => config('app.logo'),
+            'institute' => config('app.name'),
+            'address'   => config('app.address'),
+            'phone'     => config('app.phone'),
+            'email'     => config('app.email'),
+            'website'   => config('app.website'),
+        ];
     }
 
     // In app/Mail/PaymentReceipt.php

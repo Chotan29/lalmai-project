@@ -1138,6 +1138,50 @@ class OnlineRegistrationController extends CollegeBaseController
         return response()->json($response);
     }
 
+    /**
+     * Keep a half-finished application alive, and hand back a fresh csrf token.
+     *
+     * Sessions last an hour and end when the browser closes. This form has seven tabs, a photo to
+     * take and a subject list to work through, and applicants are often filling it in on a phone
+     * with someone reading the questions out. Going over the hour was never rare.
+     *
+     * What made it worse is what the applicant saw. An expired token means Laravel answers 419
+     * with an empty body, and the page - finding no message and no field errors - could only say
+     * "Submission failed. Please try again." Trying again did not help, because the token was
+     * still stale, and nothing was written to any log. Everything typed was lost.
+     *
+     * Touching the session here extends it and returns the current token, so the page can keep
+     * itself valid while the form is open. Nothing is weakened: the token still has to match.
+     */
+    public function keepAlive(Request $request)
+    {
+        $request->session()->put('registration_last_seen', now()->toDateTimeString());
+
+        return response()->json([
+            'success' => true,
+            'token'   => csrf_token(),
+        ]);
+    }
+
+    /**
+     * Prove to the host that this browser may POST before the real multipart submit starts.
+     *
+     * The shared host sometimes answers the first POST from a browser with HTTP 409 and a tiny
+     * javascript snippet that sets a "humans_*" cookie. That check happens before Laravel sees the
+     * request, so the real registration submit appears to "randomly fail" even though the form is
+     * valid. A small warm-up POST lets the page solve that one-time challenge first, refreshes the
+     * csrf token, and only then sends the actual registration or payment request.
+     */
+    public function warmupSubmit(Request $request)
+    {
+        $request->session()->put('registration_last_post_ready', now()->toDateTimeString());
+
+        return response()->json([
+            'success' => true,
+            'token'   => csrf_token(),
+        ]);
+    }
+
     public function checkEmail(Request $request)
     {
         $email = strtolower(trim((string) $request->input('email')));
