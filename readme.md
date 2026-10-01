@@ -29,4 +29,4 @@ URL: URL: http://ims.ait.org Admin Login:
 User: webadmin@edufirm.com 
 Password: 123
 
-## EduFirm School & College Web Portal CMS - CodeCanyon Item for Sale
+
