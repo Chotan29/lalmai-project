@@ -1,9 +1,9 @@
 ## About Unlimited Edu Firm
-**Unlimited Edu Firm is School & College Information Management System**. School or College can manage student & staff detail with the different helpful module.
+**Education Management System is University, School & College Information Management System**. School or College can manage student & staff detail with the different helpful module.
 Fees, Payroll, Transaction, Library, Hostel, Attendance, Transport, Assignment, Download, SMS & Email Alert, Online Payment Gateway, User and Role manage with powerful ACL are the Key features of EduFirm. 
 
 ## Test IMS Demo (Some Features Disable on Demo)
-URL: http://soft.businesswithtechnology.com 
+URL: http://soft.aitit.org
 Admin Login:
 User: admin@edufirm.com 
 Password: 123
@@ -23,9 +23,9 @@ Student Login:
 User: student@edufirm.com 
 Password: 123
 Test Web Site Demo (Some Features Disable on Demo)
-URL: http://scweb.businesswithtechnology.com 
+URL: http://ims.ait.org 
 Admin Login:
-URL: http://scweb.businesswithtechnology.com/login 
+URL: URL: http://ims.ait.org Admin Login:
 User: webadmin@edufirm.com 
 Password: 123
 
